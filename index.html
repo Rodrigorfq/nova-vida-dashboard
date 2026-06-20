@@ -222,13 +222,13 @@ function sumCat(cat){ return Object.values(cat).reduce((s,ls)=>s+sumDesc(ls),0);
 // CARREGAR DADOS
 // =====================
 async function carregarDados() {
-  if (!SCRIPT_URL || SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzf7i_-ClBSfP6tq97gX9D5-2mmcwXRkyfu7yGRBSwfwqmgJBkNRhBsyZxQqy8GvOyL1Q/exec") {
+  if (!SCRIPT_URL || SCRIPT_URL === "") {
     mostrarErroConfig();
     return;
   }
 
   try {
-    const res = await fetch(SCRIPT_URL);
+    const res = await fetch(SCRIPT_URL + "?t=" + Date.now(), { method: "GET", redirect: "follow" });
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
 
