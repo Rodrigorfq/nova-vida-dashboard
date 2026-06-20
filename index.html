@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard de Despesas | Igreja Cristã Nova Vida de Rocha Miranda</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#0f1117; --surface:#181c25; --surface2:#1e2330; --surface3:#232838;
+  --border:rgba(255,255,255,0.07); --border2:rgba(255,255,255,0.13);
+  --text:#e8eaf0; --text2:#8b93a8; --text3:#555e72;
+  --accent:#6c63ff; --gold:#f0b429; --green:#3ecf8e;
+  --radius:12px; --radius-sm:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;font-size:15px;line-height:1.6;min-height:100vh;}
+
+/* HEADER */
+.header{background:var(--surface);border-bottom:1px solid var(--border2);padding:22px 36px;display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+.church-label{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:4px;}
+.dash-title{font-size:22px;font-weight:600;color:var(--text);line-height:1.2;}
+.dash-sub{font-size:13px;color:var(--text2);margin-top:3px;}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.header-total{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:10px 18px;text-align:right;}
+.ht-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;}
+.ht-value{font-size:21px;font-weight:600;color:var(--gold);margin-top:2px;}
+.ht-sub{font-size:11px;color:var(--text3);}
+.mes-select{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:8px 14px;font-size:13px;color:var(--text);cursor:pointer;}
+.mes-select option{background:var(--surface2);}
+
+/* BADGE USUÁRIO */
+.user-badge{display:flex;align-items:center;gap:8px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:6px 12px;font-size:12px;color:var(--text2);}
+.user-dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex-shrink:0;}
+
+/* BREADCRUMB */
+.breadcrumb{padding:12px 36px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:13px;}
+.bc-item{cursor:pointer;color:var(--text2);transition:color .15s;}
+.bc-item:hover{color:var(--accent);}
+.bc-item.active{color:var(--text);font-weight:500;cursor:default;}
+.bc-sep{color:var(--text3);}
+
+.body{padding:26px 36px;max-width:1200px;margin:0 auto;}
+
+/* LOADING */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;gap:16px;}
+.spinner{width:40px;height:40px;border:3px solid var(--border2);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{color:var(--text2);font-size:14px;}
+
+/* TELA DE ACESSO NEGADO */
+.acesso-negado{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:400px;text-align:center;padding:40px;}
+.lock-icon{font-size:52px;margin-bottom:20px;}
+.acesso-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:10px;}
+.acesso-sub{font-size:14px;color:var(--text2);max-width:400px;line-height:1.8;}
+.acesso-email{font-size:13px;color:var(--text3);margin-top:16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 16px;display:inline-block;}
+
+/* ERRO CONFIGURAÇÃO */
+.erro-box{background:#1a0f0f;border:1px solid #5a2020;border-radius:var(--radius);padding:24px 28px;margin:24px 0;}
+.erro-title{font-size:15px;font-weight:600;color:#e05c5c;margin-bottom:10px;}
+.erro-steps{font-size:13px;color:var(--text2);line-height:2.2;}
+.erro-steps code{background:var(--surface2);padding:2px 8px;border-radius:4px;font-family:monospace;color:var(--accent);font-size:12px;}
+.url-input{width:100%;margin-top:14px;padding:10px 14px;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);font-size:13px;font-family:monospace;}
+.url-btn{margin-top:10px;padding:9px 20px;background:var(--accent);border:none;border-radius:var(--radius-sm);color:#fff;font-size:13px;cursor:pointer;font-weight:500;}
+.url-btn:hover{opacity:.9;}
+
+/* CARDS MÉTRICA */
+.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;margin-bottom:26px;}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:15px 17px;transition:border-color .2s;}
+.metric-card:hover{border-color:var(--border2);}
+.mc-icon{font-size:18px;margin-bottom:7px;}
+.mc-label{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:3px;}
+.mc-value{font-size:18px;font-weight:600;color:var(--text);}
+.mc-sub{font-size:12px;color:var(--text2);margin-top:3px;}
+
+hr{border:none;border-top:1px solid var(--border);margin:22px 0;}
+.sec-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:13px;}
+
+/* GRÁFICO */
+.chart-layout{display:grid;grid-template-columns:290px 1fr;gap:26px;align-items:start;}
+.chart-wrap{position:relative;width:100%;height:270px;}
+.chart-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;}
+.cc-val{font-size:17px;font-weight:600;color:var(--text);line-height:1;}
+.cc-label{font-size:10px;color:var(--text3);margin-top:4px;text-transform:uppercase;letter-spacing:.06em;}
+
+/* LEGENDA */
+.legend-list{display:flex;flex-direction:column;gap:4px;}
+.legend-item{display:grid;grid-template-columns:10px 1fr auto auto;align-items:center;gap:9px;padding:8px 11px;border-radius:var(--radius-sm);border:1px solid transparent;cursor:pointer;transition:background .15s,border-color .15s;}
+.legend-item:hover{background:var(--surface2);border-color:var(--border);}
+.legend-item.clickable:hover{border-color:var(--accent);background:rgba(108,99,255,.08);}
+.legend-dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
+.legend-name{font-size:13px;color:var(--text);}
+.legend-val{font-size:13px;font-weight:600;color:var(--text);text-align:right;}
+.legend-pct{font-size:11px;color:var(--text3);width:38px;text-align:right;}
+.click-hint{font-size:10px;color:var(--accent);margin-top:1px;}
+
+/* TABELA */
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;margin-top:22px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+thead tr{background:var(--surface2);}
+th{padding:10px 13px;text-align:left;font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);border-bottom:1px solid var(--border);}
+td{padding:9px 13px;color:var(--text2);border-bottom:1px solid var(--border);}
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:var(--surface2);}
+.td-bold{font-weight:600;color:var(--text);}
+.td-right{text-align:right;}
+.td-cat{display:flex;align-items:center;gap:8px;}
+.dot-sm{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+.bar-bg{height:4px;background:var(--surface3);border-radius:99px;overflow:hidden;width:68px;}
+.bar-fill{height:100%;border-radius:99px;transition:width 1s ease;}
+
+/* LANÇAMENTOS */
+.lancamentos-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(275px,1fr));gap:11px;margin-top:8px;}
+.lanc-card{background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:15px;}
+.lanc-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:9px;}
+.lanc-obs{font-size:14px;font-weight:500;color:var(--text);line-height:1.3;}
+.lanc-valor{font-size:15px;font-weight:600;color:var(--gold);white-space:nowrap;margin-left:10px;}
+.lanc-meta{display:flex;flex-direction:column;gap:4px;}
+.lanc-row{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text2);}
+.lanc-row span:first-child{color:var(--text3);width:88px;flex-shrink:0;}
+.comp-area{margin-top:11px;border-top:1px solid var(--border);padding-top:11px;}
+.comp-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:7px;}
+.comp-box{border:1.5px dashed var(--border2);border-radius:var(--radius-sm);padding:11px;text-align:center;cursor:pointer;transition:border-color .2s,background .2s;position:relative;}
+.comp-box:hover{border-color:var(--accent);background:rgba(108,99,255,.05);}
+.comp-box input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;}
+.comp-box-text{font-size:12px;color:var(--text3);}
+.comp-box-text span{color:var(--accent);}
+.comp-preview{max-width:100%;border-radius:6px;margin-top:8px;display:none;}
+
+/* COMPARATIVO MESES */
+.comp-meses{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;margin-bottom:22px;}
+.comp-meses-title{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:14px;}
+.comp-bars{display:flex;flex-direction:column;gap:10px;}
+.comp-row{display:grid;grid-template-columns:110px 1fr 90px;align-items:center;gap:10px;font-size:13px;cursor:pointer;padding:4px 6px;border-radius:var(--radius-sm);transition:background .15s;}
+.comp-row:hover{background:var(--surface2);}
+.comp-mes-name{color:var(--text2);}
+.comp-mes-bar-bg{height:6px;background:var(--surface3);border-radius:99px;overflow:hidden;}
+.comp-mes-bar-fill{height:100%;border-radius:99px;background:var(--accent);transition:width 1.2s ease;}
+.comp-mes-val{color:var(--text);font-weight:600;text-align:right;}
+.comp-mes-row-active .comp-mes-name{color:var(--text);font-weight:600;}
+.comp-mes-row-active .comp-mes-bar-fill{background:var(--gold);}
+
+.back-btn{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--text2);cursor:pointer;padding:6px 12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:transparent;transition:all .15s;margin-bottom:18px;}
+.back-btn:hover{color:var(--text);border-color:var(--border2);background:var(--surface);}
+.level-title{font-size:18px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.level-sub{font-size:13px;color:var(--text2);margin-bottom:18px;}
+
+footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);}
+
+@media(max-width:680px){
+  .header,.breadcrumb,.body{padding-left:16px;padding-right:16px;}
+  .chart-layout{grid-template-columns:1fr;}
+  footer{padding:14px 16px;}
+}
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div>
+    <p class="church-label">Igreja Cristã Nova Vida de Rocha Miranda</p>
+    <h1 class="dash-title">Controle de Despesas</h1>
+    <p class="dash-sub">Pastor Ronaldo Dias Quintanilha</p>
+  </div>
+  <div class="header-right">
+    <div class="user-badge" id="userBadge" style="display:none">
+      <span class="user-dot"></span>
+      <span id="userEmail">—</span>
+    </div>
+    <select class="mes-select" id="mesSelect" onchange="trocarMes()" style="display:none">
+      <option value="">Carregando...</option>
+    </select>
+    <div class="header-total">
+      <p class="ht-label">Total do mês</p>
+      <p class="ht-value" id="headerTotal">—</p>
+      <p class="ht-sub" id="headerSub">aguardando</p>
+    </div>
+  </div>
+</header>
+
+<nav class="breadcrumb" id="breadcrumb">
+  <span class="bc-item active">Visão Geral</span>
+</nav>
+
+<div class="body" id="mainBody">
+  <div class="loading">
+    <div class="spinner"></div>
+    <p class="loading-text">Verificando acesso...</p>
+  </div>
+</div>
+
+<footer>
+  <span>Igreja Cristã Nova Vida de Rocha Miranda &nbsp;·&nbsp; Pastor Ronaldo Dias Quintanilha</span>
+  <span id="footerDate">Documento confidencial — uso interno</span>
+</footer>
+
+<script>
+// =============================================
+// ⚙️  CONFIGURAÇÃO — EDITE APENAS ESTA LINHA
+// Cole aqui a URL gerada pelo Google Apps Script
+// =============================================
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzf7i_-ClBSfP6tq97gX9D5-2mmcwXRkyfu7yGRBSwfwqmgJBkNRhBsyZxQqy8GvOyL1Q/exec";
+// =============================================
+
+const CORES = [
+  "#6c63ff","#3ecf8e","#f0b429","#e05c5c","#38b2f4",
+  "#f97316","#a78bfa","#34d399","#fb7185","#fbbf24",
+  "#60a5fa","#c084fc","#94a3b8","#4ade80","#e879f9","#22d3ee"
+];
+
+let DADOS_TODOS = {};
+let DADOS = {};
+let MES_ATUAL = "";
+let state = { level:0, cat:null, desc:null };
+let chartInstance = null;
+
+function fmtBRL(v){ return 'R$ '+Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function sumDesc(ls){ return ls.reduce((s,l)=>s+(+l.valor||0),0); }
+function sumCat(cat){ return Object.values(cat).reduce((s,ls)=>s+sumDesc(ls),0); }
+
+// =====================
+// CARREGAR DADOS
+// =====================
+async function carregarDados() {
+  if (!SCRIPT_URL || SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzf7i_-ClBSfP6tq97gX9D5-2mmcwXRkyfu7yGRBSwfwqmgJBkNRhBsyZxQqy8GvOyL1Q/exec") {
+    mostrarErroConfig();
+    return;
+  }
+
+  try {
+    const res = await fetch(SCRIPT_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const json = await res.json();
+
+    // 🔒 VERIFICAR SE FOI NEGADO
+    if (json.erro === "acesso_negado") {
+      mostrarAcessoNegado(json.email);
+      return;
+    }
+
+    if (json.erro === "erro_autenticacao") {
+      mostrarErroAutenticacao();
+      return;
+    }
+
+    if (json.erro) throw new Error(json.mensagem || json.erro);
+
+    DADOS_TODOS = json;
+    const meses = Object.keys(json);
+    if (!meses.length) throw new Error("Nenhuma aba de mês encontrada.");
+
+    // Mostrar seletor e badge
+    document.getElementById('mesSelect').style.display = 'block';
+    document.getElementById('userBadge').style.display = 'flex';
+
+    const sel = document.getElementById('mesSelect');
+    sel.innerHTML = '';
+    meses.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m.replace('Despesas(','').replace(')','').replace('Despesas ','');
+      sel.appendChild(opt);
+    });
+
+    MES_ATUAL = meses[meses.length - 1];
+    sel.value = MES_ATUAL;
+    trocarMes();
+
+  } catch(err) {
+    mostrarErroConexao(err.message);
+  }
+}
+
+function trocarMes() {
+  MES_ATUAL = document.getElementById('mesSelect').value;
+  const dadosMes = DADOS_TODOS[MES_ATUAL];
+  DADOS = dadosMes.categorias || dadosMes;
+  state = { level:0, cat:null, desc:null };
+  const total = dadosMes.total || 0;
+  document.getElementById('headerTotal').textContent = fmtBRL(total);
+  const nomeMes = MES_ATUAL.replace('Despesas(','').replace(')','').replace('Despesas ','');
+  document.getElementById('headerSub').textContent = nomeMes;
+  document.getElementById('footerDate').textContent = 'Atualizado: ' + new Date().toLocaleDateString('pt-BR') + ' · Uso interno';
+  render();
+}
+
+// =====================
+// TELAS DE ERRO / ACESSO
+// =====================
+function mostrarAcessoNegado(email) {
+  document.getElementById('mainBody').innerHTML = `
+    <div class="acesso-negado">
+      <div class="lock-icon">🔒</div>
+      <p class="acesso-title">Acesso não autorizado</p>
+      <p class="acesso-sub">Este dashboard é de uso exclusivo das lideranças da Igreja Cristã Nova Vida de Rocha Miranda.<br><br>Se você acredita que deveria ter acesso, entre em contato com o administrador.</p>
+      <div class="acesso-email">E-mail identificado: ${email}</div>
+    </div>`;
+}
+
+function mostrarErroAutenticacao() {
+  document.getElementById('mainBody').innerHTML = `
+    <div class="acesso-negado">
+      <div class="lock-icon">⚠️</div>
+      <p class="acesso-title">Login necessário</p>
+      <p class="acesso-sub">Para acessar este dashboard, você precisa estar logado com sua conta Google no navegador.<br><br>Faça login em <strong>gmail.com</strong> e tente novamente.</p>
+    </div>`;
+}
+
+function mostrarErroConfig() {
+  document.getElementById('mainBody').innerHTML = `
+  <div class="erro-box">
+    <p class="erro-title">⚙️ Configure a conexão com o Google Sheets</p>
+    <div class="erro-steps">
+      1. Abra o Google Sheets com a planilha de despesas<br>
+      2. Clique em <code>Extensões → Apps Script</code><br>
+      3. Cole o código do arquivo <code>codigo_apps_script_seguro.js</code><br>
+      4. Clique em <code>Salvar</code><br>
+      5. Clique em <code>Implantar → Nova implantação</code><br>
+      6. Tipo: <code>App da Web</code> &nbsp;·&nbsp; Executar como: <code>Eu mesmo</code> &nbsp;·&nbsp; Acesso: <code>Qualquer pessoa com login Google</code><br>
+      7. Clique em <code>Implantar</code>, autorize e copie a URL<br>
+      8. Abra este arquivo no Bloco de Notas, encontre <code>https://script.google.com/macros/s/AKfycbzf7i_-ClBSfP6tq97gX9D5-2mmcwXRkyfu7yGRBSwfwqmgJBkNRhBsyZxQqy8GvOyL1Q/exec</code> e substitua pela URL
+    </div>
+  </div>`;
+}
+
+function mostrarErroConexao(msg) {
+  document.getElementById('mainBody').innerHTML = `
+  <div class="erro-box">
+    <p class="erro-title">❌ Erro ao conectar: ${msg}</p>
+    <div class="erro-steps">
+      Verifique se a URL do Apps Script está correta neste arquivo<br>
+      e se a implantação foi feita com acesso <code>Qualquer pessoa com login Google</code>.
+    </div>
+  </div>`;
+}
+
+// =====================
+// RENDERIZAÇÃO
+// =====================
+function render() {
+  updateBreadcrumb();
+  const el = document.getElementById('mainBody');
+  el.innerHTML = '';
+  if (state.level===0) renderLevel0(el);
+  else if (state.level===1) renderLevel1(el);
+  else if (state.level===2) renderLevel2(el);
+}
+
+function renderLevel0(el) {
+  const catTotals = Object.entries(DADOS).map(([nome,descs],i)=>({nome,total:sumCat(descs),cor:CORES[i%CORES.length]})).sort((a,b)=>b.total-a.total);
+  const grand = catTotals.reduce((s,c)=>s+c.total,0);
+  const maior = catTotals[0]||{total:0,nome:'—'};
+  const qtdLanc = Object.values(DADOS).flatMap(d=>Object.values(d).flat()).length;
+
+  // Comparativo meses
+  const meses = Object.keys(DADOS_TODOS);
+  if (meses.length > 1) {
+    const maxT = Math.max(...meses.map(m=>DADOS_TODOS[m].total||0));
+    const cd = document.createElement('div'); cd.className='comp-meses';
+    cd.innerHTML=`<p class="comp-meses-title">📊 Comparativo de meses</p><div class="comp-bars" id="compBars"></div>`;
+    el.appendChild(cd);
+    const bars = cd.querySelector('#compBars');
+    meses.forEach(m=>{
+      const t=DADOS_TODOS[m].total||0;
+      const pct=maxT>0?(t/maxT*100).toFixed(1):0;
+      const nm=m.replace('Despesas(','').replace(')','').replace('Despesas ','');
+      const isA=m===MES_ATUAL;
+      const row=document.createElement('div');
+      row.className='comp-row'+(isA?' comp-mes-row-active':'');
+      row.innerHTML=`<span class="comp-mes-name">${nm}</span><div class="comp-mes-bar-bg"><div class="comp-mes-bar-fill" style="width:0%" data-w="${pct}"></div></div><span class="comp-mes-val">${fmtBRL(t)}</span>`;
+      row.onclick=()=>{ document.getElementById('mesSelect').value=m; trocarMes(); };
+      bars.appendChild(row);
+    });
+    setTimeout(()=>{ document.querySelectorAll('.comp-mes-bar-fill[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'); },100);
+  }
+
+  const cards=document.createElement('div'); cards.className='metric-grid';
+  cards.innerHTML=`
+    <div class="metric-card"><div class="mc-icon">🧾</div><p class="mc-label">Lançamentos</p><p class="mc-value">${qtdLanc}</p><p class="mc-sub">registros no mês</p></div>
+    <div class="metric-card"><div class="mc-icon">📋</div><p class="mc-label">Categorias</p><p class="mc-value">${catTotals.length}</p><p class="mc-sub">áreas de despesa</p></div>
+    <div class="metric-card"><div class="mc-icon">📌</div><p class="mc-label">Maior categoria</p><p class="mc-value">${fmtBRL(maior.total)}</p><p class="mc-sub">${maior.nome}</p></div>
+    <div class="metric-card"><div class="mc-icon">💰</div><p class="mc-label">Total do mês</p><p class="mc-value">${fmtBRL(grand)}</p><p class="mc-sub">todas as categorias</p></div>`;
+  el.appendChild(cards);
+
+  const hr=document.createElement('hr'); el.appendChild(hr);
+  const lbl=document.createElement('p'); lbl.className='sec-label'; lbl.textContent='Clique em uma categoria para ver o detalhamento'; el.appendChild(lbl);
+
+  renderChart(el, catTotals, grand, 'categoria', nome=>{ state.level=1; state.cat=nome; render(); });
+
+  const tbl=document.createElement('div'); tbl.className='table-wrap';
+  tbl.innerHTML=`<table><thead><tr><th>Categoria</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tbl0"></tbody></table>`;
+  el.appendChild(tbl);
+  const tbody=tbl.querySelector('#tbl0');
+  catTotals.forEach(({nome,total,cor})=>{
+    const pct=(total/grand*100).toFixed(1);
+    const tr=document.createElement('tr'); tr.style.cursor='pointer';
+    tr.innerHTML=`<td><div class="td-cat"><span class="dot-sm" style="background:${cor}"></span><span class="td-bold">${nome}</span></div><div class="click-hint">↳ clique para detalhar</div></td><td class="td-right td-bold">${fmtBRL(total)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${cor};width:0%" data-w="${pct}"></div></div></td>`;
+    tr.onclick=()=>{ state.level=1; state.cat=nome; render(); };
+    tbody.appendChild(tr);
+  });
+  setTimeout(()=>{ document.querySelectorAll('.bar-fill[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'); },100);
+}
+
+function renderLevel1(el) {
+  const cat=state.cat, descs=DADOS[cat];
+  const catTotal=sumCat(descs);
+  const descTotals=Object.entries(descs).map(([nome,lans],i)=>({nome,total:sumDesc(lans),cor:CORES[i%CORES.length],lans})).sort((a,b)=>b.total-a.total);
+  el.innerHTML+=`<button class="back-btn" onclick="goLevel(0)">← Voltar para Visão Geral</button><p class="level-title">${cat}</p><p class="level-sub">Total: ${fmtBRL(catTotal)} &nbsp;·&nbsp; ${descTotals.length} descrições &nbsp;·&nbsp; Clique para ver os lançamentos</p>`;
+  renderChart(el, descTotals, catTotal, 'descrição', nome=>{ state.level=2; state.desc=nome; render(); });
+  const tbl=document.createElement('div'); tbl.className='table-wrap';
+  tbl.innerHTML=`<table><thead><tr><th>Descrição</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tbl1"></tbody></table>`;
+  el.appendChild(tbl);
+  const tbody=tbl.querySelector('#tbl1');
+  descTotals.forEach(({nome,total,cor,lans})=>{
+    const pct=(total/catTotal*100).toFixed(1);
+    const tr=document.createElement('tr'); tr.style.cursor='pointer';
+    tr.innerHTML=`<td><div class="td-cat"><span class="dot-sm" style="background:${cor}"></span><span class="td-bold">${nome}</span></div><div class="click-hint">↳ ${lans.length} lançamento(s)</div></td><td class="td-right td-bold">${fmtBRL(total)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${cor};width:0%" data-w="${pct}"></div></div></td>`;
+    tr.onclick=()=>{ state.level=2; state.desc=nome; render(); };
+    tbody.appendChild(tr);
+  });
+  setTimeout(()=>{ document.querySelectorAll('.bar-fill[data-w]').forEach(b=>b.style.width=b.dataset.w+'%'); },100);
+}
+
+function renderLevel2(el) {
+  const cat=state.cat, desc=state.desc;
+  const lans=DADOS[cat][desc];
+  const total=sumDesc(lans);
+  const obsMap={};
+  lans.forEach(l=>{ obsMap[l.obs]=(obsMap[l.obs]||0)+(+l.valor); });
+  const obsTotals=Object.entries(obsMap).map(([nome,total],i)=>({nome,total,cor:CORES[i%CORES.length]})).sort((a,b)=>b.total-a.total);
+  el.innerHTML+=`<button class="back-btn" onclick="goLevel(1)">← Voltar para ${cat}</button><p class="level-title">${desc}</p><p class="level-sub">Categoria: ${cat} &nbsp;·&nbsp; Total: ${fmtBRL(total)} &nbsp;·&nbsp; ${lans.length} lançamento(s)</p>`;
+  if (obsTotals.length>1) renderChart(el, obsTotals, total, 'observação', null);
+  const sec=document.createElement('div');
+  sec.innerHTML=`<hr><p class="sec-label">Lançamentos detalhados</p>`;
+  const grid=document.createElement('div'); grid.className='lancamentos-grid';
+  lans.forEach((l,i)=>{
+    const card=document.createElement('div'); card.className='lanc-card';
+    card.innerHTML=`
+      <div class="lanc-header"><span class="lanc-obs">${l.obs}</span><span class="lanc-valor">${fmtBRL(l.valor)}</span></div>
+      <div class="lanc-meta">
+        <div class="lanc-row"><span>📅 Data</span><span>${l.data}</span></div>
+        <div class="lanc-row"><span>👤 Responsável</span><span>${l.resp}</span></div>
+        <div class="lanc-row"><span>💳 Pagamento</span><span>${l.forma}</span></div>
+      </div>
+      <div class="comp-area">
+        <p class="comp-label">Comprovante</p>
+        <div class="comp-box" onclick="this.querySelector('input').click()">
+          <input type="file" accept="image/*,.pdf" onchange="previewComp(this,${i})" style="display:none">
+          <p class="comp-box-text">📎 <span>Anexar comprovante</span><br><small style="color:var(--text3)">Imagem ou PDF · só visualização</small></p>
+          <img class="comp-preview" id="prev-${i}" alt="comprovante">
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+  sec.appendChild(grid);
+  el.appendChild(sec);
+}
+
+function renderChart(el, items, grand, label, onClickCb) {
+  if (chartInstance){ chartInstance.destroy(); chartInstance=null; }
+  const wrap=document.createElement('div'); wrap.className='chart-layout';
+  const cWrap=document.createElement('div');
+  cWrap.innerHTML=`<div class="chart-wrap"><canvas id="mainChart" role="img" aria-label="Gráfico de pizza por ${label}"></canvas><div class="chart-center"><div class="cc-val" id="ccVal">${fmtBRL(grand)}</div><div class="cc-label" id="ccLabel">total</div></div></div>`;
+  const legWrap=document.createElement('div'); legWrap.className='legend-list';
+  items.forEach(({nome,total,cor})=>{
+    const pct=(total/grand*100).toFixed(1);
+    const li=document.createElement('div'); li.className='legend-item'+(onClickCb?' clickable':'');
+    li.innerHTML=`<span class="legend-dot" style="background:${cor}"></span><span class="legend-name">${nome}</span><span class="legend-val">${fmtBRL(total)}</span><span class="legend-pct">${pct}%</span>`;
+    if(onClickCb) li.onclick=()=>onClickCb(nome);
+    legWrap.appendChild(li);
+  });
+  wrap.appendChild(cWrap); wrap.appendChild(legWrap); el.appendChild(wrap);
+  setTimeout(()=>{
+    const canvas=document.getElementById('mainChart'); if(!canvas) return;
+    chartInstance=new Chart(canvas,{
+      type:'doughnut',
+      data:{ labels:items.map(i=>i.nome), datasets:[{data:items.map(i=>i.total),backgroundColor:items.map(i=>i.cor),borderWidth:2,borderColor:'#0f1117',hoverOffset:8}] },
+      options:{
+        responsive:true, maintainAspectRatio:false, cutout:'65%',
+        animation:{animateRotate:true,animateScale:true,duration:900,easing:'easeOutQuart'},
+        plugins:{ legend:{display:false}, tooltip:{callbacks:{label:ctx=>' '+fmtBRL(ctx.raw)+' ('+(ctx.raw/grand*100).toFixed(1)+'%)'}} },
+        onClick:(e,els)=>{ if(onClickCb&&els.length>0) onClickCb(items[els[0].index].nome); },
+        onHover:(e,els)=>{
+          if(onClickCb) canvas.style.cursor=els.length?'pointer':'default';
+          if(els.length>0){ const it=items[els[0].index]; document.getElementById('ccVal').textContent=fmtBRL(it.total); document.getElementById('ccLabel').textContent=it.nome.length>16?it.nome.slice(0,14)+'…':it.nome; }
+          else{ document.getElementById('ccVal').textContent=fmtBRL(grand); document.getElementById('ccLabel').textContent='total'; }
+        }
+      }
+    });
+  },50);
+}
+
+function updateBreadcrumb(){
+  const bc=document.getElementById('breadcrumb'); bc.innerHTML='';
+  const add=(label,lvl,active)=>{ const s=document.createElement('span'); s.className='bc-item'+(active?' active':''); s.textContent=label; if(!active) s.onclick=()=>goLevel(lvl); bc.appendChild(s); };
+  const sep=()=>{ const s=document.createElement('span'); s.className='bc-sep'; s.textContent='›'; bc.appendChild(s); };
+  if(state.level===0){add('Visão Geral',0,true);}
+  else if(state.level===1){add('Visão Geral',0,false);sep();add(state.cat,1,true);}
+  else{add('Visão Geral',0,false);sep();add(state.cat,1,false);sep();add(state.desc,2,true);}
+}
+
+function goLevel(l){
+  if(l===0) state={level:0,cat:null,desc:null};
+  else if(l===1){state.level=1;state.desc=null;}
+  render();
+}
+
+function previewComp(input,idx){
+  const file=input.files[0]; if(!file) return;
+  const prev=document.getElementById('prev-'+idx);
+  if(file.type.startsWith('image/')){
+    const r=new FileReader(); r.onload=e=>{prev.src=e.target.result;prev.style.display='block';}; r.readAsDataURL(file);
+  } else {
+    prev.style.display='none';
+    input.parentElement.querySelector('.comp-box-text').innerHTML='✅ <span>PDF anexado</span><br><small style="color:var(--text3)">'+file.name+'</small>';
+  }
+}
+
+carregarDados();
+</script>
+</body>
+</html>
