@@ -147,6 +147,10 @@ tr:hover td{background:var(--surface2);}
 
 footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;font-size:12px;color:var(--text3);}
 
+.eye-btn{background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:9px 12px;color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.eye-btn:hover{border-color:var(--accent);color:var(--accent);}
+.eye-btn.revelado{border-color:#3ecf8e;color:#3ecf8e;}
+.val-oculto{filter:blur(7px);user-select:none;transition:filter .3s ease;pointer-events:none;}
 @media(max-width:680px){
   .header,.breadcrumb,.body{padding-left:16px;padding-right:16px;}
   .chart-layout{grid-template-columns:1fr;}
@@ -167,12 +171,19 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
       <span class="user-dot"></span>
       <span id="userEmail">—</span>
     </div>
+    <button class="eye-btn" id="eyeBtn" onclick="toggleValores()" title="Mostrar valores">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
+        <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/>
+        <line x1="1" y1="1" x2="23" y2="23"/>
+      </svg>
+    </button>
     <select class="mes-select" id="mesSelect" onchange="trocarMes()" style="display:none">
       <option value="">Carregando...</option>
     </select>
     <div class="header-total">
       <p class="ht-label">Total do mês</p>
-      <p class="ht-value" id="headerTotal">—</p>
+      <p class="ht-value val-oculto" id="headerTotal">—</p>
       <p class="ht-sub" id="headerSub">aguardando</p>
     </div>
   </div>
@@ -222,7 +233,7 @@ function sumCat(cat){ return Object.values(cat).reduce((s,ls)=>s+sumDesc(ls),0);
 // CARREGAR DADOS
 // =====================
 async function carregarDados() {
-  if (!SCRIPT_URL || SCRIPT_URL === "") {
+  if (!SCRIPT_URL || SCRIPT_URL === "https://script.google.com/macros/s/AKfycbzf7i_-ClBSfP6tq97gX9D5-2mmcwXRkyfu7yGRBSwfwqmgJBkNRhBsyZxQqy8GvOyL1Q/exec") {
     mostrarErroConfig();
     return;
   }
@@ -333,6 +344,7 @@ function render() {
   if (state.level===0) renderLevel0(el);
   else if (state.level===1) renderLevel1(el);
   else if (state.level===2) renderLevel2(el);
+  setTimeout(aplicarOcultamento, 120);
 }
 
 function renderLevel0(el) {
@@ -503,6 +515,42 @@ function previewComp(input,idx){
     prev.style.display='none';
     input.parentElement.querySelector('.comp-box-text').innerHTML='✅ <span>PDF anexado</span><br><small style="color:var(--text3)">'+file.name+'</small>';
   }
+}
+
+// =====================
+// OCULTAR / REVELAR VALORES
+// =====================
+let valoresRevelados = false;
+
+function toggleValores() {
+  valoresRevelados = !valoresRevelados;
+  const btn = document.getElementById('eyeBtn');
+  if (valoresRevelados) {
+    btn.classList.add('revelado');
+    btn.title = 'Ocultar valores';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>';
+  } else {
+    btn.classList.remove('revelado');
+    btn.title = 'Mostrar valores';
+    btn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  }
+  aplicarOcultamento();
+}
+
+function aplicarOcultamento() {
+  const ocultar = !valoresRevelados;
+  const seletores = [
+    '#headerTotal', '#ccVal',
+    '.legend-val', '.td-bold', '.mc-value',
+    '.comp-mes-val', '.lanc-valor', '.ht-value',
+    '.badge-value', '.level-sub'
+  ];
+  seletores.forEach(sel => {
+    document.querySelectorAll(sel).forEach(el => {
+      if (ocultar) el.classList.add('val-oculto');
+      else el.classList.remove('val-oculto');
+    });
+  });
 }
 
 carregarDados();
