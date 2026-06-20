@@ -232,17 +232,6 @@ async function carregarDados() {
     if (!res.ok) throw new Error("HTTP " + res.status);
     const json = await res.json();
 
-    // 🔒 VERIFICAR SE FOI NEGADO
-    if (json.erro === "acesso_negado") {
-      mostrarAcessoNegado(json.email);
-      return;
-    }
-
-    if (json.erro === "erro_autenticacao") {
-      mostrarErroAutenticacao();
-      return;
-    }
-
     if (json.erro) throw new Error(json.mensagem || json.erro);
 
     DADOS_TODOS = json;
