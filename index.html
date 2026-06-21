@@ -178,14 +178,19 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
     <div class="senha-lock">🔐</div>
     <p class="senha-logo">Igreja Cristã Nova Vida de Rocha Miranda</p>
     <h2 class="senha-title">Acesso Restrito</h2>
-    <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Digite a senha para continuar.</p>
+    <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Informe seu e-mail e a senha para continuar.</p>
+    <input class="senha-input" id="emailInput" type="email"
+      placeholder="seu@email.com" maxlength="100"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+      style="margin-bottom:10px;letter-spacing:0;"
+      onkeydown="if(event.key==='Enter') document.getElementById('senhaInput').focus()">
     <input class="senha-input" id="senhaInput" type="text"
       placeholder="••••••••••" maxlength="30"
       autocomplete="new-password" autocorrect="off" autocapitalize="off"
       spellcheck="false" style="-webkit-text-security:disc;font-family:monospace;"
       onkeydown="if(event.key==='Enter') verificarSenha()">
     <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
-    <p class="senha-erro" id="senhaErro">❌ Senha incorreta. Tente novamente.</p>
+    <p class="senha-erro" id="senhaErro"></p>
   </div>
 </div>
 
@@ -551,52 +556,88 @@ function previewComp(input,idx){
 // =====================
 const SENHA_CORRETA = "ICNV@rm2026";
 
+// E-mails autorizados — adicione ou remova conforme necessário
+const EMAILS_AUTORIZADOS = [
+  "rodrigo.digofq@gmail.com",
+  "icnvrochamiranda@gmail.com",
+  "ronaldodq@gmail.com"
+];
+
+// Nomes para identificação no e-mail de notificação
+const NOMES = {
+  "rodrigo.digofq@gmail.com":    "Rodrigo",
+  "icnvrochamiranda@gmail.com":  "Igreja (Admin)",
+  "ronaldodq@gmail.com":         "Pastor Ronaldo"
+};
+
 function verificarSenha() {
-  const input = document.getElementById('senhaInput').value;
+  const emailInput = document.getElementById('emailInput').value.trim().toLowerCase();
+  const senhaInput = document.getElementById('senhaInput').value;
   const erro = document.getElementById('senhaErro');
-  
-  if (input === SENHA_CORRETA) {
-    // Senha correta — notificar e carregar dados
-    const wrap = document.getElementById('senhaWrap');
-    wrap.style.opacity = '0';
-    wrap.style.transition = 'opacity .4s ease';
-    setTimeout(() => { wrap.style.display = 'none'; }, 400);
 
-    // Enviar notificação por e-mail
-    try {
-      const agora = new Date();
-      const data = agora.toLocaleDateString('pt-BR');
-      const hora = agora.toLocaleTimeString('pt-BR');
-      const nav = navigator.userAgent;
-      let navegador = 'Desconhecido';
-      if (nav.includes('Chrome')) navegador = 'Google Chrome';
-      else if (nav.includes('Firefox')) navegador = 'Mozilla Firefox';
-      else if (nav.includes('Safari')) navegador = 'Safari';
-      else if (nav.includes('Edge')) navegador = 'Microsoft Edge';
-      let dispositivo = 'Computador';
-      if (/Android|iPhone|iPad|iPod/i.test(nav)) dispositivo = 'Celular / Tablet';
-
-      const urlNotif = SCRIPT_URL +
-        '?acao=notificar_acesso' +
-        '&data=' + encodeURIComponent(data) +
-        '&hora=' + encodeURIComponent(hora) +
-        '&navegador=' + encodeURIComponent(navegador) +
-        '&dispositivo=' + encodeURIComponent(dispositivo) +
-        '&t=' + Date.now();
-      fetch(urlNotif, { method: 'GET', redirect: 'follow', mode: 'no-cors' })
-        .catch(() => {}); // silencioso se falhar
-    } catch(e) {}
-
-    carregarDados();
-  } else {
-    // Senha errada
+  // Validar e-mail
+  if (!emailInput) {
     erro.style.display = 'block';
+    erro.textContent = '⚠️ Por favor, informe seu e-mail.';
+    document.getElementById('emailInput').style.borderColor = '#e05c5c';
+    setTimeout(() => { document.getElementById('emailInput').style.borderColor = ''; }, 1500);
+    return;
+  }
+
+  // Verificar se e-mail está autorizado
+  if (!EMAILS_AUTORIZADOS.includes(emailInput)) {
+    erro.style.display = 'block';
+    erro.textContent = '🚫 E-mail não autorizado. Entre em contato com o administrador.';
+    document.getElementById('emailInput').style.borderColor = '#e05c5c';
+    setTimeout(() => { document.getElementById('emailInput').style.borderColor = ''; }, 1500);
+    return;
+  }
+
+  // Verificar senha
+  if (senhaInput !== SENHA_CORRETA) {
+    erro.style.display = 'block';
+    erro.textContent = '❌ Senha incorreta. Tente novamente.';
     document.getElementById('senhaInput').value = '';
     document.getElementById('senhaInput').style.borderColor = '#e05c5c';
-    setTimeout(() => {
-      document.getElementById('senhaInput').style.borderColor = '';
-    }, 1000);
+    setTimeout(() => { document.getElementById('senhaInput').style.borderColor = ''; }, 1500);
+    return;
   }
+
+  // Tudo certo — entrar
+  erro.style.display = 'none';
+  const wrap = document.getElementById('senhaWrap');
+  wrap.style.opacity = '0';
+  wrap.style.transition = 'opacity .4s ease';
+  setTimeout(() => { wrap.style.display = 'none'; }, 400);
+
+  // Enviar notificação por e-mail
+  try {
+    const agora = new Date();
+    const data = agora.toLocaleDateString('pt-BR');
+    const hora = agora.toLocaleTimeString('pt-BR');
+    const nav = navigator.userAgent;
+    let navegador = 'Desconhecido';
+    if (nav.includes('Edg')) navegador = 'Microsoft Edge';
+    else if (nav.includes('Chrome')) navegador = 'Google Chrome';
+    else if (nav.includes('Firefox')) navegador = 'Mozilla Firefox';
+    else if (nav.includes('Safari')) navegador = 'Safari';
+    let dispositivo = 'Computador';
+    if (/Android|iPhone|iPad|iPod/i.test(nav)) dispositivo = 'Celular / Tablet';
+    const nome = NOMES[emailInput] || emailInput;
+
+    const urlNotif = SCRIPT_URL +
+      '?acao=notificar_acesso' +
+      '&nome=' + encodeURIComponent(nome) +
+      '&email=' + encodeURIComponent(emailInput) +
+      '&data=' + encodeURIComponent(data) +
+      '&hora=' + encodeURIComponent(hora) +
+      '&navegador=' + encodeURIComponent(navegador) +
+      '&dispositivo=' + encodeURIComponent(dispositivo) +
+      '&t=' + Date.now();
+    fetch(urlNotif, { method: 'GET', redirect: 'follow', mode: 'no-cors' }).catch(() => {});
+  } catch(e) {}
+
+  carregarDados();
 }
 
 // =====================
