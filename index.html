@@ -179,8 +179,10 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
     <p class="senha-logo">Igreja Cristã Nova Vida de Rocha Miranda</p>
     <h2 class="senha-title">Acesso Restrito</h2>
     <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Digite a senha para continuar.</p>
-    <input class="senha-input" id="senhaInput" type="password" placeholder="••••••••••" maxlength="30"
-      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+    <input class="senha-input" id="senhaInput" type="text"
+      placeholder="••••••••••" maxlength="30"
+      autocomplete="new-password" autocorrect="off" autocapitalize="off"
+      spellcheck="false" style="-webkit-text-security:disc;font-family:monospace;"
       onkeydown="if(event.key==='Enter') verificarSenha()">
     <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
     <p class="senha-erro" id="senhaErro">❌ Senha incorreta. Tente novamente.</p>
@@ -574,12 +576,15 @@ function verificarSenha() {
       let dispositivo = 'Computador';
       if (/Android|iPhone|iPad|iPod/i.test(nav)) dispositivo = 'Celular / Tablet';
 
-      fetch(SCRIPT_URL + '?acao=notificar_acesso&data=' + encodeURIComponent(data) +
+      const urlNotif = SCRIPT_URL +
+        '?acao=notificar_acesso' +
+        '&data=' + encodeURIComponent(data) +
         '&hora=' + encodeURIComponent(hora) +
         '&navegador=' + encodeURIComponent(navegador) +
-        '&dispositivo=' + encodeURIComponent(dispositivo), {
-        method: 'GET', redirect: 'follow'
-      }).catch(() => {}); // silencioso se falhar
+        '&dispositivo=' + encodeURIComponent(dispositivo) +
+        '&t=' + Date.now();
+      fetch(urlNotif, { method: 'GET', redirect: 'follow', mode: 'no-cors' })
+        .catch(() => {}); // silencioso se falhar
     } catch(e) {}
 
     carregarDados();
