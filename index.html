@@ -151,6 +151,18 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
 .eye-btn:hover{border-color:var(--accent);color:var(--accent);}
 .eye-btn.revelado{border-color:#3ecf8e;color:#3ecf8e;}
 .val-oculto{filter:blur(7px);user-select:none;transition:filter .3s ease;pointer-events:none;}
+/* TELA DE SENHA */
+.senha-wrap{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
+.senha-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:40px 36px;width:100%;max-width:380px;text-align:center;}
+.senha-logo{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
+.senha-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px;}
+.senha-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
+.senha-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 16px;font-size:15px;color:var(--text);text-align:center;letter-spacing:.1em;margin-bottom:12px;outline:none;transition:border-color .2s;}
+.senha-input:focus{border-color:var(--accent);}
+.senha-btn{width:100%;background:var(--accent);border:none;border-radius:var(--radius-sm);padding:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .2s;}
+.senha-btn:hover{opacity:.9;}
+.senha-erro{font-size:13px;color:#e05c5c;margin-top:10px;display:none;}
+.senha-lock{font-size:40px;margin-bottom:16px;}
 @media(max-width:680px){
   .header,.breadcrumb,.body{padding-left:16px;padding-right:16px;}
   .chart-layout{grid-template-columns:1fr;}
@@ -159,6 +171,20 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
 </style>
 </head>
 <body>
+
+<!-- TELA DE SENHA -->
+<div class="senha-wrap" id="senhaWrap">
+  <div class="senha-box">
+    <div class="senha-lock">🔐</div>
+    <p class="senha-logo">Igreja Cristã Nova Vida de Rocha Miranda</p>
+    <h2 class="senha-title">Acesso Restrito</h2>
+    <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Digite a senha para continuar.</p>
+    <input class="senha-input" id="senhaInput" type="password" placeholder="••••••••••" maxlength="30"
+      onkeydown="if(event.key==='Enter') verificarSenha()">
+    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
+    <p class="senha-erro" id="senhaErro">❌ Senha incorreta. Tente novamente.</p>
+  </div>
+</div>
 
 <header class="header">
   <div>
@@ -518,6 +544,33 @@ function previewComp(input,idx){
 }
 
 // =====================
+// CONTROLE DE SENHA
+// =====================
+const SENHA_CORRETA = "ICNV@rm2026";
+
+function verificarSenha() {
+  const input = document.getElementById('senhaInput').value;
+  const erro = document.getElementById('senhaErro');
+  
+  if (input === SENHA_CORRETA) {
+    // Senha correta — esconder tela e carregar dados
+    const wrap = document.getElementById('senhaWrap');
+    wrap.style.opacity = '0';
+    wrap.style.transition = 'opacity .4s ease';
+    setTimeout(() => { wrap.style.display = 'none'; }, 400);
+    carregarDados();
+  } else {
+    // Senha errada
+    erro.style.display = 'block';
+    document.getElementById('senhaInput').value = '';
+    document.getElementById('senhaInput').style.borderColor = '#e05c5c';
+    setTimeout(() => {
+      document.getElementById('senhaInput').style.borderColor = '';
+    }, 1000);
+  }
+}
+
+// =====================
 // OCULTAR / REVELAR VALORES
 // =====================
 let valoresRevelados = false;
@@ -553,7 +606,7 @@ function aplicarOcultamento() {
   });
 }
 
-carregarDados();
+// carregarDados() é chamado após senha correta
 </script>
 </body>
 </html>
