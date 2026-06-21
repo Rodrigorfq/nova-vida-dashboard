@@ -180,6 +180,7 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
     <h2 class="senha-title">Acesso Restrito</h2>
     <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Digite a senha para continuar.</p>
     <input class="senha-input" id="senhaInput" type="password" placeholder="••••••••••" maxlength="30"
+      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
       onkeydown="if(event.key==='Enter') verificarSenha()">
     <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
     <p class="senha-erro" id="senhaErro">❌ Senha incorreta. Tente novamente.</p>
@@ -553,11 +554,34 @@ function verificarSenha() {
   const erro = document.getElementById('senhaErro');
   
   if (input === SENHA_CORRETA) {
-    // Senha correta — esconder tela e carregar dados
+    // Senha correta — notificar e carregar dados
     const wrap = document.getElementById('senhaWrap');
     wrap.style.opacity = '0';
     wrap.style.transition = 'opacity .4s ease';
     setTimeout(() => { wrap.style.display = 'none'; }, 400);
+
+    // Enviar notificação por e-mail
+    try {
+      const agora = new Date();
+      const data = agora.toLocaleDateString('pt-BR');
+      const hora = agora.toLocaleTimeString('pt-BR');
+      const nav = navigator.userAgent;
+      let navegador = 'Desconhecido';
+      if (nav.includes('Chrome')) navegador = 'Google Chrome';
+      else if (nav.includes('Firefox')) navegador = 'Mozilla Firefox';
+      else if (nav.includes('Safari')) navegador = 'Safari';
+      else if (nav.includes('Edge')) navegador = 'Microsoft Edge';
+      let dispositivo = 'Computador';
+      if (/Android|iPhone|iPad|iPod/i.test(nav)) dispositivo = 'Celular / Tablet';
+
+      fetch(SCRIPT_URL + '?acao=notificar_acesso&data=' + encodeURIComponent(data) +
+        '&hora=' + encodeURIComponent(hora) +
+        '&navegador=' + encodeURIComponent(navegador) +
+        '&dispositivo=' + encodeURIComponent(dispositivo), {
+        method: 'GET', redirect: 'follow'
+      }).catch(() => {}); // silencioso se falhar
+    } catch(e) {}
+
     carregarDados();
   } else {
     // Senha errada
