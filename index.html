@@ -399,7 +399,7 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
 
       <!-- Badge sessão expirada -->
       <div class="sessao-badge" id="sessaoBadge">
-        &#9203; Sua sessão expirou. Faça login novamente.
+        Sua sessao expirou apos 7 dias. Faca login novamente.
       </div>
 
       <!-- Campo E-mail -->
@@ -467,6 +467,13 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
       <span class="user-dot"></span>
       <span id="userEmail">—</span>
     </div>
+    <button class="eye-btn" onclick="fazerLogout()" title="Sair do dashboard" style="margin-left:4px;">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+        <polyline points="16 17 21 12 16 7"/>
+        <line x1="21" y1="12" x2="9" y2="12"/>
+      </svg>
+    </button>
     <button class="eye-btn" id="eyeBtn" onclick="toggleValores()" title="Mostrar valores">
       <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/>
@@ -529,6 +536,12 @@ function sumCat(cat){ return Object.values(cat).reduce((s,ls)=>s+sumDesc(ls),0);
 // CARREGAR DADOS
 // =====================
 async function carregarDados() {
+  // Mostrar nome do usuário logado
+  const nomeLogado = localStorage.getItem('dashNome') || '';
+  if (nomeLogado) {
+    const badge = document.getElementById('userEmail');
+    if (badge) badge.textContent = nomeLogado;
+  }
   if (!SCRIPT_URL) {
     mostrarErroConfig();
     return;
@@ -822,7 +835,7 @@ function previewComp(input,idx){
 const SENHA_CORRETA = "ICNV@rm2026";
 const MAX_TENTATIVAS = 3;
 const TEMPO_BLOQUEIO_MIN = 5;
-const TEMPO_SESSAO_HORAS = 2;
+const TEMPO_SESSAO_DIAS = 7; // dias logado sem precisar digitar novamente
 
 const EMAILS_AUTORIZADOS = [
   "rodrigo.digofq@gmail.com",
@@ -905,16 +918,16 @@ function mostrarAviso(msg) {
 
 // Verificar se sessão expirou
 function verificarSessao() {
-  const sessaoExpira = sessionStorage.getItem('dashSessaoExpira');
+  const sessaoExpira = localStorage.getItem('dashSessaoExpira');
   if (sessaoExpira && Date.now() > parseInt(sessaoExpira)) {
-    sessionStorage.removeItem('dashSessaoExpira');
-    sessionStorage.removeItem('dashLogado');
+    localStorage.removeItem('dashSessaoExpira');
+    localStorage.removeItem('dashLogado');
     document.getElementById('sessaoBadge').style.display = 'block';
     return false;
   }
   // Já logado e sessão válida
-  if (sessionStorage.getItem('dashLogado') === 'true') {
-    entrarDashboard(sessionStorage.getItem('dashNome') || '', false);
+  if (localStorage.getItem('dashLogado') === 'true') {
+    entrarDashboard(localStorage.getItem('dashNome') || '', false);
     return true;
   }
   return false;
@@ -969,9 +982,9 @@ function verificarSenha() {
   const nome = NOMES[emailInput] || emailInput;
 
   // Salvar sessão com expiração
-  sessionStorage.setItem('dashLogado', 'true');
-  sessionStorage.setItem('dashNome', nome);
-  sessionStorage.setItem('dashSessaoExpira', String(Date.now() + TEMPO_SESSAO_HORAS * 60 * 60 * 1000));
+  localStorage.setItem('dashLogado', 'true');
+  localStorage.setItem('dashNome', nome);
+  localStorage.setItem('dashSessaoExpira', String(Date.now() + TEMPO_SESSAO_DIAS * 24 * 60 * 60 * 1000));
 
   // Animação do botão
   btn.innerHTML = '<span class="btn-spinner"></span> Entrando...';
@@ -1022,6 +1035,17 @@ window.addEventListener('load', () => {
   atualizarDots();
   verificarSessao();
 });
+
+// =====================
+// LOGOUT
+// =====================
+function fazerLogout() {
+  if (!confirm('Deseja sair do dashboard?')) return;
+  localStorage.removeItem('dashLogado');
+  localStorage.removeItem('dashNome');
+  localStorage.removeItem('dashSessaoExpira');
+  location.reload();
+}
 
 // =====================
 // OCULTAR / REVELAR VALORES
