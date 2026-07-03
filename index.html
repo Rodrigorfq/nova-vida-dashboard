@@ -151,18 +151,228 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
 .eye-btn:hover{border-color:var(--accent);color:var(--accent);}
 .eye-btn.revelado{border-color:#3ecf8e;color:#3ecf8e;}
 .val-oculto{filter:blur(7px);user-select:none;transition:filter .3s ease;pointer-events:none;}
-/* TELA DE SENHA */
-.senha-wrap{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:9999;}
-.senha-box{background:var(--surface);border:1px solid var(--border2);border-radius:var(--radius);padding:40px 36px;width:100%;max-width:380px;text-align:center;}
-.senha-logo{font-size:11px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:8px;}
-.senha-title{font-size:20px;font-weight:600;color:var(--text);margin-bottom:6px;}
-.senha-sub{font-size:13px;color:var(--text2);margin-bottom:28px;line-height:1.6;}
-.senha-input{width:100%;background:var(--surface2);border:1px solid var(--border2);border-radius:var(--radius-sm);padding:12px 16px;font-size:15px;color:var(--text);text-align:center;letter-spacing:.1em;margin-bottom:12px;outline:none;transition:border-color .2s;}
-.senha-input:focus{border-color:var(--accent);}
-.senha-btn{width:100%;background:var(--accent);border:none;border-radius:var(--radius-sm);padding:12px;font-size:14px;font-weight:600;color:#fff;cursor:pointer;transition:opacity .2s;}
-.senha-btn:hover{opacity:.9;}
-.senha-erro{font-size:13px;color:#e05c5c;margin-top:10px;display:none;}
-.senha-lock{font-size:40px;margin-bottom:16px;}
+/* ===========================
+   TELA DE LOGIN PROFISSIONAL
+   =========================== */
+.senha-wrap {
+  position: fixed; inset: 0; z-index: 9999;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, #f0f4ff 0%, #e8edf8 50%, #f5f0ff 100%);
+  font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+/* Padrão de fundo decorativo */
+.senha-wrap::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image: radial-gradient(circle at 20% 20%, rgba(108,99,255,.08) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 80%, rgba(62,207,142,.08) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.12), 0 4px 16px rgba(0,0,0,.08);
+  width: 100%; max-width: 420px;
+  overflow: hidden;
+  animation: loginEntrar .5s ease;
+  position: relative;
+}
+
+@keyframes loginEntrar {
+  from { opacity:0; transform: translateY(20px) scale(.97); }
+  to   { opacity:1; transform: translateY(0) scale(1); }
+}
+
+/* Cabeçalho colorido */
+.login-header {
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+  padding: 36px 36px 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.login-header::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(circle at 50% 0%, rgba(108,99,255,.3) 0%, transparent 70%);
+}
+
+.login-church-icon {
+  width: 64px; height: 64px;
+  background: rgba(255,255,255,.1);
+  border: 2px solid rgba(255,255,255,.2);
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 16px;
+  font-size: 28px;
+  position: relative; z-index: 1;
+}
+
+.login-church-name {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .15em; text-transform: uppercase;
+  color: rgba(255,255,255,.6);
+  margin-bottom: 6px;
+  position: relative; z-index: 1;
+}
+
+.login-title {
+  font-size: 20px; font-weight: 700;
+  color: #fff; margin: 0;
+  position: relative; z-index: 1;
+}
+
+.login-subtitle {
+  font-size: 13px; color: rgba(255,255,255,.5);
+  margin-top: 4px;
+  position: relative; z-index: 1;
+}
+
+/* Corpo do formulário */
+.login-body { padding: 32px 36px 36px; }
+
+.login-field { margin-bottom: 18px; }
+
+.login-label {
+  display: block;
+  font-size: 12px; font-weight: 600;
+  color: #444; text-transform: uppercase;
+  letter-spacing: .07em; margin-bottom: 7px;
+}
+
+.login-input-wrap {
+  position: relative;
+}
+
+.login-input-icon {
+  position: absolute; left: 14px; top: 50%;
+  transform: translateY(-50%);
+  color: #aaa; font-size: 16px;
+  pointer-events: none;
+}
+
+.login-input {
+  width: 100%;
+  padding: 13px 14px 13px 42px;
+  border: 1.5px solid #e0e0e0;
+  border-radius: 10px;
+  font-size: 14px; color: #333;
+  background: #fafafa;
+  outline: none;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.login-input:focus {
+  border-color: #6c63ff;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(108,99,255,.12);
+}
+
+.login-input::placeholder { color: #bbb; }
+
+/* Bloqueado */
+.login-input:disabled {
+  background: #f5f5f5; color: #aaa; cursor: not-allowed;
+}
+
+/* Botão entrar */
+.login-btn {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, #6c63ff, #5a52e0);
+  border: none; border-radius: 10px;
+  font-size: 15px; font-weight: 700; color: #fff;
+  cursor: pointer; margin-top: 8px;
+  transition: opacity .2s, transform .1s, box-shadow .2s;
+  box-shadow: 0 4px 15px rgba(108,99,255,.35);
+  position: relative; overflow: hidden;
+}
+
+.login-btn:hover:not(:disabled) {
+  opacity: .93;
+  box-shadow: 0 6px 20px rgba(108,99,255,.45);
+  transform: translateY(-1px);
+}
+
+.login-btn:active:not(:disabled) { transform: translateY(0); }
+
+.login-btn:disabled {
+  opacity: .6; cursor: not-allowed; transform: none;
+}
+
+/* Mensagens de erro/sucesso */
+.login-msg {
+  margin-top: 14px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  display: none;
+  text-align: center;
+}
+
+.login-msg.erro {
+  background: #fff2f2; border: 1px solid #fcc;
+  color: #d32f2f;
+}
+
+.login-msg.aviso {
+  background: #fff8e1; border: 1px solid #ffe082;
+  color: #f57f17;
+}
+
+/* Tentativas restantes */
+.login-tentativas {
+  display: flex; gap: 6px;
+  justify-content: center; margin-top: 16px;
+}
+
+.tentativa-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #e0e0e0;
+  transition: background .3s;
+}
+
+.tentativa-dot.ativa { background: #6c63ff; }
+.tentativa-dot.errou { background: #e05c5c; }
+
+/* Countdown de bloqueio */
+.login-countdown {
+  font-size: 13px; color: #e05c5c;
+  text-align: center; margin-top: 12px;
+  font-weight: 600; display: none;
+}
+
+/* Rodapé do card */
+.login-footer {
+  border-top: 1px solid #f0f0f0;
+  padding: 14px 36px;
+  text-align: center;
+  font-size: 11px; color: #bbb;
+}
+
+/* Spinner no botão */
+.btn-spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,.3);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle; margin-right: 8px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Sessão expirada */
+.sessao-badge {
+  background: #e8f5e9; border: 1px solid #c8e6c9;
+  color: #2e7d32; border-radius: 8px;
+  padding: 8px 12px; font-size: 12px;
+  text-align: center; margin-bottom: 16px;
+  display: none;
+}
 @media(max-width:680px){
   .header,.breadcrumb,.body{padding-left:16px;padding-right:16px;}
   .chart-layout{grid-template-columns:1fr;}
@@ -172,25 +382,77 @@ footer{border-top:1px solid var(--border);padding:16px 36px;display:flex;justify
 </head>
 <body>
 
-<!-- TELA DE SENHA -->
+<!-- TELA DE LOGIN PROFISSIONAL -->
 <div class="senha-wrap" id="senhaWrap">
-  <div class="senha-box">
-    <div class="senha-lock">🔐</div>
-    <p class="senha-logo">Igreja Cristã Nova Vida de Rocha Miranda</p>
-    <h2 class="senha-title">Acesso Restrito</h2>
-    <p class="senha-sub">Este dashboard é de uso exclusivo das lideranças.<br>Informe seu e-mail e a senha para continuar.</p>
-    <input class="senha-input" id="emailInput" type="email"
-      placeholder="seu@email.com" maxlength="100"
-      autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
-      style="margin-bottom:10px;letter-spacing:0;"
-      onkeydown="if(event.key==='Enter') document.getElementById('senhaInput').focus()">
-    <input class="senha-input" id="senhaInput" type="text"
-      placeholder="••••••••••" maxlength="30"
-      autocomplete="new-password" autocorrect="off" autocapitalize="off"
-      spellcheck="false" style="-webkit-text-security:disc;font-family:monospace;"
-      onkeydown="if(event.key==='Enter') verificarSenha()">
-    <button class="senha-btn" onclick="verificarSenha()">Entrar</button>
-    <p class="senha-erro" id="senhaErro"></p>
+  <div class="login-card">
+
+    <!-- Cabeçalho -->
+    <div class="login-header">
+      <div class="login-church-icon">&#9962;</div>
+      <p class="login-church-name">Igreja Cristã Nova Vida de Rocha Miranda</p>
+      <h1 class="login-title">Controle de Despesas</h1>
+      <p class="login-subtitle">Pastor Ronaldo Dias Quintanilha</p>
+    </div>
+
+    <!-- Formulário -->
+    <div class="login-body">
+
+      <!-- Badge sessão expirada -->
+      <div class="sessao-badge" id="sessaoBadge">
+        &#9203; Sua sessão expirou. Faça login novamente.
+      </div>
+
+      <!-- Campo E-mail -->
+      <div class="login-field">
+        <label class="login-label" for="emailInput">E-mail</label>
+        <div class="login-input-wrap">
+          <span class="login-input-icon">&#9993;</span>
+          <input class="login-input" id="emailInput" type="email"
+            placeholder="seu@email.com" maxlength="100"
+            autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+            onkeydown="if(event.key==='Enter') document.getElementById('senhaInput').focus()">
+        </div>
+      </div>
+
+      <!-- Campo Senha -->
+      <div class="login-field">
+        <label class="login-label" for="senhaInput">Senha</label>
+        <div class="login-input-wrap">
+          <span class="login-input-icon">&#128274;</span>
+          <input class="login-input" id="senhaInput" type="text"
+            placeholder="Digite sua senha" maxlength="30"
+            autocomplete="new-password" autocorrect="off" autocapitalize="off"
+            spellcheck="false" style="-webkit-text-security:disc;"
+            onkeydown="if(event.key==='Enter') verificarSenha()">
+        </div>
+      </div>
+
+      <!-- Botão -->
+      <button class="login-btn" id="loginBtn" onclick="verificarSenha()">
+        Entrar no Dashboard
+      </button>
+
+      <!-- Mensagem de erro -->
+      <div class="login-msg erro" id="senhaErro"></div>
+      <div class="login-msg aviso" id="loginAviso"></div>
+
+      <!-- Countdown bloqueio -->
+      <div class="login-countdown" id="loginCountdown"></div>
+
+      <!-- Indicador de tentativas -->
+      <div class="login-tentativas">
+        <div class="tentativa-dot ativa" id="dot1"></div>
+        <div class="tentativa-dot ativa" id="dot2"></div>
+        <div class="tentativa-dot ativa" id="dot3"></div>
+      </div>
+
+    </div>
+
+    <!-- Rodapé -->
+    <div class="login-footer">
+      Acesso restrito &nbsp;&bull;&nbsp; Documento confidencial
+    </div>
+
   </div>
 </div>
 
@@ -554,63 +816,168 @@ function previewComp(input,idx){
 // =====================
 // CONTROLE DE SENHA
 // =====================
+// ===================================
+// CONFIGURAÇÕES DE ACESSO
+// ===================================
 const SENHA_CORRETA = "ICNV@rm2026";
+const MAX_TENTATIVAS = 3;
+const TEMPO_BLOQUEIO_MIN = 5;
+const TEMPO_SESSAO_HORAS = 2;
 
-// E-mails autorizados — adicione ou remova conforme necessário
 const EMAILS_AUTORIZADOS = [
   "rodrigo.digofq@gmail.com",
   "icnvrochamiranda@gmail.com",
   "ronaldodq@gmail.com"
 ];
 
-// Nomes para identificação no e-mail de notificação
 const NOMES = {
-  "rodrigo.digofq@gmail.com":    "Rodrigo",
-  "icnvrochamiranda@gmail.com":  "Igreja (Admin)",
-  "ronaldodq@gmail.com":         "Pastor Ronaldo"
+  "rodrigo.digofq@gmail.com":   "Rodrigo",
+  "icnvrochamiranda@gmail.com": "Igreja (Admin)",
+  "ronaldodq@gmail.com":        "Pastor Ronaldo"
 };
 
+// ===================================
+// CONTROLE DE TENTATIVAS E BLOQUEIO
+// ===================================
+let tentativasRestantes = MAX_TENTATIVAS;
+let bloqueadoAte = null;
+let countdownInterval = null;
+
+function atualizarDots() {
+  for (let i = 1; i <= 3; i++) {
+    const dot = document.getElementById('dot' + i);
+    if (!dot) return;
+    if (i <= tentativasRestantes) {
+      dot.className = 'tentativa-dot ativa';
+    } else {
+      dot.className = 'tentativa-dot errou';
+    }
+  }
+}
+
+function bloquearLogin() {
+  bloqueadoAte = new Date(Date.now() + TEMPO_BLOQUEIO_MIN * 60 * 1000);
+  const btn = document.getElementById('loginBtn');
+  const countdown = document.getElementById('loginCountdown');
+  const emailEl = document.getElementById('emailInput');
+  const senhaEl = document.getElementById('senhaInput');
+
+  btn.disabled = true;
+  emailEl.disabled = true;
+  senhaEl.disabled = true;
+  countdown.style.display = 'block';
+
+  countdownInterval = setInterval(() => {
+    const restante = Math.ceil((bloqueadoAte - Date.now()) / 1000);
+    if (restante <= 0) {
+      clearInterval(countdownInterval);
+      bloqueadoAte = null;
+      tentativasRestantes = MAX_TENTATIVAS;
+      btn.disabled = false;
+      emailEl.disabled = false;
+      senhaEl.disabled = false;
+      countdown.style.display = 'none';
+      document.getElementById('senhaErro').style.display = 'none';
+      document.getElementById('loginAviso').style.display = 'none';
+      atualizarDots();
+    } else {
+      const min = Math.floor(restante / 60);
+      const seg = restante % 60;
+      countdown.textContent = 'Aguarde ' + min + 'm ' + seg + 's para tentar novamente';
+    }
+  }, 1000);
+}
+
+function mostrarErro(msg) {
+  const el = document.getElementById('senhaErro');
+  el.textContent = msg;
+  el.className = 'login-msg erro';
+  el.style.display = 'block';
+  setTimeout(() => { el.style.display = 'none'; }, 4000);
+}
+
+function mostrarAviso(msg) {
+  const el = document.getElementById('loginAviso');
+  el.textContent = msg;
+  el.className = 'login-msg aviso';
+  el.style.display = 'block';
+}
+
+// Verificar se sessão expirou
+function verificarSessao() {
+  const sessaoExpira = sessionStorage.getItem('dashSessaoExpira');
+  if (sessaoExpira && Date.now() > parseInt(sessaoExpira)) {
+    sessionStorage.removeItem('dashSessaoExpira');
+    sessionStorage.removeItem('dashLogado');
+    document.getElementById('sessaoBadge').style.display = 'block';
+    return false;
+  }
+  // Já logado e sessão válida
+  if (sessionStorage.getItem('dashLogado') === 'true') {
+    entrarDashboard(sessionStorage.getItem('dashNome') || '', false);
+    return true;
+  }
+  return false;
+}
+
 function verificarSenha() {
+  // Verificar bloqueio
+  if (bloqueadoAte && Date.now() < bloqueadoAte) return;
+
   const emailInput = document.getElementById('emailInput').value.trim().toLowerCase();
   const senhaInput = document.getElementById('senhaInput').value;
-  const erro = document.getElementById('senhaErro');
+  const btn = document.getElementById('loginBtn');
 
-  // Validar e-mail
+  // Validações
   if (!emailInput) {
-    erro.style.display = 'block';
-    erro.textContent = '⚠️ Por favor, informe seu e-mail.';
-    document.getElementById('emailInput').style.borderColor = '#e05c5c';
-    setTimeout(() => { document.getElementById('emailInput').style.borderColor = ''; }, 1500);
+    mostrarErro('Por favor, informe seu e-mail.');
+    document.getElementById('emailInput').focus();
     return;
   }
 
-  // Verificar se e-mail está autorizado
   if (!EMAILS_AUTORIZADOS.includes(emailInput)) {
-    erro.style.display = 'block';
-    erro.textContent = '🚫 E-mail não autorizado. Entre em contato com o administrador.';
-    document.getElementById('emailInput').style.borderColor = '#e05c5c';
-    setTimeout(() => { document.getElementById('emailInput').style.borderColor = ''; }, 1500);
+    tentativasRestantes = Math.max(0, tentativasRestantes - 1);
+    atualizarDots();
+    mostrarErro('E-mail nao autorizado. Entre em contato com o administrador.');
+    if (tentativasRestantes === 0) bloquearLogin();
+    else mostrarAviso('Tentativas restantes: ' + tentativasRestantes);
+    document.getElementById('emailInput').focus();
     return;
   }
 
-  // Verificar senha
+  if (!senhaInput) {
+    mostrarErro('Por favor, informe a senha.');
+    document.getElementById('senhaInput').focus();
+    return;
+  }
+
   if (senhaInput !== SENHA_CORRETA) {
-    erro.style.display = 'block';
-    erro.textContent = '❌ Senha incorreta. Tente novamente.';
+    tentativasRestantes = Math.max(0, tentativasRestantes - 1);
+    atualizarDots();
     document.getElementById('senhaInput').value = '';
-    document.getElementById('senhaInput').style.borderColor = '#e05c5c';
-    setTimeout(() => { document.getElementById('senhaInput').style.borderColor = ''; }, 1500);
+    if (tentativasRestantes === 0) {
+      bloquearLogin();
+      mostrarErro('Acesso bloqueado por ' + TEMPO_BLOQUEIO_MIN + ' minutos.');
+    } else {
+      mostrarErro('Senha incorreta. Tentativas restantes: ' + tentativasRestantes);
+    }
+    document.getElementById('senhaInput').focus();
     return;
   }
 
-  // Tudo certo — entrar
-  erro.style.display = 'none';
-  const wrap = document.getElementById('senhaWrap');
-  wrap.style.opacity = '0';
-  wrap.style.transition = 'opacity .4s ease';
-  setTimeout(() => { wrap.style.display = 'none'; }, 400);
+  // Login correto!
+  const nome = NOMES[emailInput] || emailInput;
 
-  // Enviar notificação por e-mail
+  // Salvar sessão com expiração
+  sessionStorage.setItem('dashLogado', 'true');
+  sessionStorage.setItem('dashNome', nome);
+  sessionStorage.setItem('dashSessaoExpira', String(Date.now() + TEMPO_SESSAO_HORAS * 60 * 60 * 1000));
+
+  // Animação do botão
+  btn.innerHTML = '<span class="btn-spinner"></span> Entrando...';
+  btn.disabled = true;
+
+  // Enviar notificação
   try {
     const agora = new Date();
     const data = agora.toLocaleDateString('pt-BR');
@@ -623,22 +990,38 @@ function verificarSenha() {
     else if (nav.includes('Safari')) navegador = 'Safari';
     let dispositivo = 'Computador';
     if (/Android|iPhone|iPad|iPod/i.test(nav)) dispositivo = 'Celular / Tablet';
-    const nome = NOMES[emailInput] || emailInput;
 
-    const urlNotif = SCRIPT_URL +
-      '?acao=notificar_acesso' +
-      '&nome=' + encodeURIComponent(nome) +
+    fetch(SCRIPT_URL + '?acao=notificar_acesso&nome=' + encodeURIComponent(nome) +
       '&email=' + encodeURIComponent(emailInput) +
       '&data=' + encodeURIComponent(data) +
       '&hora=' + encodeURIComponent(hora) +
       '&navegador=' + encodeURIComponent(navegador) +
       '&dispositivo=' + encodeURIComponent(dispositivo) +
-      '&t=' + Date.now();
-    fetch(urlNotif, { method: 'GET', redirect: 'follow', mode: 'no-cors' }).catch(() => {});
+      '&t=' + Date.now(),
+      { method: 'GET', redirect: 'follow', mode: 'no-cors' }
+    ).catch(() => {});
   } catch(e) {}
 
-  carregarDados();
+  setTimeout(() => entrarDashboard(nome, true), 800);
 }
+
+function entrarDashboard(nome, animar) {
+  const wrap = document.getElementById('senhaWrap');
+  if (animar) {
+    wrap.style.transition = 'opacity .5s ease';
+    wrap.style.opacity = '0';
+    setTimeout(() => { wrap.style.display = 'none'; carregarDados(); }, 500);
+  } else {
+    wrap.style.display = 'none';
+    carregarDados();
+  }
+}
+
+// Verificar sessão ao carregar
+window.addEventListener('load', () => {
+  atualizarDots();
+  verificarSessao();
+});
 
 // =====================
 // OCULTAR / REVELAR VALORES
@@ -676,7 +1059,7 @@ function aplicarOcultamento() {
   });
 }
 
-// carregarDados() é chamado após senha correta
+// carregarDados() é chamado após login bem-sucedido
 </script>
 </body>
 </html>
