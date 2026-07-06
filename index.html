@@ -483,7 +483,7 @@ async function carregarTudo(){
     const [resDespesas, resEntradas] = await Promise.all([
       fetch(URL_DESPESAS+'?t='+Date.now(),{method:'GET',redirect:'follow'}),
       URL_ENTRADAS !== 'https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec'
-        ? fetch(URL_ENTRADAS+'?t='+Date.now(),{method:'GET',redirect:'follow'})
+        ? fetch(URL_ENTRADAS+'?t='+Date.now(),{method:'GET',redirect:'follow',mode:'cors'})
         : Promise.resolve(null)
     ]);
 
@@ -492,8 +492,17 @@ async function carregarTudo(){
     DADOS_DESPESAS = jsonDesp;
 
     if(resEntradas){
-      const jsonEnt = await resEntradas.json();
-      if(!jsonEnt.erro) DADOS_ENTRADAS = jsonEnt;
+      try {
+        const jsonEnt = await resEntradas.json();
+        if(!jsonEnt.erro) {
+          DADOS_ENTRADAS = jsonEnt;
+          console.log('Entradas carregadas:', Object.keys(DADOS_ENTRADAS));
+        } else {
+          console.error('Erro entradas:', jsonEnt.erro);
+        }
+      } catch(errEnt) {
+        console.error('Erro ao parsear entradas:', errEnt);
+      }
     }
 
     // Popular seletor de meses (baseado nas despesas)
