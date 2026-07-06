@@ -481,9 +481,9 @@ async function carregarTudo(){
 
   try{
     const [resDespesas, resEntradas] = await Promise.all([
-      fetch(URL_DESPESAS+'?t='+Date.now(),{method:'GET',redirect:'follow',mode:'cors'}),
-      URL_ENTRADAS !== 'https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec'
-        ? fetch(URL_ENTRADAS+'?t='+Date.now(),{method:'GET',redirect:'follow',mode:'cors'})
+      fetch(URL_DESPESAS+'?t='+Date.now(),{method:'GET',redirect:'follow'}),
+      URL_ENTRADAS && URL_ENTRADAS.startsWith('https://script.google.com')
+        ? fetch(URL_ENTRADAS+'?t='+Date.now(),{method:'GET',redirect:'follow'})
         : Promise.resolve(null)
     ]);
 
