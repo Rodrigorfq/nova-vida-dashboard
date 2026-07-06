@@ -558,10 +558,38 @@ function render(){
 }
 
 // ── DADOS DO MÊS ATUAL ──
+function getNomeMesEntradas(mesDespesas) {
+  // Extrai o nome do mês da chave de despesas e busca na entrada
+  const nomeMes = mesDespesas
+    .replace('Despesas(','')
+    .replace(')','')
+    .replace('Despesas ','')
+    .trim();
+  
+  // Tentar encontrar a chave correspondente nas entradas
+  const chaves = Object.keys(DADOS_ENTRADAS);
+  
+  // Busca exata
+  const chaveExata = 'Entradas(' + nomeMes + ')';
+  if (DADOS_ENTRADAS[chaveExata]) return chaveExata;
+  
+  // Busca case-insensitive
+  const chaveCI = chaves.find(k => 
+    k.toLowerCase() === chaveExata.toLowerCase()
+  );
+  if (chaveCI) return chaveCI;
+  
+  // Busca parcial pelo nome do mês
+  const chaveParcial = chaves.find(k => 
+    k.toLowerCase().includes(nomeMes.toLowerCase())
+  );
+  return chaveParcial || null;
+}
+
 function getDadosMesAtual(){
   const desp = DADOS_DESPESAS[MES_ATUAL] || {};
-  const nomeMesEnt = 'Entradas('+MES_ATUAL.replace('Despesas(','').replace(')','').replace('Despesas ','') + ')';
-  const ent  = DADOS_ENTRADAS[nomeMesEnt] || null;
+  const chaveEnt = getNomeMesEntradas(MES_ATUAL);
+  const ent = chaveEnt ? (DADOS_ENTRADAS[chaveEnt] || null) : null;
   const totalDesp = desp.total || 0;
   const totalEnt  = ent ? (ent.total.totalGeral||0) : 0;
   return { desp, ent, totalDesp, totalEnt, saldo: totalEnt - totalDesp };
@@ -742,9 +770,9 @@ function renderTabelaComparativa(el){
   const tbody=tbl.querySelector('#tblComp');
   todosDesp.forEach(m=>{
     const nomeMes=m.replace('Despesas(','').replace(')','').replace('Despesas ','');
-    const nomeMesEnt='Entradas('+nomeMes+')';
     const totalDesp=DADOS_DESPESAS[m].total||0;
-    const ent=DADOS_ENTRADAS[nomeMesEnt];
+    const chaveEntM=getNomeMesEntradas(m);
+    const ent=chaveEntM?DADOS_ENTRADAS[chaveEntM]:null;
     const totalEnt=ent?(ent.total.totalGeral||0):0;
     const saldo=totalEnt-totalDesp;
     const catedral=ent?(ent.total.catedral||0):0;
@@ -767,8 +795,8 @@ function renderTabelaComparativa(el){
 // =============================================
 function renderEntradas(el){
   const nomeMes=getNomeMes();
-  const nomeMesEnt='Entradas('+nomeMes+')';
-  const ent=DADOS_ENTRADAS[nomeMesEnt];
+  const chaveEnt=getNomeMesEntradas(MES_ATUAL);
+  const ent=chaveEnt?DADOS_ENTRADAS[chaveEnt]:null;
 
   if(!ent){
     el.innerHTML=`<div style="padding:40px;text-align:center;color:var(--text3)"><p style="font-size:40px;margin-bottom:16px">📊</p><p style="font-size:16px;font-weight:600;color:var(--text2)">Dados de entradas não disponíveis para ${nomeMes}</p><p style="font-size:13px;margin-top:8px">Configure o Apps Script de entradas para ver os dados.</p></div>`;
