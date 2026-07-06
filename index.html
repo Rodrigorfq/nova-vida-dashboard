@@ -481,7 +481,7 @@ async function carregarTudo(){
 
   try{
     const [resDespesas, resEntradas] = await Promise.all([
-      fetch(URL_DESPESAS+'?t='+Date.now(),{method:'GET',redirect:'follow'}),
+      fetch(URL_DESPESAS+'?t='+Date.now(),{method:'GET',redirect:'follow',mode:'cors'}),
       URL_ENTRADAS !== 'https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec'
         ? fetch(URL_ENTRADAS+'?t='+Date.now(),{method:'GET',redirect:'follow',mode:'cors'})
         : Promise.resolve(null)
