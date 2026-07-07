@@ -729,6 +729,80 @@ tr:hover td { background: var(--bg); }
 .fade-in { opacity: 0; transform: translateY(12px); transition: opacity .4s ease, transform .4s ease; }
 .fade-in.show { opacity: 1; transform: translateY(0); }
 
+/* ─── DRILL-DOWN ─── */
+.drill-header {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 20px;
+}
+
+.back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 14px; border-radius: var(--r-sm);
+  border: 1px solid var(--border); background: var(--white);
+  color: var(--slate); font-size: 13px; font-weight: 500;
+  cursor: pointer; font-family: inherit;
+  transition: all .15s; box-shadow: var(--shadow-sm);
+}
+.back-btn:hover { border-color: var(--navy3); color: var(--navy); background: var(--bg); }
+
+.drill-title { font-size: 18px; font-weight: 800; color: var(--navy); }
+.drill-sub { font-size: 13px; color: var(--muted); margin-top: 2px; }
+
+.breadcrumb {
+  display: flex; align-items: center; gap: 6px;
+  margin-bottom: 20px; flex-wrap: wrap;
+}
+.bc-item {
+  font-size: 13px; color: var(--muted); cursor: pointer;
+  transition: color .15s; font-weight: 500;
+}
+.bc-item:hover { color: var(--accent); }
+.bc-item.active { color: var(--navy); cursor: default; }
+.bc-sep { color: var(--border); font-size: 16px; }
+
+.lanc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 14px; margin-top: 16px;
+}
+
+.lanc-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s, box-shadow .2s;
+}
+.lanc-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.lanc-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 12px; gap: 10px;
+}
+.lanc-obs { font-size: 14px; font-weight: 600; color: var(--navy); line-height: 1.3; }
+.lanc-val { font-size: 15px; font-weight: 800; color: var(--saida); white-space: nowrap; }
+
+.lanc-meta { display: flex; flex-direction: column; gap: 5px; }
+.lanc-row { display: flex; align-items: center; gap: 8px; font-size: 12px; }
+.lanc-row-label { color: var(--muted); width: 90px; flex-shrink: 0; }
+.lanc-row-val { color: var(--slate); font-weight: 500; }
+
+.comp-area { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
+.comp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 8px; }
+.comp-drop {
+  border: 1.5px dashed var(--border);
+  border-radius: var(--r-sm); padding: 12px;
+  text-align: center; cursor: pointer;
+  transition: border-color .2s, background .2s;
+  position: relative;
+}
+.comp-drop:hover { border-color: var(--accent); background: var(--accent2); }
+.comp-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
+.comp-drop-text { font-size: 12px; color: var(--muted); }
+.comp-drop-text span { color: var(--accent); font-weight: 600; }
+.comp-preview { max-width: 100%; border-radius: 6px; margin-top: 8px; display: none; }
+
 /* ═══════════════════════════════════════
    RESPONSIVO
 ═══════════════════════════════════════ */
@@ -915,6 +989,7 @@ const SESSAO_DIAS = 7;
 
 // Estado
 let DD = {}, DE = {}, MES = "", ABA = "geral", visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
+let DRILL = { level: 0, cat: null, desc: null };
 let charts = {};
 
 // Helpers
@@ -1307,8 +1382,13 @@ function renderEntradas(el){
   },100);
 }
 
-// ─── SAÍDAS ───
+// ─── SAÍDAS — NÍVEL 0 (categorias) ───
 function renderSaidas(el){
+  DRILL = { level:0, cat:null, desc:null };
+  renderSaidasNivel0(el);
+}
+
+function renderSaidasNivel0(el){
   const nm=getMesNome();
   const desp=DD[MES]||{}; const cat=desp.categorias||desp; const tD=desp.total||0;
   const CRSAI=["#dc2626","#ef4444","#f87171","#fca5a5","#b91c1c","#991b1b","#7f1d1d","#be123c","#fb7185","#f43f5e","#e11d48","#be123c"];
@@ -1329,48 +1409,201 @@ function renderSaidas(el){
   });
   el.appendChild(kpis);
 
-  // Comparativo meses saídas
   renderCompMeses(el);
 
-  // Pizza + Tabela
+  // Pizza + Legenda clicável
   const g=div("chart-grid-21 fade-in");
-
   const cPiz=div("chart-card");
   cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Categorias de Despesa</p><p class="chart-card-sub">${nm} · clique para ver detalhes</p></div><div class="chart-wrap" style="height:280px"><canvas id="cSaiD"></canvas><div class="chart-center-label"><p class="ccl-val" id="ccSaiD">${fK(tD)}</p><p class="ccl-sub">total</p></div></div>`;
-
   const cLeg=div("chart-card");
-  cLeg.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Participação</p><p class="chart-card-sub">Valor e % por categoria</p></div><div class="legend" id="legSaiD" style="max-height:320px;overflow-y:auto"></div>`;
-
+  cLeg.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Participação</p><p class="chart-card-sub">Clique para detalhar</p></div><div class="legend" id="legSaiD" style="max-height:320px;overflow-y:auto"></div>`;
   g.appendChild(cPiz); g.appendChild(cLeg);
   el.appendChild(g);
 
-  // Tabela detalhada
+  // Tabela clicável
   const sec=div("fade-in");
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Detalhamento por Categoria</p></div></div>';
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Detalhamento por Categoria</p><p class="section-sub">Clique em uma categoria para ver as descrições</p></div></div>';
   const tbl=div("table-card");
   tbl.innerHTML=`<table><thead><tr><th>Categoria</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblCat"></tbody></table>`;
-  sec.appendChild(tbl);
-  el.appendChild(sec);
+  sec.appendChild(tbl); el.appendChild(sec);
 
   const tb=tbl.querySelector("#tblCat");
   catTots.forEach(({n,v,c})=>{
     const pct=(v/tD*100).toFixed(1);
     const tr=document.createElement("tr");
-    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${n}</span></div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
+    tr.style.cursor="pointer";
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${n}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ clique para detalhar</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
+    tr.onclick=()=>{ DRILL.level=1; DRILL.cat=n; renderSaidasAtual(); };
     tb.appendChild(tr);
   });
 
   setTimeout(()=>{
-    charts.sD=buildPizza("cSaiD",catTots.map(i=>i.n),catTots.map(i=>i.v),catTots.map(i=>i.c),"ccSaiD",tD);
-    buildLegend("legSaiD",catTots.map(i=>({l:i.n,v:i.v,c:i.c})),tD);
+    charts.sD=buildPizza("cSaiD",catTots.map(i=>i.n),catTots.map(i=>i.v),catTots.map(i=>i.c),"ccSaiD",tD,
+      (idx)=>{ DRILL.level=1; DRILL.cat=catTots[idx].n; renderSaidasAtual(); });
+    // Legenda clicável
+    const leg=document.getElementById("legSaiD");
+    if(leg){ catTots.forEach(({n,v,c})=>{
+      const pct=(v/tD*100).toFixed(1);
+      const r=document.createElement("div"); r.className="legend-row"; r.style.cursor="pointer";
+      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${n}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
+      r.onclick=()=>{ DRILL.level=1; DRILL.cat=n; renderSaidasAtual(); };
+      leg.appendChild(r);
+    });}
     document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
   },100);
+}
+
+// ─── SAÍDAS — NÍVEL 1 (descrições da categoria) ───
+function renderSaidasNivel1(el){
+  const desp=DD[MES]||{}; const cat=desp.categorias||desp;
+  const catNome=DRILL.cat;
+  const descs=cat[catNome]||{};
+  const CRSUB=["#2563eb","#7c3aed","#059669","#d97706","#0891b2","#db2777","#65a30d","#ea580c","#0284c7","#9333ea","#16a34a","#dc2626"];
+  const descTots=Object.entries(descs).map(([n,lans],i)=>({n,v:lans.reduce((s,l)=>s+(+l.valor||0),0),c:CRSUB[i%CRSUB.length],lans})).sort((a,b)=>b.v-a.v);
+  const total=descTots.reduce((s,d)=>s+d.v,0);
+
+  // Breadcrumb
+  const bc=div("breadcrumb");
+  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item active">${catNome}</span>`;
+  el.appendChild(bc);
+
+  // Header
+  const hdr=div("drill-header fade-in");
+  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=0;renderSaidasAtual()">← Voltar</button><div><p class="drill-title">${catNome}</p><p class="drill-sub">Total: ${fBRL(total)} · ${descTots.length} descrições · clique para ver os lançamentos</p></div>`;
+  el.appendChild(hdr);
+
+  // Pizza + Legenda
+  const g=div("chart-grid-21 fade-in");
+  const cPiz=div("chart-card");
+  cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Descrições — ${catNome}</p><p class="chart-card-sub">Clique para ver lançamentos</p></div><div class="chart-wrap" style="height:260px"><canvas id="cDescPizza"></canvas><div class="chart-center-label"><p class="ccl-val" id="ccDesc">${fK(total)}</p><p class="ccl-sub">total</p></div></div>`;
+  const cLeg=div("chart-card");
+  cLeg.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Participação</p><p class="chart-card-sub">Clique para detalhar</p></div><div class="legend" id="legDesc" style="max-height:300px;overflow-y:auto"></div>`;
+  g.appendChild(cPiz); g.appendChild(cLeg);
+  el.appendChild(g);
+
+  // Tabela
+  const sec=div("fade-in");
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Descrições</p><p class="section-sub">Clique para ver os lançamentos</p></div></div>';
+  const tbl=div("table-card");
+  tbl.innerHTML=`<table><thead><tr><th>Descrição</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblDesc"></tbody></table>`;
+  sec.appendChild(tbl); el.appendChild(sec);
+
+  const tb=tbl.querySelector("#tblDesc");
+  descTots.forEach(({n,v,c,lans})=>{
+    const pct=(v/total*100).toFixed(1);
+    const tr=document.createElement("tr"); tr.style.cursor="pointer";
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${n}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ ${lans.length} lançamento(s)</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
+    tr.onclick=()=>{ DRILL.level=2; DRILL.desc=n; renderSaidasAtual(); };
+    tb.appendChild(tr);
+  });
+
+  setTimeout(()=>{
+    charts.descP=buildPizza("cDescPizza",descTots.map(i=>i.n),descTots.map(i=>i.v),descTots.map(i=>i.c),"ccDesc",total,
+      (idx)=>{ DRILL.level=2; DRILL.desc=descTots[idx].n; renderSaidasAtual(); });
+    const leg=document.getElementById("legDesc");
+    if(leg){ descTots.forEach(({n,v,c})=>{
+      const pct=(v/total*100).toFixed(1);
+      const r=document.createElement("div"); r.className="legend-row"; r.style.cursor="pointer";
+      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${n}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
+      r.onclick=()=>{ DRILL.level=2; DRILL.desc=n; renderSaidasAtual(); };
+      leg.appendChild(r);
+    });}
+    document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
+  },100);
+}
+
+// ─── SAÍDAS — NÍVEL 2 (lançamentos da descrição) ───
+function renderSaidasNivel2(el){
+  const desp=DD[MES]||{}; const cat=desp.categorias||desp;
+  const lans=(cat[DRILL.cat]||{})[DRILL.desc]||[];
+  const total=lans.reduce((s,l)=>s+(+l.valor||0),0);
+
+  // Breadcrumb
+  const bc=div("breadcrumb");
+  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item" onclick="DRILL.level=1;renderSaidasAtual()">${DRILL.cat}</span><span class="bc-sep">›</span><span class="bc-item active">${DRILL.desc}</span>`;
+  el.appendChild(bc);
+
+  // Header
+  const hdr=div("drill-header fade-in");
+  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=1;renderSaidasAtual()">← Voltar para ${DRILL.cat}</button><div><p class="drill-title">${DRILL.desc}</p><p class="drill-sub">Categoria: ${DRILL.cat} · Total: ${fBRL(total)} · ${lans.length} lançamento(s)</p></div>`;
+  el.appendChild(hdr);
+
+  // Pizza observações (se mais de 1)
+  const obsMap={};
+  lans.forEach(l=>{ obsMap[l.obs]=(obsMap[l.obs]||0)+(+l.valor||0); });
+  const obsTots=Object.entries(obsMap).map(([n,v],i)=>({n,v,c:["#2563eb","#7c3aed","#059669","#d97706","#0891b2","#db2777"][i%6]})).sort((a,b)=>b.v-a.v);
+
+  if(obsTots.length>1){
+    const g=div("chart-grid-21 fade-in");
+    const cPiz=div("chart-card");
+    cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Distribuição por Observação</p></div><div class="chart-wrap" style="height:220px"><canvas id="cObsPizza"></canvas><div class="chart-center-label"><p class="ccl-val" id="ccObs">${fK(total)}</p><p class="ccl-sub">total</p></div></div>`;
+    const cLeg=div("chart-card");
+    cLeg.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Observações</p></div><div class="legend" id="legObs"></div>`;
+    g.appendChild(cPiz); g.appendChild(cLeg);
+    el.appendChild(g);
+    setTimeout(()=>{
+      charts.obsP=buildPizza("cObsPizza",obsTots.map(i=>i.n),obsTots.map(i=>i.v),obsTots.map(i=>i.c),"ccObs",total,null);
+      buildLegend("legObs",obsTots.map(i=>({l:i.n,v:i.v,c:i.c})),total);
+    },100);
+  }
+
+  // Cards de lançamentos
+  const sec=div("fade-in");
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Lançamentos</p></div></div>';
+  const grid=div("lanc-grid");
+  lans.forEach((l,i)=>{
+    const c=div("lanc-card");
+    c.innerHTML=`
+      <div class="lanc-hdr">
+        <span class="lanc-obs">${l.obs||"—"}</span>
+        <span class="lanc-val">${fBRL(l.valor)}</span>
+      </div>
+      <div class="lanc-meta">
+        <div class="lanc-row"><span class="lanc-row-label">📅 Data</span><span class="lanc-row-val">${l.data||"—"}</span></div>
+        <div class="lanc-row"><span class="lanc-row-label">👤 Responsável</span><span class="lanc-row-val">${l.resp||"—"}</span></div>
+        <div class="lanc-row"><span class="lanc-row-label">💳 Pagamento</span><span class="lanc-row-val">${l.forma||"—"}</span></div>
+      </div>
+      <div class="comp-area">
+        <p class="comp-label">Comprovante</p>
+        <div class="comp-drop" onclick="this.querySelector('input').click()">
+          <input type="file" accept="image/*,.pdf" onchange="prevComp(this,${i})" style="display:none">
+          <p class="comp-drop-text">📎 <span>Anexar comprovante</span><br><small>Imagem ou PDF · só visualização</small></p>
+          <img class="comp-preview" id="prev${i}" alt="">
+        </div>
+      </div>`;
+    grid.appendChild(c);
+  });
+  sec.appendChild(grid);
+  el.appendChild(sec);
+}
+
+function renderSaidasAtual(){
+  Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
+  const el=$("pageBody"); el.innerHTML="";
+  if(DRILL.level===0) renderSaidasNivel0(el);
+  else if(DRILL.level===1) renderSaidasNivel1(el);
+  else if(DRILL.level===2) renderSaidasNivel2(el);
+  setTimeout(()=>{
+    document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
+    document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
+    aplicarOcultamento();
+  },80);
+}
+
+function prevComp(input,idx){
+  const file=input.files[0]; if(!file) return;
+  const prev=document.getElementById("prev"+idx);
+  if(file.type.startsWith("image/")){
+    const r=new FileReader(); r.onload=e=>{prev.src=e.target.result;prev.style.display="block";}; r.readAsDataURL(file);
+  } else {
+    input.parentElement.querySelector(".comp-drop-text").innerHTML='✅ <span>'+file.name+'</span>';
+  }
 }
 
 // ─── UTILITÁRIOS ───
 function div(cls){ const d=document.createElement("div"); d.className=cls; return d; }
 
-function buildPizza(id,labels,data,colors,ccId,total){
+function buildPizza(id,labels,data,colors,ccId,total,onClickCb){
   const canvas=document.getElementById(id); if(!canvas) return null;
   return new Chart(canvas,{
     type:"doughnut",
@@ -1378,8 +1611,10 @@ function buildPizza(id,labels,data,colors,ccId,total){
     options:{
       responsive:true,maintainAspectRatio:false,cutout:"68%",
       animation:{animateRotate:true,animateScale:true,duration:800,easing:"easeOutQuart"},
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+fBRL(ctx.raw)+" ("+(ctx.raw/total*100).toFixed(1)+"%)"}}}  ,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+fBRL(ctx.raw)+" ("+(ctx.raw/total*100).toFixed(1)+"%)"}}},
+      onClick:(e,els)=>{ if(onClickCb && els.length>0) onClickCb(els[0].index); },
       onHover:(e,els)=>{
+        if(onClickCb) canvas.style.cursor=els.length?"pointer":"default";
         if(els.length){const i=data[els[0].index];$(ccId).textContent=fK(i);}
         else $(ccId).textContent=fK(total);
       }
