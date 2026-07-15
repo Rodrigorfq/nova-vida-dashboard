@@ -764,6 +764,35 @@ tr:hover td { background: var(--bg); }
 .fade-in { opacity: 0; transform: translateY(12px); transition: opacity .4s ease, transform .4s ease; }
 .fade-in.show { opacity: 1; transform: translateY(0); }
 
+/* ─── COMPROVANTE ─── */
+.comp-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: var(--r-sm);
+  font-size: 11px; font-weight: 600;
+  border: 1.5px solid #e2e8f0;
+  background: var(--white); color: var(--slate);
+  cursor: pointer; text-decoration: none;
+  transition: all .15s; font-family: inherit;
+  margin-top: 10px;
+}
+.comp-btn:hover {
+  background: #f0f9ff; border-color: #2563eb;
+  color: #2563eb;
+}
+.comp-btn-icon { font-size: 14px; }
+
+.comp-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 700;
+  background: #dbeafe; color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+.comp-badge-none {
+  background: #f1f5f9; color: #94a3b8;
+  border-color: #e2e8f0;
+}
+
 /* ─── DRILL-DOWN ─── */
 .drill-header {
   display: flex; align-items: center; gap: 12px;
@@ -823,20 +852,7 @@ tr:hover td { background: var(--bg); }
 .lanc-row-label { color: var(--muted); width: 90px; flex-shrink: 0; }
 .lanc-row-val { color: var(--slate); font-weight: 500; }
 
-.comp-area { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 12px; }
-.comp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: 8px; }
-.comp-drop {
-  border: 1.5px dashed var(--border);
-  border-radius: var(--r-sm); padding: 12px;
-  text-align: center; cursor: pointer;
-  transition: border-color .2s, background .2s;
-  position: relative;
-}
-.comp-drop:hover { border-color: var(--accent); background: var(--accent2); }
-.comp-drop input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; }
-.comp-drop-text { font-size: 12px; color: var(--muted); }
-.comp-drop-text span { color: var(--accent); font-weight: 600; }
-.comp-preview { max-width: 100%; border-radius: 6px; margin-top: 8px; display: none; }
+/* comp-drop removido — comprovantes via Drive */
 
 /* ═══════════════════════════════════════
    RESPONSIVO
@@ -1682,6 +1698,7 @@ function renderSaidasNivel2(el){
   sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Lançamentos</p></div></div>';
   const grid=div("lanc-grid");
   lans.forEach((l,i)=>{
+    const temComp = l.comp && l.comp.length > 5;
     const c=div("lanc-card");
     c.innerHTML=`
       <div class="lanc-hdr">
@@ -1692,15 +1709,27 @@ function renderSaidasNivel2(el){
         <div class="lanc-row"><span class="lanc-row-label">📅 Data</span><span class="lanc-row-val">${l.data||"—"}</span></div>
         <div class="lanc-row"><span class="lanc-row-label">👤 Responsável</span><span class="lanc-row-val">${l.resp||"—"}</span></div>
         <div class="lanc-row"><span class="lanc-row-label">💳 Pagamento</span><span class="lanc-row-val">${l.forma||"—"}</span></div>
-      </div>
-      <div class="comp-area">
-        <p class="comp-label">Comprovante</p>
-        <div class="comp-drop" onclick="this.querySelector('input').click()">
-          <input type="file" accept="image/*,.pdf" onchange="prevComp(this,${i})" style="display:none">
-          <p class="comp-drop-text">📎 <span>Anexar comprovante</span><br><small>Imagem ou PDF · só visualização</small></p>
-          <img class="comp-preview" id="prev${i}" alt="">
+        <div class="lanc-row">
+          <span class="lanc-row-label">📎 Comprovante</span>
+          <span class="lanc-row-val">
+            ${temComp
+              ? `<span class="comp-badge">✅ Anexado</span>`
+              : `<span class="comp-badge comp-badge-none">Sem comprovante</span>`
+            }
+          </span>
         </div>
-      </div>`;
+      </div>
+      ${temComp ? `
+      <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
+        <a href="${l.comp}" target="_blank" rel="noopener noreferrer" class="comp-btn">
+          <span class="comp-btn-icon">📄</span>
+          Ver comprovante no Drive
+        </a>
+        <a href="${l.comp.replace('/view','/export?format=pdf')}" target="_blank" rel="noopener noreferrer" class="comp-btn" style="margin-left:6px">
+          <span class="comp-btn-icon">⬇</span>
+          Baixar
+        </a>
+      </div>` : ""}`;
     grid.appendChild(c);
   });
   sec.appendChild(grid);
@@ -1720,15 +1749,7 @@ function renderSaidasAtual(){
   },80);
 }
 
-function prevComp(input,idx){
-  const file=input.files[0]; if(!file) return;
-  const prev=document.getElementById("prev"+idx);
-  if(file.type.startsWith("image/")){
-    const r=new FileReader(); r.onload=e=>{prev.src=e.target.result;prev.style.display="block";}; r.readAsDataURL(file);
-  } else {
-    input.parentElement.querySelector(".comp-drop-text").innerHTML='✅ <span>'+file.name+'</span>';
-  }
-}
+// prevComp removido — comprovantes via link do Drive
 
 // ─── UTILITÁRIOS ───
 function div(cls){ const d=document.createElement("div"); d.className=cls; return d; }
