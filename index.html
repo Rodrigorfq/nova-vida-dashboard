@@ -1926,13 +1926,15 @@ function renderFolhaVisao(el, mesNome, mesDados){
 
   // KPIs
   const kpis=div("kpi-grid fade-in");
+  const totalFerias = Object.values(funcs).reduce((s,f)=>s+(f.ferias||0),0);
+  const totalPrevisao = totalSaldo + totalFerias;
   [
-    {label:"Total Folha",      val:totalGeral, icon:"👥", cls:"kpi-saida",  sub:mesNome+" · 2026"},
-    {label:"Total Salários",   val:totalSal,   icon:"💰", cls:"kpi-accent", sub:"bruto mensal"},
-    {label:"Total Benefícios", val:totalBenef, icon:"🎁", cls:"kpi-accent", sub:"Alim. + Transp."},
-    {label:"Total Vales",      val:totalVales, icon:"📋", cls:"kpi-gold",   sub:"descontados no saldo"},
-    {label:"Total Saldo",      val:totalSaldo, icon:"✅", cls:"kpi-entrada",sub:"a pagar"},
-    {label:"Funcionários",     val:Object.keys(funcs).length, icon:"🏢", cls:"kpi-accent", sub:"ativos no mês", isMoney:false},
+    {label:"Total Folha",      val:totalGeral,    icon:"👥", cls:"kpi-saida",  sub:mesNome+" · 2026"},
+    {label:"Total Salários",   val:totalSal,      icon:"💰", cls:"kpi-accent", sub:"bruto mensal"},
+    {label:"Total Benefícios", val:totalBenef,    icon:"🎁", cls:"kpi-accent", sub:"Alim. + Transp."},
+    {label:"Total Vales",      val:totalVales,    icon:"📋", cls:"kpi-gold",   sub:"descontados no saldo"},
+    {label:"Total Saldo",      val:totalSaldo,    icon:"✅", cls:"kpi-entrada",sub:"a pagar este mês"},
+    {label:"Previsão c/ Férias",val:totalPrevisao,icon:"⚠️", cls:"kpi-gold",  sub:"saldo + férias pendentes"},
   ].forEach(k=>{
     const c=div("kpi-card "+k.cls);
     c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${k.isMoney===false?k.val:fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
@@ -1985,7 +1987,12 @@ function renderFolhaVisao(el, mesNome, mesDados){
         ${f.ferias>0?`<div class="func-row"><span class="func-row-label">Férias</span><span class="func-row-val">${fBRL(f.ferias)}</span></div>`:""}
         ${f.ajuda>0?`<div class="func-row"><span class="func-row-label">Ajuda</span><span class="func-row-val">${fBRL(f.ajuda)}</span></div>`:""}
         <div class="func-row"><span class="func-row-label">Vales</span><span class="func-row-val func-row-vale">- ${fBRL(f.vales||0)}</span></div>
-        <div class="func-row" style="border-bottom:none"><span class="func-row-label" style="font-weight:700">Saldo a Pagar</span><span class="func-row-val func-row-saldo" style="font-size:14px">${fBRL(f.saldo||0)}</span></div>
+        <div class="func-row"><span class="func-row-label" style="font-weight:700">Saldo a Pagar</span><span class="func-row-val func-row-saldo" style="font-size:14px">${fBRL(f.saldo||0)}</span></div>
+        ${f.ferias>0?`
+        <div class="func-row" style="border-bottom:none;background:#fefce8;margin:6px -18px -14px;padding:8px 18px;border-top:1.5px dashed #fcd34d;">
+          <span class="func-row-label" style="font-weight:700;color:#92400e">⚠ Previsão c/ Férias</span>
+          <span class="func-row-val" style="color:#92400e;font-size:14px;font-weight:800">${fBRL((f.saldo||0)+(f.ferias||0))}</span>
+        </div>`:`<div class="func-row" style="border-bottom:none"></div>`}
         ${(f.valesHist||[]).length>0?`<div class="func-vales-badge">📋 ${(f.valesHist||[]).length} vale(s) no mês</div>`:""}
       </div>`;
     grid.appendChild(c);
