@@ -1286,6 +1286,7 @@ function render(){
   if(ABA==="geral") renderGeral(el);
   else if(ABA==="entrada") renderEntradas(el);
   else if(ABA==="saida") renderSaidas(el);
+  else if(ABA==="folha") renderFolha(el);
   setTimeout(()=>{
     document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
     document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
