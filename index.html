@@ -1876,24 +1876,23 @@ function renderFolha(el){
   const mesNome = getMesFolha();
   const mesDados = DF[mesNome] || null;
 
-  // Debug
-  console.log("renderFolha - mesNome:", mesNome, "mesDados:", mesDados ? Object.keys(mesDados) : null);
-
-  // Tabs de sub-navegação
   const tabs = document.createElement("div");
   tabs.className = "pessoal-tabs fade-in";
-  tabs.innerHTML = [
-    ["visao","Visão Geral"],
-    ["comparativo","Comparativo"],
-    ["evolucao","Evolução Anual"]
-  ].map(([v,l])=>`<div class="pessoal-tab${PESSOAL_VIEW===v?" ativo":""}" onclick="PESSOAL_VIEW='${v}';renderFolhaAtual()">${l}</div>`).join("");
+  const tabDefs = [["visao","Visao Geral"],["comparativo","Comparativo"],["evolucao","Evolucao Anual"]];
+  tabDefs.forEach(function(pair){
+    const v=pair[0]; const l=pair[1];
+    const t=document.createElement("div");
+    t.className="pessoal-tab"+(PESSOAL_VIEW===v?" ativo":"");
+    t.textContent=l;
+    t.onclick=function(){ PESSOAL_VIEW=v; renderFolhaAtual(); };
+    tabs.appendChild(t);
+  });
   el.appendChild(tabs);
 
-  if(PESSOAL_VIEW==="visao")            renderFolhaVisao(el, mesNome, mesDados);
-  else if(PESSOAL_VIEW==="comparativo") renderFolhaComparativo(el, mesNome);
-  else if(PESSOAL_VIEW==="evolucao")    renderFolhaEvolucao(el);
+  if(PESSOAL_VIEW==="visao") renderFolhaVisao(el,mesNome,mesDados);
+  else if(PESSOAL_VIEW==="comparativo") renderFolhaComparativo(el,mesNome);
+  else if(PESSOAL_VIEW==="evolucao") renderFolhaEvolucao(el);
 }
-
 function renderFolhaAtual(){
   Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
   const el=$("pageBody"); el.innerHTML="";
@@ -1906,11 +1905,10 @@ function renderFolhaAtual(){
 
 // ── VISÃO GERAL DO MÊS ──
 function renderFolhaVisao(el, mesNome, mesDados){
-  console.log("renderFolhaVisao - mesDados:", mesDados, "funcs:", mesDados?.funcionarios);
   if(!mesDados || !mesDados.funcionarios || Object.keys(mesDados.funcionarios).length===0){
     const errDiv = document.createElement("div");
     errDiv.className = "error-state";
-    errDiv.innerHTML = "<p class='error-title'>Dados não disponíveis para " + mesNome + "</p><p class='error-text'>DF["+mesNome+"] = " + JSON.stringify(mesDados).substring(0,200) + "</p>";
+    errDiv.innerHTML = "<p class=\"error-title\">Dados nao disponiveis para " + mesNome + "</p>";
     el.appendChild(errDiv);
     return;
   }
@@ -1955,7 +1953,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
 
   // Cards por funcionário
   const sec=div("fade-in");
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Detalhamento por Funcionário</p></div></div>';
+  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Detalhamento por Funcionario</p></div></div>";
   const grid=div("func-grid");
 
   Object.entries(funcs).forEach(([nome,f])=>{
@@ -2035,7 +2033,7 @@ function renderFolhaComparativo(el, mesNome){
   const funcNames=Object.keys(funcs);
 
   const sec=div("fade-in");
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Comparativo entre Funcionários</p><p class="section-sub">Composição do custo total por pessoa</p></div></div>';
+  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Comparativo entre Funcionarios</p><p class=\"section-sub\">Composicao do custo total por pessoa</p></div></div>";
 
   // Gráfico de barras empilhadas
   const card=div("chart-card");
@@ -2129,7 +2127,7 @@ function renderFolhaEvolucao(el){
   const funcList=[...funcTodos];
 
   const sec=div("fade-in");
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Evolução Anual da Folha</p><p class="section-sub">Custo total por mês ao longo de 2026</p></div></div>';
+  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Evolucao Anual da Folha</p><p class=\"section-sub\">Custo total por mes ao longo de 2026</p></div></div>";
 
   // Gráfico de linhas evolução total
   const card1=div("chart-card");
@@ -2144,7 +2142,7 @@ function renderFolhaEvolucao(el){
 
   // Tabela resumo anual
   const sec2=div("fade-in");
-  sec2.innerHTML='<div class="section-hdr"><div><p class="section-title">Resumo Anual por Funcionário</p></div></div>';
+  sec2.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Resumo Anual por Funcionario</p></div></div>";
   const tbl=div("table-card");
   let thMeses=mesesComDados.map(m=>`<th class="td-right">${m.slice(0,3)}</th>`).join("");
   tbl.innerHTML=`<table><thead><tr><th>Funcionário</th>${thMeses}<th class="td-right">TOTAL ANUAL</th></tr></thead><tbody id="tblFuncAnual"></tbody></table>`;
