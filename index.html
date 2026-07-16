@@ -793,6 +793,76 @@ tr:hover td { background: var(--bg); }
   border-color: #e2e8f0;
 }
 
+/* ─── PESSOAL / FOLHA ─── */
+.func-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.func-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  transition: transform .2s, box-shadow .2s;
+}
+.func-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+
+.func-card-hdr {
+  padding: 16px 18px;
+  display: flex; align-items: center; gap: 12px;
+  border-bottom: 1px solid var(--border);
+}
+.func-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.func-nome { font-size: 14px; font-weight: 700; color: var(--navy); }
+.func-tipo { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.func-total-hdr { margin-left: auto; text-align: right; }
+.func-total-val { font-size: 16px; font-weight: 800; }
+.func-total-label { font-size: 10px; color: var(--muted); }
+
+.func-card-body { padding: 14px 18px; }
+.func-row {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 12px; padding: 5px 0;
+  border-bottom: 1px solid var(--border);
+}
+.func-row:last-child { border-bottom: none; }
+.func-row-label { color: var(--muted); }
+.func-row-val { font-weight: 600; color: var(--navy); }
+.func-row-vale { color: #92400e; font-weight: 700; }
+.func-row-saldo { color: var(--entrada); font-weight: 700; }
+
+.func-vales-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px;
+  font-size: 10px; font-weight: 700;
+  background: #fef3c7; color: #92400e;
+  border: 1px solid #fcd34d; margin-top: 8px;
+}
+
+.pessoal-tabs {
+  display: flex; gap: 4px;
+  background: var(--bg); border-radius: var(--r-sm);
+  padding: 4px; margin-bottom: 20px; width: fit-content;
+}
+.pessoal-tab {
+  padding: 8px 18px; border-radius: 6px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; color: var(--muted);
+  transition: all .2s;
+}
+.pessoal-tab.ativo {
+  background: var(--white); color: var(--navy);
+  box-shadow: var(--shadow-sm);
+}
+
 /* ─── DRILL-DOWN ─── */
 .drill-header {
   display: flex; align-items: center; gap: 12px;
@@ -976,6 +1046,9 @@ tr:hover td { background: var(--bg); }
       <div class="nav-item" id="navSaida" onclick="trocarAba('saida')">
         <span class="nav-dot" style="background:var(--saida)"></span> Saídas
       </div>
+      <div class="nav-item" id="navFolha" onclick="trocarAba('folha')">
+        <span class="nav-dot" style="background:#d97706"></span> Pessoal
+      </div>
     </nav>
 
     <div class="sidebar-bottom">
@@ -1035,6 +1108,7 @@ tr:hover td { background: var(--bg); }
 // ═══════════════════════════════════════
 const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
 const URL_ENTRADAS = "https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec";
+const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbwYyZu_XGeZQYdgw8KotirWtm0JWMH4NGYvFswTasbfKG1theXvWaUDVJJazzyJK1NKNA/exec";
 const SENHA_CORRETA = "ICNV@rm2026";
 const EMAILS_AUTH = ["rodrigo.digofq@gmail.com","icnvrochamiranda@gmail.com","ronaldodq@gmail.com"];
 const NOMES = {"rodrigo.digofq@gmail.com":"Rodrigo","icnvrochamiranda@gmail.com":"Igreja","ronaldodq@gmail.com":"Pr. Ronaldo"};
@@ -1042,7 +1116,7 @@ const MAX_TENT = 3;
 const SESSAO_DIAS = 7;
 
 // Estado
-let DD = {}, DE = {}, MES = "", ABA = "geral", visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
+let DD = {}, DE = {}, DF = {}, MES = "", ABA = "geral", visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
 let DRILL = { level: 0, cat: null, desc: null };
 let charts = {};
 
@@ -1148,16 +1222,20 @@ function fazerLogout(){
 async function carregarTudo(){
   $("pageBody").innerHTML='<div class="loading-state"><div class="loader"></div><p class="loader-text">Carregando dados financeiros...</p></div>';
   try{
-    const [rD, rE] = await Promise.all([
+    const [rD, rE, rF] = await Promise.all([
       fetch(URL_DESPESAS+"?t="+Date.now(),{method:"GET",redirect:"follow"}),
       URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com")
         ? fetch(URL_ENTRADAS+"?t="+Date.now(),{method:"GET",redirect:"follow"})
+        : Promise.resolve(null),
+      URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com")
+        ? fetch(URL_FOLHA+"?t="+Date.now(),{method:"GET",redirect:"follow"})
         : Promise.resolve(null)
     ]);
     const jD = await rD.json();
     if(jD.erro) throw new Error(jD.mensagem||jD.erro);
     DD = jD;
     if(rE){ try{ const jE=await rE.json(); if(!jE.erro) DE=jE; }catch(e){} }
+    if(rF){ try{ const jF=await rF.json(); if(!jF.erro) DF=jF; }catch(e){} }
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); sel.appendChild(o); });
@@ -1172,11 +1250,16 @@ function trocarMes(){ MES=$("mesSelect").value; render(); }
 
 function trocarAba(aba){
   ABA=aba;
-  ["geral","entrada","saida"].forEach(a=>{
+  ["geral","entrada","saida","folha"].forEach(a=>{
     const n=$("nav"+a.charAt(0).toUpperCase()+a.slice(1));
-    n.className="nav-item"+(aba===a?" active":"");
+    if(n) n.className="nav-item"+(aba===a?" active":"");
   });
-  const titles={geral:["Visão Geral","Resumo financeiro consolidado"],entrada:["Entradas","Arrecadação e receitas"],saida:["Saídas","Despesas e custos"]};
+  const titles={
+    geral:  ["Visão Geral","Resumo financeiro consolidado"],
+    entrada:["Entradas","Arrecadação e receitas"],
+    saida:  ["Saídas","Despesas e custos"],
+    folha:  ["Pessoal","Folha de pagamento e funcionários"],
+  };
   $("topbarTitle").textContent=titles[aba][0];
   $("topbarSub").textContent=titles[aba][1];
   render();
@@ -1750,6 +1833,399 @@ function renderSaidasAtual(){
 }
 
 // prevComp removido — comprovantes via link do Drive
+
+// ─── PESSOAL / FOLHA DE PAGAMENTO ───
+const FUNC_CORES = {
+  "Alexandre":   {bg:"#3730a3", light:"#eef2ff", ft:"#3730a3"},
+  "Carmen":      {bg:"#065f46", light:"#ecfdf5", ft:"#065f46"},
+  "Luis":        {bg:"#0369a1", light:"#e0f2fe", ft:"#0369a1"},
+  "Rodrigo":     {bg:"#c2410c", light:"#fff7ed", ft:"#c2410c"},
+  "Vinicius":    {bg:"#166534", light:"#f0fdf4", ft:"#166534"},
+  "Edilaine":    {bg:"#6b21a8", light:"#fdf4ff", ft:"#6b21a8"},
+  "Adv.Douglas": {bg:"#92400e", light:"#fffbeb", ft:"#92400e"},
+};
+
+const FUNC_TIPO = {
+  "Alexandre":   "CLT — CNPJ da Igreja",
+  "Carmen":      "CLT — CNPJ da Igreja",
+  "Luis":        "CLT — CNPJ da Igreja",
+  "Rodrigo":     "CLT — CNPJ da Igreja",
+  "Vinicius":    "CLT — CNPJ da Igreja",
+  "Edilaine":    "CPF do Presidente",
+  "Adv.Douglas": "Honorários",
+};
+
+let PESSOAL_VIEW = "visao"; // "visao" | "comparativo" | "evolucao"
+
+function getMesFolha(){
+  // Converter nome do mês de "Despesas(JUNHO)" → "JUNHO"
+  return MES.replace("Despesas(","").replace(")","").replace("Despesas ","").trim().toUpperCase();
+}
+
+function renderFolha(el){
+  const mesNome = getMesFolha();
+  const mesDados = DF[mesNome] || null;
+
+  // Tabs de sub-navegação
+  const tabs = div("pessoal-tabs fade-in");
+  tabs.innerHTML=`
+    <div class="pessoal-tab ${PESSOAL_VIEW==="visao"?"ativo":""}" onclick="PESSOAL_VIEW='visao';renderFolhaAtual()">Visão Geral</div>
+    <div class="pessoal-tab ${PESSOAL_VIEW==="comparativo"?"ativo":""}" onclick="PESSOAL_VIEW='comparativo';renderFolhaAtual()">Comparativo</div>
+    <div class="pessoal-tab ${PESSOAL_VIEW==="evolucao"?"ativo":""}" onclick="PESSOAL_VIEW='evolucao';renderFolhaAtual()">Evolução Anual</div>`;
+  el.appendChild(tabs);
+
+  if(PESSOAL_VIEW==="visao")       renderFolhaVisao(el, mesNome, mesDados);
+  else if(PESSOAL_VIEW==="comparativo") renderFolhaComparativo(el, mesNome);
+  else if(PESSOAL_VIEW==="evolucao")    renderFolhaEvolucao(el);
+}
+
+function renderFolhaAtual(){
+  Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
+  const el=$("pageBody"); el.innerHTML="";
+  renderFolha(el);
+  setTimeout(()=>{
+    document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
+    aplicarOcultamento();
+  },80);
+}
+
+// ── VISÃO GERAL DO MÊS ──
+function renderFolhaVisao(el, mesNome, mesDados){
+  if(!mesDados || Object.keys(mesDados.funcionarios||{}).length===0){
+    el.innerHTML+=`<div class="error-state"><p class="error-title">Dados de pessoal não disponíveis para ${mesNome}</p><p class="error-text">Configure o Apps Script da Folha de Pagamento e tente novamente.</p></div>`;
+    return;
+  }
+  const funcs = mesDados.funcionarios || {};
+  const totalGeral = Object.values(funcs).reduce((s,f)=>s+(f.total||0),0);
+  const totalVales = Object.values(funcs).reduce((s,f)=>s+(f.vales||0),0);
+  const totalSaldo = Object.values(funcs).reduce((s,f)=>s+(f.saldo||0),0);
+  const totalSal   = Object.values(funcs).reduce((s,f)=>s+(f.salario||0),0);
+  const totalBenef = Object.values(funcs).reduce((s,f)=>s+(f.auxAlim||0)+(f.transporte||0),0);
+
+  // KPIs
+  const kpis=div("kpi-grid fade-in");
+  [
+    {label:"Total Folha",      val:totalGeral, icon:"👥", cls:"kpi-saida",  sub:mesNome+" · 2026"},
+    {label:"Total Salários",   val:totalSal,   icon:"💰", cls:"kpi-accent", sub:"bruto mensal"},
+    {label:"Total Benefícios", val:totalBenef, icon:"🎁", cls:"kpi-accent", sub:"Alim. + Transp."},
+    {label:"Total Vales",      val:totalVales, icon:"📋", cls:"kpi-gold",   sub:"descontados no saldo"},
+    {label:"Total Saldo",      val:totalSaldo, icon:"✅", cls:"kpi-entrada",sub:"a pagar"},
+    {label:"Funcionários",     val:Object.keys(funcs).length, icon:"🏢", cls:"kpi-accent", sub:"ativos no mês", isMoney:false},
+  ].forEach(k=>{
+    const c=div("kpi-card "+k.cls);
+    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${k.isMoney===false?k.val:fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
+    kpis.appendChild(c);
+  });
+  el.appendChild(kpis);
+
+  // Gráficos: pizza distribuição + barras por funcionário
+  const g=div("chart-grid-2 fade-in");
+
+  const cPiz=div("chart-card");
+  cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Distribuição por Funcionário</p><p class="chart-card-sub">${mesNome} · Total do Mês</p></div>
+    <div class="chart-wrap" style="height:240px"><canvas id="cFuncPizza"></canvas>
+    <div class="chart-center-label"><p class="ccl-val">${fK(totalGeral)}</p><p class="ccl-sub">total</p></div></div>
+    <div class="legend" id="legFuncPizza"></div>`;
+
+  const cBar=div("chart-card");
+  cBar.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Salário × Vales × Saldo</p><p class="chart-card-sub">${mesNome} · por funcionário</p></div>
+    <div style="height:280px"><canvas id="cFuncBar"></canvas></div>`;
+
+  g.appendChild(cPiz); g.appendChild(cBar);
+  el.appendChild(g);
+
+  // Cards por funcionário
+  const sec=div("fade-in");
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Detalhamento por Funcionário</p></div></div>';
+  const grid=div("func-grid");
+
+  Object.entries(funcs).forEach(([nome,f])=>{
+    const cor = FUNC_CORES[nome] || {bg:"#334155",light:"#f8fafc",ft:"#334155"};
+    const ini = nome.charAt(0).toUpperCase();
+    const c=div("func-card");
+    c.innerHTML=`
+      <div class="func-card-hdr">
+        <div class="func-avatar" style="background:${cor.bg}">${ini}</div>
+        <div>
+          <p class="func-nome">${nome}</p>
+          <p class="func-tipo">${FUNC_TIPO[nome]||"Funcionário"}</p>
+        </div>
+        <div class="func-total-hdr">
+          <p class="func-total-val" style="color:${cor.ft}">${fBRL(f.total||0)}</p>
+          <p class="func-total-label">total do mês</p>
+        </div>
+      </div>
+      <div class="func-card-body">
+        <div class="func-row"><span class="func-row-label">Salário</span><span class="func-row-val">${fBRL(f.salario||0)}</span></div>
+        <div class="func-row"><span class="func-row-label">Aux. Alimentação</span><span class="func-row-val">${fBRL(f.auxAlim||0)}</span></div>
+        <div class="func-row"><span class="func-row-label">Transporte</span><span class="func-row-val">${fBRL(f.transporte||0)}</span></div>
+        ${f.parte13>0?`<div class="func-row"><span class="func-row-label">Parte 13°</span><span class="func-row-val">${fBRL(f.parte13)}</span></div>`:""}
+        ${f.ferias>0?`<div class="func-row"><span class="func-row-label">Férias</span><span class="func-row-val">${fBRL(f.ferias)}</span></div>`:""}
+        ${f.ajuda>0?`<div class="func-row"><span class="func-row-label">Ajuda</span><span class="func-row-val">${fBRL(f.ajuda)}</span></div>`:""}
+        <div class="func-row"><span class="func-row-label">Vales</span><span class="func-row-val func-row-vale">- ${fBRL(f.vales||0)}</span></div>
+        <div class="func-row" style="border-bottom:none"><span class="func-row-label" style="font-weight:700">Saldo a Pagar</span><span class="func-row-val func-row-saldo" style="font-size:14px">${fBRL(f.saldo||0)}</span></div>
+        ${(f.valesHist||[]).length>0?`<div class="func-vales-badge">📋 ${(f.valesHist||[]).length} vale(s) no mês</div>`:""}
+      </div>`;
+    grid.appendChild(c);
+  });
+  sec.appendChild(grid);
+  el.appendChild(sec);
+
+  setTimeout(()=>{
+    // Pizza
+    const funcNames=Object.keys(funcs);
+    const funcTotais=funcNames.map(n=>funcs[n].total||0);
+    const funcCores=funcNames.map(n=>(FUNC_CORES[n]||{bg:"#334155"}).bg);
+    charts.fPiz=buildPizza("cFuncPizza",funcNames,funcTotais,funcCores,"ccFuncPiz",totalGeral,null);
+    buildLegend("legFuncPizza",funcNames.map((n,i)=>({l:n,v:funcTotais[i],c:funcCores[i]})),totalGeral);
+
+    // Barras agrupadas
+    const canvas=document.getElementById("cFuncBar"); if(!canvas) return;
+    charts.fBar=new Chart(canvas,{
+      type:"bar",
+      data:{
+        labels:funcNames,
+        datasets:[
+          {label:"Salário",   data:funcNames.map(n=>funcs[n].salario||0), backgroundColor:"rgba(79,70,229,.8)",  borderRadius:4},
+          {label:"Vales",     data:funcNames.map(n=>funcs[n].vales||0),   backgroundColor:"rgba(217,119,6,.8)",  borderRadius:4},
+          {label:"Saldo",     data:funcNames.map(n=>funcs[n].saldo||0),   backgroundColor:"rgba(5,150,105,.8)",  borderRadius:4},
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        animation:{duration:800,easing:"easeOutQuart"},
+        plugins:{legend:{position:"top",labels:{font:{size:11,weight:"600"},usePointStyle:true,pointStyleWidth:10,padding:16}},
+          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
+            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
+          y:{grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
+        }
+      }
+    });
+  },120);
+}
+
+// ── COMPARATIVO ENTRE FUNCIONÁRIOS ──
+function renderFolhaComparativo(el, mesNome){
+  const mesDados = DF[mesNome] || null;
+  if(!mesDados || !mesDados.funcionarios){
+    el.innerHTML+=`<div class="error-state"><p class="error-title">Sem dados para ${mesNome}</p></div>`; return;
+  }
+  const funcs=mesDados.funcionarios;
+  const funcNames=Object.keys(funcs);
+
+  const sec=div("fade-in");
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Comparativo entre Funcionários</p><p class="section-sub">Composição do custo total por pessoa</p></div></div>';
+
+  // Gráfico de barras empilhadas
+  const card=div("chart-card");
+  card.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Composição por Funcionário</p><p class="chart-card-sub">Salário + Aux.Alim. + Transporte + Extras</p></div><div style="height:320px"><canvas id="cFuncStack"></canvas></div>`;
+  sec.appendChild(card);
+
+  // Tabela comparativa
+  const tbl=div("table-card");
+  tbl.innerHTML=`<table><thead><tr>
+    <th>Funcionário</th><th>Vínculo</th><th class="td-right">Salário</th>
+    <th class="td-right">Benefícios</th><th class="td-right">Extras</th>
+    <th class="td-right">Total</th><th class="td-right">Vales</th><th class="td-right">Saldo</th>
+  </tr></thead><tbody id="tblFuncComp"></tbody></table>`;
+  sec.appendChild(tbl);
+  el.appendChild(sec);
+
+  const tb=tbl.querySelector("#tblFuncComp");
+  let totSal=0,totBen=0,totExt=0,totTot=0,totVal=0,totSal2=0;
+  funcNames.forEach(nome=>{
+    const f=funcs[nome]; const cor=(FUNC_CORES[nome]||{ft:"#334155"}).ft;
+    const benef=(f.auxAlim||0)+(f.transporte||0);
+    const extras=(f.parte13||0)+(f.ferias||0)+(f.ajuda||0);
+    totSal+=f.salario||0; totBen+=benef; totExt+=extras;
+    totTot+=f.total||0; totVal+=f.vales||0; totSal2+=f.saldo||0;
+    const tr=document.createElement("tr");
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${(FUNC_CORES[nome]||{bg:"#334155"}).bg};flex-shrink:0"></div>
+      <span class="td-bold">${nome}</span></div></td>
+      <td style="font-size:11px;color:var(--muted)">${FUNC_TIPO[nome]||""}</td>
+      <td class="td-right">${fBRL(f.salario||0)}</td>
+      <td class="td-right">${fBRL(benef)}</td>
+      <td class="td-right">${fBRL(extras)}</td>
+      <td class="td-right td-bold" style="color:${cor}">${fBRL(f.total||0)}</td>
+      <td class="td-right" style="color:#92400e;font-weight:700">${fBRL(f.vales||0)}</td>
+      <td class="td-right td-green">${fBRL(f.saldo||0)}</td>`;
+    tb.appendChild(tr);
+  });
+  const trTot=document.createElement("tr");
+  trTot.style.background="var(--bg)";
+  trTot.innerHTML=`<td class="td-bold" colspan="2">TOTAL</td>
+    <td class="td-right td-bold">${fBRL(totSal)}</td>
+    <td class="td-right td-bold">${fBRL(totBen)}</td>
+    <td class="td-right td-bold">${fBRL(totExt)}</td>
+    <td class="td-right td-bold" style="color:var(--saida)">${fBRL(totTot)}</td>
+    <td class="td-right" style="color:#92400e;font-weight:700">${fBRL(totVal)}</td>
+    <td class="td-right td-green">${fBRL(totSal2)}</td>`;
+  tb.appendChild(trTot);
+
+  setTimeout(()=>{
+    const canvas=document.getElementById("cFuncStack"); if(!canvas) return;
+    const cores=funcNames.map(n=>(FUNC_CORES[n]||{bg:"#334155"}).bg);
+    charts.fStack=new Chart(canvas,{
+      type:"bar",
+      data:{
+        labels:funcNames,
+        datasets:[
+          {label:"Salário",    data:funcNames.map(n=>funcs[n].salario||0),  backgroundColor:"rgba(79,70,229,.85)",  borderRadius:0},
+          {label:"Aux. Alim.", data:funcNames.map(n=>funcs[n].auxAlim||0),  backgroundColor:"rgba(5,150,105,.85)",  borderRadius:0},
+          {label:"Transporte", data:funcNames.map(n=>funcs[n].transporte||0),backgroundColor:"rgba(8,145,178,.85)", borderRadius:0},
+          {label:"Extras",     data:funcNames.map(n=>(funcs[n].parte13||0)+(funcs[n].ferias||0)+(funcs[n].ajuda||0)),backgroundColor:"rgba(217,119,6,.85)",borderRadius:4},
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{
+          legend:{position:"top",labels:{font:{size:11,weight:"600"},usePointStyle:true,pointStyleWidth:10,padding:16}},
+          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
+            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}
+        },
+        scales:{
+          x:{stacked:true,grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
+          y:{stacked:true,grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
+        },
+        animation:{duration:800,easing:"easeOutQuart"}
+      }
+    });
+  },120);
+}
+
+// ── EVOLUÇÃO ANUAL ──
+function renderFolhaEvolucao(el){
+  const MESES_ORDER=["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+  const mesesComDados=MESES_ORDER.filter(m=>DF[m] && Object.keys(DF[m].funcionarios||{}).length>0);
+
+  if(mesesComDados.length===0){
+    el.innerHTML+=`<div class="error-state"><p class="error-title">Sem dados anuais disponíveis</p></div>`; return;
+  }
+
+  const funcTodos=new Set();
+  mesesComDados.forEach(m=>Object.keys(DF[m].funcionarios||{}).forEach(f=>funcTodos.add(f)));
+  const funcList=[...funcTodos];
+
+  const sec=div("fade-in");
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Evolução Anual da Folha</p><p class="section-sub">Custo total por mês ao longo de 2026</p></div></div>';
+
+  // Gráfico de linhas evolução total
+  const card1=div("chart-card");
+  card1.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Total da Folha por Mês</p><p class="chart-card-sub">Evolução mensal · 2026</p></div><div style="height:280px"><canvas id="cFolhaLinha"></canvas></div>`;
+  sec.appendChild(card1);
+
+  // Gráfico de linhas por funcionário
+  const card2=div("chart-card");
+  card2.style.marginTop="16px";
+  card2.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Evolução por Funcionário</p><p class="chart-card-sub">Total mensal de cada pessoa</p></div><div style="height:300px"><canvas id="cFuncLinha"></canvas></div>`;
+  sec.appendChild(card2);
+
+  // Tabela resumo anual
+  const sec2=div("fade-in");
+  sec2.innerHTML='<div class="section-hdr"><div><p class="section-title">Resumo Anual por Funcionário</p></div></div>';
+  const tbl=div("table-card");
+  let thMeses=mesesComDados.map(m=>`<th class="td-right">${m.slice(0,3)}</th>`).join("");
+  tbl.innerHTML=`<table><thead><tr><th>Funcionário</th>${thMeses}<th class="td-right">TOTAL ANUAL</th></tr></thead><tbody id="tblFuncAnual"></tbody></table>`;
+  sec2.appendChild(tbl);
+
+  el.appendChild(sec);
+  el.appendChild(sec2);
+
+  const tb=tbl.querySelector("#tblFuncAnual");
+  funcList.forEach(nome=>{
+    const cor=(FUNC_CORES[nome]||{bg:"#334155",ft:"#334155"});
+    let totalAnual=0;
+    const tr=document.createElement("tr");
+    let tds=mesesComDados.map(m=>{
+      const v=(DF[m]?.funcionarios?.[nome]?.total)||0;
+      totalAnual+=v;
+      return `<td class="td-right" style="font-size:12px">${v>0?fBRL(v):"—"}</td>`;
+    }).join("");
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
+      <div style="width:10px;height:10px;border-radius:50%;background:${cor.bg};flex-shrink:0"></div>
+      <span class="td-bold">${nome}</span></div></td>${tds}
+      <td class="td-right td-bold" style="color:${cor.ft}">${fBRL(totalAnual)}</td>`;
+    tb.appendChild(tr);
+  });
+  // Linha total
+  const trTot=document.createElement("tr"); trTot.style.background="var(--bg)";
+  let totAnualGeral=0;
+  let tdsTot=mesesComDados.map(m=>{
+    const v=Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.total||0),0);
+    totAnualGeral+=v;
+    return `<td class="td-right td-bold" style="color:var(--saida)">${fBRL(v)}</td>`;
+  }).join("");
+  trTot.innerHTML=`<td class="td-bold">TOTAL</td>${tdsTot}<td class="td-right td-bold" style="color:var(--saida)">${fBRL(totAnualGeral)}</td>`;
+  tb.appendChild(trTot);
+
+  setTimeout(()=>{
+    // Linha total geral
+    const c1=document.getElementById("cFolhaLinha"); if(!c1) return;
+    charts.fLinha=new Chart(c1,{
+      type:"line",
+      data:{
+        labels:mesesComDados.map(m=>m.slice(0,3)),
+        datasets:[{
+          label:"Total Folha",
+          data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.total||0),0)),
+          borderColor:"#4f46e5", backgroundColor:"rgba(79,70,229,.08)",
+          borderWidth:2.5, pointBackgroundColor:"#4f46e5",
+          pointRadius:5, pointHoverRadius:7, tension:.4, fill:true,
+        },{
+          label:"Saldo a Pagar",
+          data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.saldo||0),0)),
+          borderColor:"#059669", backgroundColor:"rgba(5,150,105,.05)",
+          borderWidth:2, pointBackgroundColor:"#059669",
+          pointRadius:4, pointHoverRadius:6, tension:.4, fill:false, borderDash:[5,4],
+        }]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:"index",intersect:false},
+        plugins:{legend:{position:"top",labels:{font:{size:11,weight:"600"},usePointStyle:true,pointStyleWidth:10,padding:16}},
+          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
+            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
+          y:{grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
+        },
+        animation:{duration:900,easing:"easeOutQuart"}
+      }
+    });
+
+    // Linhas por funcionário
+    const c2=document.getElementById("cFuncLinha"); if(!c2) return;
+    charts.fLinha2=new Chart(c2,{
+      type:"line",
+      data:{
+        labels:mesesComDados.map(m=>m.slice(0,3)),
+        datasets:funcList.map(nome=>({
+          label:nome,
+          data:mesesComDados.map(m=>(DF[m]?.funcionarios?.[nome]?.total)||0),
+          borderColor:(FUNC_CORES[nome]||{bg:"#334155"}).bg,
+          backgroundColor:"transparent",
+          borderWidth:2, pointRadius:4, pointHoverRadius:6,
+          tension:.3,
+        }))
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        interaction:{mode:"index",intersect:false},
+        plugins:{legend:{position:"top",labels:{font:{size:10,weight:"600"},usePointStyle:true,pointStyleWidth:8,padding:12}},
+          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
+            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}},
+        scales:{
+          x:{grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
+          y:{grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
+        },
+        animation:{duration:900,easing:"easeOutQuart"}
+      }
+    });
+  },120);
+}
 
 // ─── UTILITÁRIOS ───
 function div(cls){ const d=document.createElement("div"); d.className=cls; return d; }
