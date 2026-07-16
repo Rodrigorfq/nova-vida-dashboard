@@ -793,6 +793,160 @@ tr:hover td { background: var(--bg); }
   border-color: #e2e8f0;
 }
 
+/* ─── COMPROVANTES / VINCULADOR ─── */
+.comp-vinc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.comp-painel {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  max-height: 70vh;
+}
+
+.comp-painel-hdr {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.comp-painel-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+}
+
+.comp-painel-count {
+  font-size: 11px;
+  color: var(--muted);
+  background: var(--border);
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.comp-painel-body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px;
+}
+
+.comp-desp-item {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all .15s;
+  position: relative;
+}
+
+.comp-desp-item:hover { border-color: var(--accent); background: var(--accent2); }
+.comp-desp-item.selecionado { border-color: var(--accent); background: var(--accent2); }
+.comp-desp-item.tem-comp { border-color: #a7f3d0; background: var(--entrada3); }
+
+.comp-desp-desc { font-size: 13px; font-weight: 600; color: var(--navy); margin-bottom: 3px; }
+.comp-desp-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; }
+.comp-desp-val  { font-size: 12px; font-weight: 700; color: var(--saida); margin-left: auto; }
+
+.comp-desp-badge {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 99px;
+}
+.comp-badge-ok  { background: #d1fae5; color: #065f46; }
+.comp-badge-sem { background: #f1f5f9; color: #94a3b8; }
+
+.comp-arq-item {
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--border);
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all .15s;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.comp-arq-item:hover { border-color: #0891b2; background: #f0f9ff; }
+.comp-arq-item.selecionado { border-color: #0891b2; background: #e0f2fe; }
+
+.comp-arq-icon { font-size: 22px; flex-shrink: 0; }
+.comp-arq-nome { font-size: 12px; font-weight: 600; color: var(--navy); margin-bottom: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.comp-arq-meta { font-size: 10px; color: var(--muted); }
+
+.comp-action-bar {
+  background: var(--navy);
+  border-radius: var(--r);
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  animation: slideDown .3s ease;
+}
+
+@keyframes slideDown { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+
+.comp-action-info { color: rgba(255,255,255,.8); font-size: 13px; }
+.comp-action-info strong { color: #fff; display: block; font-size: 14px; margin-bottom: 2px; }
+
+.comp-action-btns { display: flex; gap: 8px; flex-shrink: 0; }
+
+.comp-btn-vincular {
+  background: #059669; border: none; border-radius: var(--r-sm);
+  padding: 10px 20px; font-size: 13px; font-weight: 700;
+  color: #fff; cursor: pointer; font-family: inherit;
+  transition: opacity .15s;
+}
+.comp-btn-vincular:hover { opacity: .9; }
+.comp-btn-vincular:disabled { opacity: .5; cursor: not-allowed; }
+
+.comp-btn-cancel {
+  background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2);
+  border-radius: var(--r-sm); padding: 10px 16px;
+  font-size: 13px; color: rgba(255,255,255,.8);
+  cursor: pointer; font-family: inherit; transition: background .15s;
+}
+.comp-btn-cancel:hover { background: rgba(255,255,255,.15); }
+
+.comp-mes-select {
+  background: var(--white); border: 1px solid var(--border);
+  border-radius: var(--r-sm); padding: 8px 14px;
+  font-size: 13px; font-weight: 600; color: var(--navy);
+  cursor: pointer; font-family: inherit; margin-bottom: 16px;
+}
+
+.comp-grupo-label {
+  font-size: 10px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .08em; color: var(--muted);
+  padding: 8px 4px 4px; margin-bottom: 4px;
+}
+
+.comp-toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 9999;
+  background: #059669; color: #fff;
+  padding: 12px 20px; border-radius: var(--r-sm);
+  font-size: 14px; font-weight: 600;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn .3s ease;
+}
+.comp-toast.erro { background: var(--saida); }
+@keyframes toastIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+
 /* ─── PESSOAL / FOLHA ─── */
 .func-grid {
   display: grid;
@@ -1049,6 +1203,9 @@ tr:hover td { background: var(--bg); }
       <div class="nav-item" id="navFolha" onclick="trocarAba('folha')">
         <span class="nav-dot" style="background:#d97706"></span> Pessoal
       </div>
+      <div class="nav-item" id="navComprov" onclick="trocarAba('comprov')">
+        <span class="nav-dot" style="background:#0891b2"></span> Comprovantes
+      </div>
     </nav>
 
     <div class="sidebar-bottom">
@@ -1109,6 +1266,7 @@ tr:hover td { background: var(--bg); }
 const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
 const URL_ENTRADAS = "https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec";
 const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbzdNX1EZHKBZvgF_cTjmZaPTVQPlQiVCML53eQaRG27CnomXdYgcgFlHGbayih3N1f6VA/exec";
+const URL_COMPROV = "https://script.google.com/macros/s/AKfycbwdYGXOxRmWZ-85gui4zBj5oKeLEcQWB0Bu16aPR1erB248BoQijPYb7hVfcmigCESeHA/exec";
 const SENHA_CORRETA = "ICNV@rm2026";
 const EMAILS_AUTH = ["rodrigo.digofq@gmail.com","icnvrochamiranda@gmail.com","ronaldodq@gmail.com"];
 const NOMES = {"rodrigo.digofq@gmail.com":"Rodrigo","icnvrochamiranda@gmail.com":"Igreja","ronaldodq@gmail.com":"Pr. Ronaldo"};
@@ -1260,15 +1418,16 @@ function trocarMes(){ MES=$("mesSelect").value; render(); }
 
 function trocarAba(aba){
   ABA=aba;
-  ["geral","entrada","saida","folha"].forEach(a=>{
+  ["geral","entrada","saida","folha","comprov"].forEach(a=>{
     const n=$("nav"+a.charAt(0).toUpperCase()+a.slice(1));
     if(n) n.className="nav-item"+(aba===a?" active":"");
   });
   const titles={
-    geral:  ["Visão Geral","Resumo financeiro consolidado"],
-    entrada:["Entradas","Arrecadação e receitas"],
-    saida:  ["Saídas","Despesas e custos"],
-    folha:  ["Pessoal","Folha de pagamento e funcionários"],
+    geral:   ["Visão Geral","Resumo financeiro consolidado"],
+    entrada: ["Entradas","Arrecadação e receitas"],
+    saida:   ["Saídas","Despesas e custos"],
+    folha:   ["Pessoal","Folha de pagamento e funcionários"],
+    comprov: ["Comprovantes","Vincular arquivos do Drive às despesas"],
   };
   $("topbarTitle").textContent=titles[aba][0];
   $("topbarSub").textContent=titles[aba][1];
@@ -1287,6 +1446,7 @@ function render(){
   else if(ABA==="entrada") renderEntradas(el);
   else if(ABA==="saida") renderSaidas(el);
   else if(ABA==="folha") renderFolha(el);
+  else if(ABA==="comprov") renderComprovantes(el);
   setTimeout(()=>{
     document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
     document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
@@ -2289,6 +2449,356 @@ function renderFolhaEvolucao(el){
       }
     });
   },120);
+}
+
+// ─── COMPROVANTES / VINCULADOR ───
+let COMPROV_STATE = {
+  mesSel: "",
+  despSel: null,
+  arqSel: null,
+  despesas: {},
+  arquivos: {},
+  carregando: false,
+};
+
+function renderComprovantes(el){
+  // Seletor de mês
+  const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
+                 "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+  if(!COMPROV_STATE.mesSel) COMPROV_STATE.mesSel = getMesNome();
+
+  // Header com seletor
+  const hdr = div("fade-in");
+  hdr.style.cssText = "margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;";
+  hdr.innerHTML = `
+    <div>
+      <p style="font-size:18px;font-weight:800;color:var(--navy)">Vinculador de Comprovantes</p>
+      <p style="font-size:13px;color:var(--muted);margin-top:2px">Selecione uma despesa e um arquivo para vincular</p>
+    </div>`;
+
+  const sel = document.createElement("select");
+  sel.className = "comp-mes-select";
+  sel.style.marginBottom = "0";
+  MESES.forEach(m => {
+    const opt = document.createElement("option");
+    opt.value = m; opt.textContent = m;
+    if(m === COMPROV_STATE.mesSel) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.onchange = function(){ COMPROV_STATE.mesSel = this.value; COMPROV_STATE.despSel = null; COMPROV_STATE.arqSel = null; carregarDadosComprov(); };
+  hdr.appendChild(sel);
+
+  const btnRecarregar = document.createElement("button");
+  btnRecarregar.className = "topbar-btn";
+  btnRecarregar.innerHTML = "🔄 Recarregar";
+  btnRecarregar.onclick = function(){ COMPROV_STATE.despSel=null; COMPROV_STATE.arqSel=null; carregarDadosComprov(); };
+  hdr.appendChild(btnRecarregar);
+  el.appendChild(hdr);
+
+  // Barra de ação (aparece quando ambos selecionados)
+  const actionBar = document.createElement("div");
+  actionBar.id = "compActionBar";
+  el.appendChild(actionBar);
+
+  // Grid dois painéis
+  const grid = div("comp-vinc-grid fade-in");
+
+  // Painel esquerdo — despesas
+  const painelDesp = div("comp-painel");
+  painelDesp.innerHTML = `
+    <div class="comp-painel-hdr">
+      <span class="comp-painel-title">📋 Despesas</span>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span id="compFiltroComp" style="font-size:11px;cursor:pointer;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#64748b" onclick="toggleFiltroComprov()">Mostrar todas</span>
+        <span class="comp-painel-count" id="compDespCount">—</span>
+      </div>
+    </div>
+    <div class="comp-painel-body" id="compDespBody">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
+    </div>`;
+
+  // Painel direito — arquivos
+  const painelArq = div("comp-painel");
+  painelArq.innerHTML = `
+    <div class="comp-painel-hdr">
+      <span class="comp-painel-title">📁 Arquivos no Drive</span>
+      <span class="comp-painel-count" id="compArqCount">—</span>
+    </div>
+    <div class="comp-painel-body" id="compArqBody">
+      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
+    </div>`;
+
+  grid.appendChild(painelDesp);
+  grid.appendChild(painelArq);
+  el.appendChild(grid);
+
+  // Carregar dados
+  carregarDadosComprov();
+}
+
+let MOSTRAR_SEM_COMP = false;
+function toggleFiltroComprov(){
+  MOSTRAR_SEM_COMP = !MOSTRAR_SEM_COMP;
+  const btn = document.getElementById("compFiltroComp");
+  if(btn) btn.textContent = MOSTRAR_SEM_COMP ? "Só sem comprovante" : "Mostrar todas";
+  renderListaDesp();
+}
+
+async function carregarDadosComprov(){
+  const mes = COMPROV_STATE.mesSel;
+
+  // Atualizar UI loading
+  const despBody = document.getElementById("compDespBody");
+  const arqBody  = document.getElementById("compArqBody");
+  if(despBody) despBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div class="loader" style="margin:0 auto 12px"></div>Carregando despesas...</div>';
+  if(arqBody)  arqBody.innerHTML  = '<div style="text-align:center;padding:40px;color:var(--muted)"><div class="loader" style="margin:0 auto 12px"></div>Carregando arquivos do Drive...</div>';
+
+  // Buscar em paralelo
+  const [resDespesas, resArquivos] = await Promise.all([
+    URL_COMPROV && URL_COMPROV.startsWith("https://")
+      ? fetch(URL_COMPROV+"?acao=listar_despesas&mes="+mes+"&t="+Date.now(), {method:"GET",redirect:"follow"}).then(r=>r.json()).catch(()=>({erro:"Falha"}))
+      : {erro:"URL não configurada"},
+    URL_COMPROV && URL_COMPROV.startsWith("https://")
+      ? fetch(URL_COMPROV+"?acao=listar_arquivos&mes="+mes+"&t="+Date.now(), {method:"GET",redirect:"follow"}).then(r=>r.json()).catch(()=>({erro:"Falha"}))
+      : {erro:"URL não configurada"},
+  ]);
+
+  if(!resDespesas.erro) COMPROV_STATE.despesas = resDespesas.despesas || {};
+  if(!resArquivos.erro) COMPROV_STATE.arquivos  = resArquivos.arquivos  || {};
+
+  renderListaDesp();
+  renderListaArq();
+}
+
+function renderListaDesp(){
+  const body  = document.getElementById("compDespBody");
+  const count = document.getElementById("compDespCount");
+  if(!body) return;
+
+  const mes = COMPROV_STATE.mesSel;
+  const lista = COMPROV_STATE.despesas[mes] || [];
+
+  const filtradas = MOSTRAR_SEM_COMP ? lista.filter(d=>!d.temComp) : lista;
+  if(count) count.textContent = filtradas.length + " itens";
+
+  if(filtradas.length === 0){
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+      <p style="font-size:24px;margin-bottom:8px">${MOSTRAR_SEM_COMP?"✅":"📋"}</p>
+      <p>${MOSTRAR_SEM_COMP?"Todas as despesas já têm comprovante!":"Nenhuma despesa encontrada para "+mes}</p>
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = "";
+  filtradas.forEach(function(d){
+    const item = document.createElement("div");
+    item.className = "comp-desp-item" + (d.temComp?" tem-comp":"") + (COMPROV_STATE.despSel===d?" selecionado":"");
+    item.innerHTML = `
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
+        <div style="flex:1;min-width:0">
+          <p class="comp-desp-desc">${d.desc}</p>
+          <div class="comp-desp-meta">
+            <span>📅 ${d.data}</span>
+            <span>📂 ${d.cat}</span>
+            ${d.obs&&d.obs!=="—"?`<span>💬 ${d.obs.substring(0,30)}</span>`:""}
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <p class="comp-desp-val">${fBRL(d.valor)}</p>
+          <span class="comp-desp-badge ${d.temComp?"comp-badge-ok":"comp-badge-sem"}">${d.temComp?"✅ Com comprovante":"📎 Sem comprovante"}</span>
+        </div>
+      </div>
+      ${d.temComp?`<div style="margin-top:6px;display:flex;gap:6px">
+        <a href="${d.comp}" target="_blank" style="font-size:11px;color:#0369a1;text-decoration:none;font-weight:600">🔗 Ver atual</a>
+        <span style="font-size:11px;color:var(--muted)">·</span>
+        <span style="font-size:11px;color:var(--saida);cursor:pointer;font-weight:600" onclick="desvincularComp('${d.aba}',${d.linha},${d.colComp},event)">🗑 Remover</span>
+      </div>`:""}`;
+    item.onclick = function(e){
+      if(e.target.tagName==="A"||e.target.tagName==="SPAN") return;
+      COMPROV_STATE.despSel = d;
+      renderListaDesp();
+      atualizarActionBar();
+    };
+    body.appendChild(item);
+  });
+}
+
+function renderListaArq(){
+  const body  = document.getElementById("compArqBody");
+  const count = document.getElementById("compArqCount");
+  if(!body) return;
+
+  const mes = COMPROV_STATE.mesSel;
+  const dados = COMPROV_STATE.arquivos[mes] || {};
+  const pdfs  = dados.pdfs  || [];
+  const notas = dados.notas || [];
+  const outros= dados.outros|| [];
+  const total = pdfs.length + notas.length + outros.length;
+
+  if(count) count.textContent = total + " arquivos";
+
+  if(total === 0){
+    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
+      <p style="font-size:24px;margin-bottom:8px">📁</p>
+      <p>Nenhum arquivo encontrado em ${mes}</p>
+      <p style="font-size:12px;margin-top:4px">Verifique se a pasta do Drive está correta</p>
+    </div>`;
+    return;
+  }
+
+  body.innerHTML = "";
+
+  function renderGrupo(lista, label, icon){
+    if(!lista.length) return;
+    const lbl = document.createElement("p");
+    lbl.className = "comp-grupo-label";
+    lbl.textContent = icon + " " + label + " (" + lista.length + ")";
+    body.appendChild(lbl);
+    lista.forEach(function(arq){
+      const isSel = COMPROV_STATE.arqSel && COMPROV_STATE.arqSel.id === arq.id;
+      const item = document.createElement("div");
+      item.className = "comp-arq-item" + (isSel?" selecionado":"");
+      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
+      item.innerHTML = `
+        <span class="comp-arq-icon">${icone}</span>
+        <div style="flex:1;min-width:0">
+          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
+          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
+        </div>
+        <a href="${arq.link}" target="_blank" onclick="event.stopPropagation()" style="font-size:18px;text-decoration:none;flex-shrink:0" title="Abrir no Drive">👁</a>`;
+      item.onclick = function(){
+        COMPROV_STATE.arqSel = arq;
+        renderListaArq();
+        atualizarActionBar();
+      };
+      body.appendChild(item);
+    });
+  }
+
+  renderGrupo(pdfs,   "PDFs — Comprovantes Bancários", "📄");
+  renderGrupo(notas,  "Notas Fiscais / Imagens", "🖼");
+  renderGrupo(outros, "Outros Arquivos", "📎");
+}
+
+function atualizarActionBar(){
+  const bar = document.getElementById("compActionBar");
+  if(!bar) return;
+
+  const desp = COMPROV_STATE.despSel;
+  const arq  = COMPROV_STATE.arqSel;
+
+  if(!desp && !arq){ bar.innerHTML=""; return; }
+
+  bar.innerHTML = "";
+  const el = div("comp-action-bar");
+
+  if(desp && arq){
+    el.innerHTML = `
+      <div class="comp-action-info">
+        <strong>Pronto para vincular!</strong>
+        📋 <b>${desp.desc}</b> (${fBRL(desp.valor)}) ← 📄 <b>${arq.nome}</b>
+      </div>
+      <div class="comp-action-btns">
+        <button class="comp-btn-cancel" onclick="COMPROV_STATE.despSel=null;COMPROV_STATE.arqSel=null;renderListaDesp();renderListaArq();atualizarActionBar()">Cancelar</button>
+        <button class="comp-btn-vincular" id="btnVincularComp" onclick="executarVinculo()">✅ Vincular Comprovante</button>
+      </div>`;
+  } else if(desp){
+    el.innerHTML = `
+      <div class="comp-action-info">
+        <strong>Despesa selecionada:</strong>
+        📋 ${desp.desc} · ${fBRL(desp.valor)} · ${desp.data}
+      </div>
+      <div class="comp-action-btns">
+        <button class="comp-btn-cancel" onclick="COMPROV_STATE.despSel=null;renderListaDesp();atualizarActionBar()">Cancelar</button>
+        <button class="comp-btn-vincular" disabled>Selecione um arquivo →</button>
+      </div>`;
+  } else if(arq){
+    el.innerHTML = `
+      <div class="comp-action-info">
+        <strong>Arquivo selecionado:</strong>
+        📄 ${arq.nome} · ${arq.tamanho}
+      </div>
+      <div class="comp-action-btns">
+        <button class="comp-btn-cancel" onclick="COMPROV_STATE.arqSel=null;renderListaArq();atualizarActionBar()">Cancelar</button>
+        <button class="comp-btn-vincular" disabled>← Selecione uma despesa</button>
+      </div>`;
+  }
+
+  bar.appendChild(el);
+}
+
+async function executarVinculo(){
+  const desp = COMPROV_STATE.despSel;
+  const arq  = COMPROV_STATE.arqSel;
+  if(!desp || !arq) return;
+
+  const btn = document.getElementById("btnVincularComp");
+  if(btn){ btn.disabled=true; btn.textContent="Vinculando..."; }
+
+  try{
+    const url = URL_COMPROV
+      + "?acao=vincular"
+      + "&aba=" + encodeURIComponent(desp.aba)
+      + "&linha=" + desp.linha
+      + "&colComp=" + desp.colComp
+      + "&link=" + encodeURIComponent(arq.link)
+      + "&t=" + Date.now();
+
+    const res = await fetch(url, {method:"GET", redirect:"follow"});
+    const json = await res.json();
+
+    if(json.ok){
+      mostrarToast("✅ Comprovante vinculado com sucesso!");
+      // Atualizar localmente
+      desp.comp = arq.link;
+      desp.temComp = true;
+      COMPROV_STATE.despSel = null;
+      COMPROV_STATE.arqSel  = null;
+      renderListaDesp();
+      renderListaArq();
+      atualizarActionBar();
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha ao vincular"), true);
+      if(btn){ btn.disabled=false; btn.textContent="✅ Vincular Comprovante"; }
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    if(btn){ btn.disabled=false; btn.textContent="✅ Vincular Comprovante"; }
+  }
+}
+
+async function desvincularComp(aba, linha, colComp, event){
+  if(event) event.stopPropagation();
+  if(!confirm("Remover o comprovante desta despesa?")) return;
+
+  try{
+    const url = URL_COMPROV
+      + "?acao=desvincular"
+      + "&aba=" + encodeURIComponent(aba)
+      + "&linha=" + linha
+      + "&colComp=" + colComp
+      + "&t=" + Date.now();
+
+    const res = await fetch(url, {method:"GET", redirect:"follow"});
+    const json = await res.json();
+
+    if(json.ok){
+      mostrarToast("🗑 Comprovante removido.");
+      carregarDadosComprov();
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
+    }
+  }catch(e){
+    mostrarToast("❌ Erro: " + e.message, true);
+  }
+}
+
+function mostrarToast(msg, erro=false){
+  const t = document.createElement("div");
+  t.className = "comp-toast" + (erro?" erro":"");
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(), 300); }, 3000);
 }
 
 // ─── UTILITÁRIOS ───
