@@ -1277,7 +1277,11 @@ function trocarAba(aba){
 
 // ─── RENDERIZAÇÃO ───
 function render(){
-  Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
+  // Destruir todos os charts antes de limpar o DOM
+  Object.values(charts).forEach(c=>{ 
+    try{ c.options.onHover=null; c.options.onClick=null; c.destroy(); }catch(e){} 
+  }); 
+  charts={};
   const el=$("pageBody"); el.innerHTML="";
   if(ABA==="geral") renderGeral(el);
   else if(ABA==="entrada") renderEntradas(el);
@@ -2258,9 +2262,14 @@ function buildPizza(id,labels,data,colors,ccId,total,onClickCb){
       plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+fBRL(ctx.raw)+" ("+(ctx.raw/total*100).toFixed(1)+"%)"}}},
       onClick:(e,els)=>{ if(onClickCb && els.length>0) onClickCb(els[0].index); },
       onHover:(e,els)=>{
-        if(onClickCb) canvas.style.cursor=els.length?"pointer":"default";
-        if(els.length){const i=data[els[0].index];$(ccId).textContent=fK(i);}
-        else $(ccId).textContent=fK(total);
+        try{
+          if(onClickCb && canvas) canvas.style.cursor=els.length?"pointer":"default";
+          const ccEl=$(ccId);
+          if(ccEl){
+            if(els.length){ccEl.textContent=fK(data[els[0].index]);}
+            else{ccEl.textContent=fK(total);}
+          }
+        }catch(err){}
       }
     }
   });
