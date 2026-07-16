@@ -1876,15 +1876,20 @@ function renderFolha(el){
   const mesNome = getMesFolha();
   const mesDados = DF[mesNome] || null;
 
+  // Debug
+  console.log("renderFolha - mesNome:", mesNome, "mesDados:", mesDados ? Object.keys(mesDados) : null);
+
   // Tabs de sub-navegação
-  const tabs = div("pessoal-tabs fade-in");
-  tabs.innerHTML=`
-    <div class="pessoal-tab ${PESSOAL_VIEW==="visao"?"ativo":""}" onclick="PESSOAL_VIEW='visao';renderFolhaAtual()">Visão Geral</div>
-    <div class="pessoal-tab ${PESSOAL_VIEW==="comparativo"?"ativo":""}" onclick="PESSOAL_VIEW='comparativo';renderFolhaAtual()">Comparativo</div>
-    <div class="pessoal-tab ${PESSOAL_VIEW==="evolucao"?"ativo":""}" onclick="PESSOAL_VIEW='evolucao';renderFolhaAtual()">Evolução Anual</div>`;
+  const tabs = document.createElement("div");
+  tabs.className = "pessoal-tabs fade-in";
+  tabs.innerHTML = [
+    ["visao","Visão Geral"],
+    ["comparativo","Comparativo"],
+    ["evolucao","Evolução Anual"]
+  ].map(([v,l])=>`<div class="pessoal-tab${PESSOAL_VIEW===v?" ativo":""}" onclick="PESSOAL_VIEW='${v}';renderFolhaAtual()">${l}</div>`).join("");
   el.appendChild(tabs);
 
-  if(PESSOAL_VIEW==="visao")       renderFolhaVisao(el, mesNome, mesDados);
+  if(PESSOAL_VIEW==="visao")            renderFolhaVisao(el, mesNome, mesDados);
   else if(PESSOAL_VIEW==="comparativo") renderFolhaComparativo(el, mesNome);
   else if(PESSOAL_VIEW==="evolucao")    renderFolhaEvolucao(el);
 }
@@ -1901,8 +1906,12 @@ function renderFolhaAtual(){
 
 // ── VISÃO GERAL DO MÊS ──
 function renderFolhaVisao(el, mesNome, mesDados){
-  if(!mesDados || Object.keys(mesDados.funcionarios||{}).length===0){
-    el.innerHTML+=`<div class="error-state"><p class="error-title">Dados de pessoal não disponíveis para ${mesNome}</p><p class="error-text">Configure o Apps Script da Folha de Pagamento e tente novamente.</p></div>`;
+  console.log("renderFolhaVisao - mesDados:", mesDados, "funcs:", mesDados?.funcionarios);
+  if(!mesDados || !mesDados.funcionarios || Object.keys(mesDados.funcionarios).length===0){
+    const errDiv = document.createElement("div");
+    errDiv.className = "error-state";
+    errDiv.innerHTML = "<p class='error-title'>Dados não disponíveis para " + mesNome + "</p><p class='error-text'>DF["+mesNome+"] = " + JSON.stringify(mesDados).substring(0,200) + "</p>";
+    el.appendChild(errDiv);
     return;
   }
   const funcs = mesDados.funcionarios || {};
