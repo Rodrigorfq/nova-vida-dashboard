@@ -1108,7 +1108,7 @@ tr:hover td { background: var(--bg); }
 // ═══════════════════════════════════════
 const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
 const URL_ENTRADAS = "https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec";
-const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbwYyZu_XGeZQYdgw8KotirWtm0JWMH4NGYvFswTasbfKG1theXvWaUDVJJazzyJK1NKNA/exec";
+const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbzdNX1EZHKBZvgF_cTjmZaPTVQPlQiVCML53eQaRG27CnomXdYgcgFlHGbayih3N1f6VA/exec";
 const SENHA_CORRETA = "ICNV@rm2026";
 const EMAILS_AUTH = ["rodrigo.digofq@gmail.com","icnvrochamiranda@gmail.com","ronaldodq@gmail.com"];
 const NOMES = {"rodrigo.digofq@gmail.com":"Rodrigo","icnvrochamiranda@gmail.com":"Igreja","ronaldodq@gmail.com":"Pr. Ronaldo"};
@@ -1222,20 +1222,30 @@ function fazerLogout(){
 async function carregarTudo(){
   $("pageBody").innerHTML='<div class="loading-state"><div class="loader"></div><p class="loader-text">Carregando dados financeiros...</p></div>';
   try{
-    const [rD, rE, rF] = await Promise.all([
-      fetch(URL_DESPESAS+"?t="+Date.now(),{method:"GET",redirect:"follow"}),
-      URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com")
-        ? fetch(URL_ENTRADAS+"?t="+Date.now(),{method:"GET",redirect:"follow"})
-        : Promise.resolve(null),
-      URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com")
-        ? fetch(URL_FOLHA+"?t="+Date.now(),{method:"GET",redirect:"follow"})
-        : Promise.resolve(null)
-    ]);
+    // Buscar despesas (obrigatório)
+    const rD = await fetch(URL_DESPESAS+"?t="+Date.now(),{method:"GET",redirect:"follow"});
     const jD = await rD.json();
     if(jD.erro) throw new Error(jD.mensagem||jD.erro);
     DD = jD;
-    if(rE){ try{ const jE=await rE.json(); if(!jE.erro) DE=jE; }catch(e){} }
-    if(rF){ try{ const jF=await rF.json(); if(!jF.erro) DF=jF; }catch(e){} }
+
+    // Buscar entradas (opcional — falha não bloqueia)
+    if(URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com")){
+      try{
+        const rE = await fetch(URL_ENTRADAS+"?t="+Date.now(),{method:"GET",redirect:"follow"});
+        const jE = await rE.json();
+        if(!jE.erro) DE=jE;
+        console.log("Entradas OK:", Object.keys(DE).length, "meses");
+      }catch(e){ console.warn("Entradas não carregadas:", e.message); }
+    }
+
+    // Buscar folha de pagamento (opcional — falha não bloqueia)
+    if(URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com")){
+      try{
+        const rF = await fetch(URL_FOLHA+"?t="+Date.now(),{method:"GET",redirect:"follow"});
+        const jF = await rF.json();
+        if(!jF.erro){ DF=jF; console.log("Folha OK:", Object.keys(DF).length, "meses"); }
+      }catch(e){ console.warn("Folha não carregada:", e.message); }
+    }
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); sel.appendChild(o); });
