@@ -441,6 +441,23 @@ body {
 }
 
 .topbar-left { display: flex; align-items: center; gap: 12px; }
+
+/* ─── MENU MOBILE (hambúrguer) ─── */
+.menu-toggle-btn {
+  display: none;
+  background: none; border: none; cursor: pointer;
+  padding: 6px; border-radius: 8px;
+  color: var(--navy); flex-shrink: 0;
+}
+.menu-toggle-btn:hover { background: var(--bg); }
+
+.sidebar-overlay {
+  display: none;
+  position: fixed; inset: 0;
+  background: rgba(15,23,42,.5);
+  z-index: 90;
+}
+.sidebar-overlay.show { display: block; }
 .topbar-title { font-size: 16px; font-weight: 700; color: var(--navy); }
 .topbar-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
 
@@ -1088,8 +1105,9 @@ tr:hover td { background: var(--bg); }
 }
 
 @media (max-width: 768px) {
-  .sidebar { transform: translateX(-100%); }
+  .sidebar { transform: translateX(-100%); z-index: 100; }
   .sidebar.open { transform: translateX(0); }
+  .menu-toggle-btn { display: flex; align-items: center; justify-content: center; }
   .main-content { margin-left: 0; }
   .hero-finance { grid-template-columns: 1fr; }
   .chart-grid-2, .chart-grid-3 { grid-template-columns: 1fr; }
@@ -1177,6 +1195,9 @@ tr:hover td { background: var(--bg); }
 ═══════════════════════════════════════ -->
 <div id="appWrap">
 
+  <!-- OVERLAY MOBILE -->
+  <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar(false)"></div>
+
   <!-- SIDEBAR -->
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-brand">
@@ -1230,6 +1251,13 @@ tr:hover td { background: var(--bg); }
   <div class="main-content">
     <header class="topbar">
       <div class="topbar-left">
+        <button class="menu-toggle-btn" onclick="toggleSidebar()" title="Abrir menu" aria-label="Abrir menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
         <div>
           <div class="topbar-title" id="topbarTitle">Visão Geral</div>
           <div class="topbar-sub" id="topbarSub">Resumo financeiro consolidado</div>
@@ -1416,8 +1444,16 @@ async function carregarTudo(){
 
 function trocarMes(){ MES=$("mesSelect").value; render(); }
 
+function toggleSidebar(forcar){
+  const sb=$("sidebar"); const ov=$("sidebarOverlay");
+  const abrir = typeof forcar==="boolean" ? forcar : !sb.classList.contains("open");
+  sb.classList.toggle("open", abrir);
+  ov.classList.toggle("show", abrir);
+}
+
 function trocarAba(aba){
   ABA=aba;
+  toggleSidebar(false); // fecha o menu no mobile ao selecionar uma aba
   ["geral","entrada","saida","folha","comprov"].forEach(a=>{
     const n=$("nav"+a.charAt(0).toUpperCase()+a.slice(1));
     if(n) n.className="nav-item"+(aba===a?" active":"");
@@ -2369,502 +2405,4 @@ function renderFolhaEvolucao(el){
       return `<td class="td-right" style="font-size:12px">${v>0?fBRL(v):"—"}</td>`;
     }).join("");
     tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
-      <div style="width:10px;height:10px;border-radius:50%;background:${cor.bg};flex-shrink:0"></div>
-      <span class="td-bold">${nome}</span></div></td>${tds}
-      <td class="td-right td-bold" style="color:${cor.ft}">${fBRL(totalAnual)}</td>`;
-    tb.appendChild(tr);
-  });
-  // Linha total
-  const trTot=document.createElement("tr"); trTot.style.background="var(--bg)";
-  let totAnualGeral=0;
-  let tdsTot=mesesComDados.map(m=>{
-    const v=Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.total||0),0);
-    totAnualGeral+=v;
-    return `<td class="td-right td-bold" style="color:var(--saida)">${fBRL(v)}</td>`;
-  }).join("");
-  trTot.innerHTML=`<td class="td-bold">TOTAL</td>${tdsTot}<td class="td-right td-bold" style="color:var(--saida)">${fBRL(totAnualGeral)}</td>`;
-  tb.appendChild(trTot);
-
-  setTimeout(()=>{
-    // Linha total geral
-    const c1=document.getElementById("cFolhaLinha"); if(!c1) return;
-    charts.fLinha=new Chart(c1,{
-      type:"line",
-      data:{
-        labels:mesesComDados.map(m=>m.slice(0,3)),
-        datasets:[{
-          label:"Total Folha",
-          data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.total||0),0)),
-          borderColor:"#4f46e5", backgroundColor:"rgba(79,70,229,.08)",
-          borderWidth:2.5, pointBackgroundColor:"#4f46e5",
-          pointRadius:5, pointHoverRadius:7, tension:.4, fill:true,
-        },{
-          label:"Saldo a Pagar",
-          data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.saldo||0),0)),
-          borderColor:"#059669", backgroundColor:"rgba(5,150,105,.05)",
-          borderWidth:2, pointBackgroundColor:"#059669",
-          pointRadius:4, pointHoverRadius:6, tension:.4, fill:false, borderDash:[5,4],
-        }]
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        interaction:{mode:"index",intersect:false},
-        plugins:{legend:{position:"top",labels:{font:{size:11,weight:"600"},usePointStyle:true,pointStyleWidth:10,padding:16}},
-          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
-            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}},
-        scales:{
-          x:{grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
-          y:{grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
-        },
-        animation:{duration:900,easing:"easeOutQuart"}
-      }
-    });
-
-    // Linhas por funcionário
-    const c2=document.getElementById("cFuncLinha"); if(!c2) return;
-    charts.fLinha2=new Chart(c2,{
-      type:"line",
-      data:{
-        labels:mesesComDados.map(m=>m.slice(0,3)),
-        datasets:funcList.map(nome=>({
-          label:nome,
-          data:mesesComDados.map(m=>(DF[m]?.funcionarios?.[nome]?.total)||0),
-          borderColor:(FUNC_CORES[nome]||{bg:"#334155"}).bg,
-          backgroundColor:"transparent",
-          borderWidth:2, pointRadius:4, pointHoverRadius:6,
-          tension:.3,
-        }))
-      },
-      options:{
-        responsive:true,maintainAspectRatio:false,
-        interaction:{mode:"index",intersect:false},
-        plugins:{legend:{position:"top",labels:{font:{size:10,weight:"600"},usePointStyle:true,pointStyleWidth:8,padding:12}},
-          tooltip:{backgroundColor:"#1e293b",titleColor:"#f8fafc",bodyColor:"#cbd5e1",padding:10,
-            callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}}},
-        scales:{
-          x:{grid:{display:false},ticks:{font:{size:11},color:"#94a3b8"}},
-          y:{grid:{color:"rgba(0,0,0,.04)"},ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true}
-        },
-        animation:{duration:900,easing:"easeOutQuart"}
-      }
-    });
-  },120);
-}
-
-// ─── COMPROVANTES / VINCULADOR ───
-let COMPROV_STATE = {
-  mesSel: "",
-  despSel: null,
-  arqSel: null,
-  despesas: {},
-  arquivos: {},
-  carregando: false,
-};
-
-function renderComprovantes(el){
-  // Seletor de mês
-  const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
-                 "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
-  if(!COMPROV_STATE.mesSel) COMPROV_STATE.mesSel = getMesNome();
-
-  // Header com seletor
-  const hdr = div("fade-in");
-  hdr.style.cssText = "margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;";
-  hdr.innerHTML = `
-    <div>
-      <p style="font-size:18px;font-weight:800;color:var(--navy)">Vinculador de Comprovantes</p>
-      <p style="font-size:13px;color:var(--muted);margin-top:2px">Selecione uma despesa e um arquivo para vincular</p>
-    </div>`;
-
-  const sel = document.createElement("select");
-  sel.className = "comp-mes-select";
-  sel.style.marginBottom = "0";
-  MESES.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m; opt.textContent = m;
-    if(m === COMPROV_STATE.mesSel) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  sel.onchange = function(){ COMPROV_STATE.mesSel = this.value; COMPROV_STATE.despSel = null; COMPROV_STATE.arqSel = null; carregarDadosComprov(); };
-  hdr.appendChild(sel);
-
-  const btnRecarregar = document.createElement("button");
-  btnRecarregar.className = "topbar-btn";
-  btnRecarregar.innerHTML = "🔄 Recarregar";
-  btnRecarregar.onclick = function(){ COMPROV_STATE.despSel=null; COMPROV_STATE.arqSel=null; carregarDadosComprov(); };
-  hdr.appendChild(btnRecarregar);
-  el.appendChild(hdr);
-
-  // Barra de ação (aparece quando ambos selecionados)
-  const actionBar = document.createElement("div");
-  actionBar.id = "compActionBar";
-  el.appendChild(actionBar);
-
-  // Grid dois painéis
-  const grid = div("comp-vinc-grid fade-in");
-
-  // Painel esquerdo — despesas
-  const painelDesp = div("comp-painel");
-  painelDesp.innerHTML = `
-    <div class="comp-painel-hdr">
-      <span class="comp-painel-title">📋 Despesas</span>
-      <div style="display:flex;gap:6px;align-items:center">
-        <span id="compFiltroComp" style="font-size:11px;cursor:pointer;padding:2px 8px;border-radius:99px;background:#f1f5f9;color:#64748b" onclick="toggleFiltroComprov()">Mostrar todas</span>
-        <span class="comp-painel-count" id="compDespCount">—</span>
-      </div>
-    </div>
-    <div class="comp-painel-body" id="compDespBody">
-      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
-    </div>`;
-
-  // Painel direito — arquivos
-  const painelArq = div("comp-painel");
-  painelArq.innerHTML = `
-    <div class="comp-painel-hdr">
-      <span class="comp-painel-title">📁 Arquivos no Drive</span>
-      <span class="comp-painel-count" id="compArqCount">—</span>
-    </div>
-    <div class="comp-painel-body" id="compArqBody">
-      <div style="text-align:center;padding:40px;color:var(--muted)">Carregando...</div>
-    </div>`;
-
-  grid.appendChild(painelDesp);
-  grid.appendChild(painelArq);
-  el.appendChild(grid);
-
-  // Carregar dados
-  carregarDadosComprov();
-}
-
-let MOSTRAR_SEM_COMP = false;
-function toggleFiltroComprov(){
-  MOSTRAR_SEM_COMP = !MOSTRAR_SEM_COMP;
-  const btn = document.getElementById("compFiltroComp");
-  if(btn) btn.textContent = MOSTRAR_SEM_COMP ? "Só sem comprovante" : "Mostrar todas";
-  renderListaDesp();
-}
-
-async function carregarDadosComprov(){
-  const mes = COMPROV_STATE.mesSel;
-
-  // Atualizar UI loading
-  const despBody = document.getElementById("compDespBody");
-  const arqBody  = document.getElementById("compArqBody");
-  if(despBody) despBody.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)"><div class="loader" style="margin:0 auto 12px"></div>Carregando despesas...</div>';
-  if(arqBody)  arqBody.innerHTML  = '<div style="text-align:center;padding:40px;color:var(--muted)"><div class="loader" style="margin:0 auto 12px"></div>Carregando arquivos do Drive...</div>';
-
-  // Buscar em paralelo
-  const [resDespesas, resArquivos] = await Promise.all([
-    URL_COMPROV && URL_COMPROV.startsWith("https://")
-      ? fetch(URL_COMPROV+"?acao=listar_despesas&mes="+mes+"&t="+Date.now(), {method:"GET",redirect:"follow"}).then(r=>r.json()).catch(()=>({erro:"Falha"}))
-      : {erro:"URL não configurada"},
-    URL_COMPROV && URL_COMPROV.startsWith("https://")
-      ? fetch(URL_COMPROV+"?acao=listar_arquivos&mes="+mes+"&t="+Date.now(), {method:"GET",redirect:"follow"}).then(r=>r.json()).catch(()=>({erro:"Falha"}))
-      : {erro:"URL não configurada"},
-  ]);
-
-  if(!resDespesas.erro) COMPROV_STATE.despesas = resDespesas.despesas || {};
-  if(!resArquivos.erro) COMPROV_STATE.arquivos  = resArquivos.arquivos  || {};
-
-  renderListaDesp();
-  renderListaArq();
-}
-
-function renderListaDesp(){
-  const body  = document.getElementById("compDespBody");
-  const count = document.getElementById("compDespCount");
-  if(!body) return;
-
-  const mes = COMPROV_STATE.mesSel;
-  const lista = COMPROV_STATE.despesas[mes] || [];
-
-  const filtradas = MOSTRAR_SEM_COMP ? lista.filter(d=>!d.temComp) : lista;
-  if(count) count.textContent = filtradas.length + " itens";
-
-  if(filtradas.length === 0){
-    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
-      <p style="font-size:24px;margin-bottom:8px">${MOSTRAR_SEM_COMP?"✅":"📋"}</p>
-      <p>${MOSTRAR_SEM_COMP?"Todas as despesas já têm comprovante!":"Nenhuma despesa encontrada para "+mes}</p>
-    </div>`;
-    return;
-  }
-
-  body.innerHTML = "";
-  filtradas.forEach(function(d){
-    const item = document.createElement("div");
-    item.className = "comp-desp-item" + (d.temComp?" tem-comp":"") + (COMPROV_STATE.despSel===d?" selecionado":"");
-    item.innerHTML = `
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px">
-        <div style="flex:1;min-width:0">
-          <p class="comp-desp-desc">${d.desc}</p>
-          <div class="comp-desp-meta">
-            <span>📅 ${d.data}</span>
-            <span>📂 ${d.cat}</span>
-            ${d.obs&&d.obs!=="—"?`<span>💬 ${d.obs.substring(0,30)}</span>`:""}
-          </div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <p class="comp-desp-val">${fBRL(d.valor)}</p>
-          <span class="comp-desp-badge ${d.temComp?"comp-badge-ok":"comp-badge-sem"}">${d.temComp?"✅ Com comprovante":"📎 Sem comprovante"}</span>
-        </div>
-      </div>
-      ${d.temComp?`<div style="margin-top:6px;display:flex;gap:6px">
-        <a href="${d.comp}" target="_blank" style="font-size:11px;color:#0369a1;text-decoration:none;font-weight:600">🔗 Ver atual</a>
-        <span style="font-size:11px;color:var(--muted)">·</span>
-        <span style="font-size:11px;color:var(--saida);cursor:pointer;font-weight:600" onclick="desvincularComp('${d.aba}',${d.linha},${d.colComp},event)">🗑 Remover</span>
-      </div>`:""}`;
-    item.onclick = function(e){
-      if(e.target.tagName==="A"||e.target.tagName==="SPAN") return;
-      COMPROV_STATE.despSel = d;
-      renderListaDesp();
-      atualizarActionBar();
-    };
-    body.appendChild(item);
-  });
-}
-
-function renderListaArq(){
-  const body  = document.getElementById("compArqBody");
-  const count = document.getElementById("compArqCount");
-  if(!body) return;
-
-  const mes = COMPROV_STATE.mesSel;
-  const dados = COMPROV_STATE.arquivos[mes] || {};
-  const pdfs  = dados.pdfs  || [];
-  const notas = dados.notas || [];
-  const outros= dados.outros|| [];
-  const total = pdfs.length + notas.length + outros.length;
-
-  if(count) count.textContent = total + " arquivos";
-
-  if(total === 0){
-    body.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">
-      <p style="font-size:24px;margin-bottom:8px">📁</p>
-      <p>Nenhum arquivo encontrado em ${mes}</p>
-      <p style="font-size:12px;margin-top:4px">Verifique se a pasta do Drive está correta</p>
-    </div>`;
-    return;
-  }
-
-  body.innerHTML = "";
-
-  function renderGrupo(lista, label, icon){
-    if(!lista.length) return;
-    const lbl = document.createElement("p");
-    lbl.className = "comp-grupo-label";
-    lbl.textContent = icon + " " + label + " (" + lista.length + ")";
-    body.appendChild(lbl);
-    lista.forEach(function(arq){
-      const isSel = COMPROV_STATE.arqSel && COMPROV_STATE.arqSel.id === arq.id;
-      const item = document.createElement("div");
-      item.className = "comp-arq-item" + (isSel?" selecionado":"");
-      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
-      item.innerHTML = `
-        <span class="comp-arq-icon">${icone}</span>
-        <div style="flex:1;min-width:0">
-          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
-          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
-        </div>
-        <a href="${arq.link}" target="_blank" onclick="event.stopPropagation()" style="font-size:18px;text-decoration:none;flex-shrink:0" title="Abrir no Drive">👁</a>`;
-      item.onclick = function(){
-        COMPROV_STATE.arqSel = arq;
-        renderListaArq();
-        atualizarActionBar();
-      };
-      body.appendChild(item);
-    });
-  }
-
-  renderGrupo(pdfs,   "PDFs — Comprovantes Bancários", "📄");
-  renderGrupo(notas,  "Notas Fiscais / Imagens", "🖼");
-  renderGrupo(outros, "Outros Arquivos", "📎");
-}
-
-function atualizarActionBar(){
-  const bar = document.getElementById("compActionBar");
-  if(!bar) return;
-
-  const desp = COMPROV_STATE.despSel;
-  const arq  = COMPROV_STATE.arqSel;
-
-  if(!desp && !arq){ bar.innerHTML=""; return; }
-
-  bar.innerHTML = "";
-  const el = div("comp-action-bar");
-
-  if(desp && arq){
-    el.innerHTML = `
-      <div class="comp-action-info">
-        <strong>Pronto para vincular!</strong>
-        📋 <b>${desp.desc}</b> (${fBRL(desp.valor)}) ← 📄 <b>${arq.nome}</b>
-      </div>
-      <div class="comp-action-btns">
-        <button class="comp-btn-cancel" onclick="COMPROV_STATE.despSel=null;COMPROV_STATE.arqSel=null;renderListaDesp();renderListaArq();atualizarActionBar()">Cancelar</button>
-        <button class="comp-btn-vincular" id="btnVincularComp" onclick="executarVinculo()">✅ Vincular Comprovante</button>
-      </div>`;
-  } else if(desp){
-    el.innerHTML = `
-      <div class="comp-action-info">
-        <strong>Despesa selecionada:</strong>
-        📋 ${desp.desc} · ${fBRL(desp.valor)} · ${desp.data}
-      </div>
-      <div class="comp-action-btns">
-        <button class="comp-btn-cancel" onclick="COMPROV_STATE.despSel=null;renderListaDesp();atualizarActionBar()">Cancelar</button>
-        <button class="comp-btn-vincular" disabled>Selecione um arquivo →</button>
-      </div>`;
-  } else if(arq){
-    el.innerHTML = `
-      <div class="comp-action-info">
-        <strong>Arquivo selecionado:</strong>
-        📄 ${arq.nome} · ${arq.tamanho}
-      </div>
-      <div class="comp-action-btns">
-        <button class="comp-btn-cancel" onclick="COMPROV_STATE.arqSel=null;renderListaArq();atualizarActionBar()">Cancelar</button>
-        <button class="comp-btn-vincular" disabled>← Selecione uma despesa</button>
-      </div>`;
-  }
-
-  bar.appendChild(el);
-}
-
-async function executarVinculo(){
-  const desp = COMPROV_STATE.despSel;
-  const arq  = COMPROV_STATE.arqSel;
-  if(!desp || !arq) return;
-
-  const btn = document.getElementById("btnVincularComp");
-  if(btn){ btn.disabled=true; btn.textContent="Vinculando..."; }
-
-  try{
-    const url = URL_COMPROV
-      + "?acao=vincular"
-      + "&aba=" + encodeURIComponent(desp.aba)
-      + "&linha=" + desp.linha
-      + "&colComp=" + desp.colComp
-      + "&link=" + encodeURIComponent(arq.link)
-      + "&t=" + Date.now();
-
-    const res = await fetch(url, {method:"GET", redirect:"follow"});
-    const json = await res.json();
-
-    if(json.ok){
-      mostrarToast("✅ Comprovante vinculado com sucesso!");
-      // Atualizar localmente
-      desp.comp = arq.link;
-      desp.temComp = true;
-      COMPROV_STATE.despSel = null;
-      COMPROV_STATE.arqSel  = null;
-      renderListaDesp();
-      renderListaArq();
-      atualizarActionBar();
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha ao vincular"), true);
-      if(btn){ btn.disabled=false; btn.textContent="✅ Vincular Comprovante"; }
-    }
-  }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
-    if(btn){ btn.disabled=false; btn.textContent="✅ Vincular Comprovante"; }
-  }
-}
-
-async function desvincularComp(aba, linha, colComp, event){
-  if(event) event.stopPropagation();
-  if(!confirm("Remover o comprovante desta despesa?")) return;
-
-  try{
-    const url = URL_COMPROV
-      + "?acao=desvincular"
-      + "&aba=" + encodeURIComponent(aba)
-      + "&linha=" + linha
-      + "&colComp=" + colComp
-      + "&t=" + Date.now();
-
-    const res = await fetch(url, {method:"GET", redirect:"follow"});
-    const json = await res.json();
-
-    if(json.ok){
-      mostrarToast("🗑 Comprovante removido.");
-      carregarDadosComprov();
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
-    }
-  }catch(e){
-    mostrarToast("❌ Erro: " + e.message, true);
-  }
-}
-
-function mostrarToast(msg, erro=false){
-  const t = document.createElement("div");
-  t.className = "comp-toast" + (erro?" erro":"");
-  t.textContent = msg;
-  document.body.appendChild(t);
-  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(), 300); }, 3000);
-}
-
-// ─── UTILITÁRIOS ───
-function div(cls){ const d=document.createElement("div"); d.className=cls; return d; }
-
-function buildPizza(id,labels,data,colors,ccId,total,onClickCb){
-  const canvas=document.getElementById(id); if(!canvas) return null;
-  return new Chart(canvas,{
-    type:"doughnut",
-    data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:"#fff",hoverOffset:8}]},
-    options:{
-      responsive:true,maintainAspectRatio:false,cutout:"68%",
-      animation:{animateRotate:true,animateScale:true,duration:800,easing:"easeOutQuart"},
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>" "+fBRL(ctx.raw)+" ("+(ctx.raw/total*100).toFixed(1)+"%)"}}},
-      onClick:(e,els)=>{ if(onClickCb && els.length>0) onClickCb(els[0].index); },
-      onHover:(e,els)=>{
-        try{
-          if(onClickCb && canvas) canvas.style.cursor=els.length?"pointer":"default";
-          const ccEl=$(ccId);
-          if(ccEl){
-            if(els.length){ccEl.textContent=fK(data[els[0].index]);}
-            else{ccEl.textContent=fK(total);}
-          }
-        }catch(err){}
-      }
-    }
-  });
-}
-
-function buildLegend(id,items,total){
-  const el=document.getElementById(id); if(!el) return;
-  items.forEach(({l,v,c})=>{
-    const pct=(v/total*100).toFixed(1);
-    const r=document.createElement("div"); r.className="legend-row";
-    r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${l}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
-    el.appendChild(r);
-  });
-}
-
-// ─── OCULTAR/REVELAR ───
-function toggleValores(){
-  visivel=!visivel;
-  const btn=$("eyeBtn");
-  if(visivel){
-    btn.classList.add("ativo");
-    btn.innerHTML=btn.innerHTML.replace("Ocultar","Revelar");
-  } else {
-    btn.classList.remove("ativo");
-    btn.innerHTML=btn.innerHTML.replace("Revelar","Ocultar");
-  }
-  aplicarOcultamento();
-}
-
-function aplicarOcultamento(){
-  const hide=!visivel;
-  [".hero-value",".kpi-value",".semana-card-total",".semana-row-val",
-   ".legend-val",".td-red",".td-green",".td-blue",".td-gold",
-   ".ccl-val",".comp-bar-val",".hero-sub"].forEach(sel=>{
-    document.querySelectorAll(sel).forEach(e=>{
-      if(hide) e.classList.add("val-oculto"); else e.classList.remove("val-oculto");
-    });
-  });
-}
-
-// ─── INIT ───
-window.addEventListener("load",()=>{ atualizarDots(); verificarSessao(); });
-</script>
-</body>
-</html>
+      <div style="width:10px;height:10px;border-radius:50%;background:${cor.bg
