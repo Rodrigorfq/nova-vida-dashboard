@@ -1408,30 +1408,30 @@ function fazerLogout(){
 async function carregarTudo(){
   $("pageBody").innerHTML='<div class="loading-state"><div class="loader"></div><p class="loader-text">Carregando dados financeiros...</p></div>';
   try{
-    // Buscar despesas (obrigatório)
-    const rD = await fetch(URL_DESPESAS+"?t="+Date.now(),{method:"GET",redirect:"follow"});
-    const jD = await rD.json();
+    // Disparar as 3 buscas em PARALELO (não uma depois da outra) — reduz drasticamente o tempo de carregamento
+    const pDespesas = fetch(URL_DESPESAS+"?t="+Date.now(),{method:"GET",redirect:"follow"}).then(r=>r.json());
+
+    const pEntradas = (URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com"))
+      ? fetch(URL_ENTRADAS+"?t="+Date.now(),{method:"GET",redirect:"follow"}).then(r=>r.json()).catch(e=>({erro:e.message}))
+      : Promise.resolve({erro:"não configurado"});
+
+    const pFolha = (URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com"))
+      ? fetch(URL_FOLHA+"?t="+Date.now(),{method:"GET",redirect:"follow"}).then(r=>r.json()).catch(e=>({erro:e.message}))
+      : Promise.resolve({erro:"não configurado"});
+
+    const [jD, jE, jF] = await Promise.all([pDespesas, pEntradas, pFolha]);
+
+    // Despesas é obrigatório
     if(jD.erro) throw new Error(jD.mensagem||jD.erro);
     DD = jD;
 
-    // Buscar entradas (opcional — falha não bloqueia)
-    if(URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com")){
-      try{
-        const rE = await fetch(URL_ENTRADAS+"?t="+Date.now(),{method:"GET",redirect:"follow"});
-        const jE = await rE.json();
-        if(!jE.erro) DE=jE;
-        console.log("Entradas OK:", Object.keys(DE).length, "meses");
-      }catch(e){ console.warn("Entradas não carregadas:", e.message); }
-    }
+    // Entradas é opcional — falha não bloqueia
+    if(!jE.erro){ DE=jE; console.log("Entradas OK:", Object.keys(DE).length, "meses"); }
+    else console.warn("Entradas não carregadas:", jE.erro);
 
-    // Buscar folha de pagamento (opcional — falha não bloqueia)
-    if(URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com")){
-      try{
-        const rF = await fetch(URL_FOLHA+"?t="+Date.now(),{method:"GET",redirect:"follow"});
-        const jF = await rF.json();
-        if(!jF.erro){ DF=jF; console.log("Folha OK:", Object.keys(DF).length, "meses"); }
-      }catch(e){ console.warn("Folha não carregada:", e.message); }
-    }
+    // Folha é opcional — falha não bloqueia
+    if(!jF.erro){ DF=jF; console.log("Folha OK:", Object.keys(DF).length, "meses"); }
+    else console.warn("Folha não carregada:", jF.erro);
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); sel.appendChild(o); });
