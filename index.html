@@ -947,6 +947,32 @@ tr:hover td { background: var(--bg); }
   cursor: pointer; font-family: inherit; margin-bottom: 16px;
 }
 
+/* ─── UPLOAD INTELIGENTE (IA) ─── */
+.ia-upload-dropzone {
+  display: block;
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .15s;
+  font-size: 13px;
+  color: var(--slate);
+}
+.ia-upload-dropzone:hover { border-color: var(--accent); background: var(--accent2); }
+.ia-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ia-form-group { display: flex; flex-direction: column; gap: 4px; }
+.ia-form-label {
+  font-size: 11px; font-weight: 600; color: var(--slate);
+  text-transform: uppercase; letter-spacing: .05em;
+}
+.ia-form-input {
+  padding: 8px 12px; border: 1.5px solid var(--border);
+  border-radius: var(--r-sm); font-size: 13px; font-family: inherit;
+  color: var(--navy); background: var(--white);
+}
+.ia-form-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+
 .comp-grupo-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted);
@@ -2529,7 +2555,27 @@ function renderComprovantes(el){
   btnRecarregar.innerHTML = "🔄 Recarregar";
   btnRecarregar.onclick = function(){ COMPROV_STATE.despSel=null; COMPROV_STATE.arqSel=null; carregarDadosComprov(); };
   hdr.appendChild(btnRecarregar);
+
+  const btnNovoIA = document.createElement("button");
+  btnNovoIA.className = "topbar-btn ativo";
+  btnNovoIA.innerHTML = "🤖 Novo comprovante com IA";
+  btnNovoIA.onclick = function(){ toggleIAPanel(); };
+  hdr.appendChild(btnNovoIA);
+
   el.appendChild(hdr);
+
+  // Painel de upload inteligente (IA) — oculto por padrão
+  const iaPanel = div("fade-in");
+  iaPanel.id = "iaUploadPanel";
+  iaPanel.style.cssText = "display:none;background:var(--white);border:1px solid var(--border);border-radius:var(--r);padding:18px;margin-bottom:16px;box-shadow:var(--shadow-sm)";
+  iaPanel.innerHTML = `
+    <p style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:10px">📤 Adicionar novo comprovante com leitura automática</p>
+    <label class="ia-upload-dropzone" for="iaFileInput">
+      <span id="iaDropzoneText">📤 Clique para selecionar a foto ou PDF do comprovante</span>
+    </label>
+    <input type="file" id="iaFileInput" accept="image/*,.pdf" style="display:none" onchange="selecionarArquivoIA(this)">
+    <div id="iaResultado"></div>`;
+  el.appendChild(iaPanel);
 
   // Barra de ação (aparece quando ambos selecionados)
   const actionBar = document.createElement("div");
@@ -2826,6 +2872,144 @@ async function desvincularComp(aba, linha, colComp, event){
     }
   }catch(e){
     mostrarToast("❌ Erro: " + e.message, true);
+  }
+}
+
+// ─── UPLOAD INTELIGENTE (IA) ───
+let IA_STATE = { base64: null, mimeType: null, nomeArquivo: null, dadosExtraidos: null };
+
+function toggleIAPanel(){
+  const panel = document.getElementById("iaUploadPanel");
+  if(!panel) return;
+  const abrir = panel.style.display === "none";
+  panel.style.display = abrir ? "block" : "none";
+  if(abrir) resetIAPanel();
+}
+
+function resetIAPanel(){
+  IA_STATE = { base64:null, mimeType:null, nomeArquivo:null, dadosExtraidos:null };
+  const resultado = document.getElementById("iaResultado");
+  if(resultado) resultado.innerHTML = "";
+  const input = document.getElementById("iaFileInput");
+  if(input) input.value = "";
+  const dz = document.getElementById("iaDropzoneText");
+  if(dz) dz.innerHTML = "📤 Clique para selecionar a foto ou PDF do comprovante";
+}
+
+function selecionarArquivoIA(input){
+  const file = input.files[0];
+  if(!file) return;
+  IA_STATE.nomeArquivo = file.name;
+  IA_STATE.mimeType = file.type || "image/jpeg";
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    IA_STATE.base64 = e.target.result.split(",")[1];
+    const dz = document.getElementById("iaDropzoneText");
+    if(dz) dz.innerHTML = "📄 " + file.name + "<br><span style='font-size:11px;color:var(--muted)'>Analisando com IA...</span>";
+    analisarViaIA();
+  };
+  reader.onerror = function(){ mostrarToast("❌ Não foi possível ler o arquivo.", true); };
+  reader.readAsDataURL(file);
+}
+
+async function analisarViaIA(){
+  const resultado = document.getElementById("iaResultado");
+  if(resultado) resultado.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><div class="loader" style="margin:0 auto 10px"></div>Lendo o comprovante...</div>';
+
+  try{
+    const res = await fetch(URL_COMPROV, {
+      method: "POST",
+      body: JSON.stringify({ acao: "analisar_comprovante", imagemBase64: IA_STATE.base64, mimeType: IA_STATE.mimeType }),
+    });
+    const json = await res.json();
+
+    if(json.erro){
+      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${json.erro}</p></div>`;
+      return;
+    }
+
+    IA_STATE.dadosExtraidos = json.dados;
+    const dz = document.getElementById("iaDropzoneText");
+    if(dz) dz.innerHTML = "📄 " + IA_STATE.nomeArquivo + "<br><span style='font-size:11px;color:var(--entrada)'>✅ Lido com sucesso — confira os dados abaixo</span>";
+    renderFormExtraidoIA(json.dados);
+  }catch(e){
+    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${e.message}</p></div>`;
+  }
+}
+
+function renderFormExtraidoIA(dados){
+  const resultado = document.getElementById("iaResultado");
+  if(!resultado) return;
+  const esc = s => String(s||"").replace(/"/g,"&quot;");
+  resultado.innerHTML = `
+    <div style="background:var(--accent2);border:1px solid #c7d2fe;border-radius:var(--r);padding:16px;margin-top:12px">
+      <p style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:12px">🤖 Dados extraídos pela IA — confira e corrija se precisar</p>
+      <div class="ia-form-grid">
+        <div class="ia-form-group">
+          <label class="ia-form-label">Data</label>
+          <input class="ia-form-input" id="iaData" value="${esc(dados.data)}" placeholder="DD/MM/AAAA">
+        </div>
+        <div class="ia-form-group">
+          <label class="ia-form-label">Valor (R$)</label>
+          <input class="ia-form-input" id="iaValor" type="number" step="0.01" value="${Number(dados.valor)||0}">
+        </div>
+        <div class="ia-form-group" style="grid-column:1/-1">
+          <label class="ia-form-label">Descrição / Fornecedor</label>
+          <input class="ia-form-input" id="iaDescricao" value="${esc(dados.descricao)}">
+        </div>
+        <div class="ia-form-group">
+          <label class="ia-form-label">Categoria</label>
+          <input class="ia-form-input" id="iaCategoria" value="${esc(dados.categoria_sugerida)}">
+        </div>
+        <div class="ia-form-group">
+          <label class="ia-form-label">Forma de Pagamento</label>
+          <input class="ia-form-input" id="iaForma" value="${esc(dados.forma_pagamento)}">
+        </div>
+        <div class="ia-form-group" style="grid-column:1/-1">
+          <label class="ia-form-label">Observação</label>
+          <input class="ia-form-input" id="iaObs" value="${esc(dados.observacao)}">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:14px">
+        <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--slate)" onclick="resetIAPanel()">Cancelar</button>
+        <button class="comp-btn-vincular" id="btnSalvarIA" onclick="salvarViaIA()">✅ Confirmar e Lançar na Planilha</button>
+      </div>
+    </div>`;
+}
+
+async function salvarViaIA(){
+  const btn = document.getElementById("btnSalvarIA");
+  if(btn){ btn.disabled = true; btn.textContent = "Salvando..."; }
+
+  const payload = {
+    acao: "salvar_despesa_ia",
+    mes: COMPROV_STATE.mesSel,
+    data: document.getElementById("iaData").value,
+    descricao: document.getElementById("iaDescricao").value,
+    categoria: document.getElementById("iaCategoria").value,
+    forma: document.getElementById("iaForma").value,
+    valor: document.getElementById("iaValor").value,
+    observacao: document.getElementById("iaObs").value,
+    imagemBase64: IA_STATE.base64,
+    mimeType: IA_STATE.mimeType,
+    nomeArquivo: IA_STATE.nomeArquivo,
+  };
+
+  try{
+    const res = await fetch(URL_COMPROV, { method: "POST", body: JSON.stringify(payload) });
+    const json = await res.json();
+    if(json.ok){
+      mostrarToast("✅ Despesa lançada na planilha com sucesso!");
+      toggleIAPanel();
+      carregarDadosComprov();
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha ao salvar"), true);
+      if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
   }
 }
 
