@@ -2618,8 +2618,133 @@ function renderComprovantes(el){
     <div id="iaResultado"></div>`;
   el.appendChild(iaPanel);
 
+  // Fila de pendentes — comprovantes enviados pela página de captura (celular do gabinete)
+  renderPendentes(el);
+
   // Busca de despesas recorrentes
   renderBuscaDespesas(el);
+}
+
+// ─── FILA DE PENDENTES (comprovantes capturados pelo celular, aguardando revisão) ───
+let PENDENTES_CACHE = [];
+
+function renderPendentes(el){
+  const card = div("chart-card fade-in");
+  card.id = "pendentesCard";
+  card.style.marginBottom = "16px";
+  card.innerHTML = `
+    <div class="chart-card-hdr" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:8px">
+      <div>
+        <p class="chart-card-title">📥 Comprovantes aguardando revisão</p>
+        <p class="chart-card-sub">Enviados pela página de captura do celular — confira os dados antes de lançar oficialmente</p>
+      </div>
+      <button class="topbar-btn" onclick="carregarPendentes()">🔄 Atualizar</button>
+    </div>
+    <div id="pendentesLista"><div style="text-align:center;padding:20px;color:var(--muted)">Carregando...</div></div>`;
+  el.appendChild(card);
+  carregarPendentes();
+}
+
+async function carregarPendentes(){
+  const lista = document.getElementById("pendentesLista");
+  if(!lista) return;
+  try{
+    const res = await fetch(URL_COMPROV + "?acao=listar_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const json = await res.json();
+    if(json.erro){ lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro: ${json.erro}</p>`; return; }
+    PENDENTES_CACHE = json.pendentes || [];
+    renderListaPendentes();
+  }catch(e){
+    lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro de conexão: ${e.message}</p>`;
+  }
+}
+
+function renderListaPendentes(){
+  const lista = document.getElementById("pendentesLista");
+  if(!lista) return;
+  if(PENDENTES_CACHE.length === 0){
+    lista.innerHTML = '<p style="font-size:13px;color:var(--muted);padding:16px 0;text-align:center">Nenhum comprovante aguardando revisão. ✅</p>';
+    return;
+  }
+  lista.innerHTML = "";
+  const esc = s => String(s||"").replace(/"/g,"&quot;");
+  PENDENTES_CACHE.forEach(function(p){
+    const item = div("comp-desp-item tem-comp");
+    item.style.cursor = "default";
+    item.innerHTML = `
+      <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap">
+        <div>
+          <p class="comp-desp-desc">${p.descricao || "(sem descrição)"}</p>
+          <div class="comp-desp-meta">
+            <span>📤 Enviado por ${p.enviadoPor||"—"} em ${p.dataEnvio||"—"}</span>
+            <span>📅 Mês: ${p.mes}</span>
+          </div>
+        </div>
+        <a href="${p.comp}" target="_blank" style="font-size:11px;color:var(--saldo-pos);text-decoration:none;font-weight:600;flex-shrink:0">🔗 Ver foto</a>
+      </div>
+      <div class="ia-form-grid">
+        <div class="ia-form-group"><label class="ia-form-label">Data</label><input class="ia-form-input" data-campo="data" value="${esc(p.data)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Valor (R$)</label><input class="ia-form-input" data-campo="valor" type="number" step="0.01" value="${Number(p.valor)||0}"></div>
+        <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Descrição</label><input class="ia-form-input" data-campo="descricao" value="${esc(p.descricao)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" value="${esc(p.categoria)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" value="${esc(p.forma)}"></div>
+        <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--saida)" onclick="rejeitarPendenteUI('${p.id}', this)">✕ Rejeitar</button>
+        <button class="comp-btn-vincular" onclick="aprovarPendenteUI('${p.id}', '${p.mes}', '${p.comp}', this)">✅ Aprovar e Lançar</button>
+      </div>`;
+    lista.appendChild(item);
+  });
+}
+
+function lerCamposPendente(container){
+  const campos = {};
+  container.querySelectorAll("[data-campo]").forEach(function(inp){ campos[inp.dataset.campo] = inp.value; });
+  return campos;
+}
+
+async function aprovarPendenteUI(id, mes, comp, btnEl){
+  const item = btnEl.closest(".comp-desp-item");
+  const campos = lerCamposPendente(item);
+  btnEl.disabled = true; btnEl.textContent = "Salvando...";
+  try{
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+      acao:"aprovar_pendente", id: id, mes: mes, comp: comp,
+      data: campos.data, descricao: campos.descricao, categoria: campos.categoria,
+      forma: campos.forma, valor: campos.valor, observacao: campos.observacao,
+    })});
+    const json = await res.json();
+    if(json.ok){
+      mostrarToast("✅ Aprovado e lançado na planilha!");
+      carregarTudo(); // recarrega tudo — inclui a lista de pendentes atualizada
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
+      btnEl.disabled=false; btnEl.textContent="✅ Aprovar e Lançar";
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    btnEl.disabled=false; btnEl.textContent="✅ Aprovar e Lançar";
+  }
+}
+
+async function rejeitarPendenteUI(id, btnEl){
+  if(!confirm("Rejeitar este comprovante? A foto continua salva no Drive, mas não será lançada na planilha.")) return;
+  btnEl.disabled = true;
+  try{
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"rejeitar_pendente", id: id }) });
+    const json = await res.json();
+    if(json.ok){
+      mostrarToast("🗑 Rejeitado.");
+      carregarPendentes();
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
+      btnEl.disabled = false;
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    btnEl.disabled = false;
+  }
 }
 
 // ─── BUSCA DE DESPESAS RECORRENTES ───
