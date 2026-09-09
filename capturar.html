@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0f172a">
+<title>Enviar Comprovante | ICNV Rocha Miranda</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+:root {
+  --navy: #0f172a;
+  --slate: #475569;
+  --muted: #64748b;
+  --border: #e2e8f0;
+  --bg: #f7f8fa;
+  --white: #ffffff;
+  --entrada: #16803d;
+  --entrada2: #dcfce7;
+  --saida: #c0272d;
+  --saida2: #fbe4e4;
+  --accent: #4338ca;
+  --accent2: #eceefb;
+  --r: 10px;
+  --r-sm: 6px;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--navy);
+  font-size: 15px;
+  line-height: 1.5;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+.topbar {
+  background: var(--navy);
+  padding: 18px 20px;
+  color: #fff;
+}
+.topbar-title { font-size: 16px; font-weight: 700; }
+.topbar-sub { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 2px; }
+
+.container {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+}
+
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.form-group { margin-bottom: 16px; }
+.form-label {
+  display: block;
+  font-size: 11px; font-weight: 600; color: var(--slate);
+  text-transform: uppercase; letter-spacing: .05em; margin-bottom: 6px;
+}
+.form-input, .form-select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 15px; color: var(--navy);
+  background: var(--white);
+  font-family: inherit;
+}
+.form-input:focus, .form-select:focus { outline: none; border-color: var(--accent); }
+
+/* Área de captura */
+.captura-area {
+  border: 2px dashed var(--border);
+  border-radius: var(--r);
+  padding: 32px 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .15s, background .15s;
+  display: block;
+}
+.captura-area:active { border-color: var(--accent); background: var(--accent2); }
+.captura-icon { font-size: 40px; margin-bottom: 10px; display: block; }
+.captura-texto { font-size: 14px; color: var(--slate); font-weight: 600; }
+.captura-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+.preview-wrap { position: relative; margin-bottom: 16px; }
+.preview-img {
+  width: 100%; max-height: 340px; object-fit: contain;
+  border-radius: var(--r); border: 1px solid var(--border);
+  background: #000;
+}
+.preview-trocar {
+  display: block; text-align: center; margin-top: 10px;
+  font-size: 13px; color: var(--accent); font-weight: 600;
+  text-decoration: none; cursor: pointer;
+}
+
+.btn-enviar {
+  width: 100%; padding: 14px;
+  background: var(--accent); border: none; border-radius: var(--r-sm);
+  font-size: 15px; font-weight: 700; color: #fff;
+  cursor: pointer; font-family: inherit;
+}
+.btn-enviar:disabled { opacity: .5; cursor: not-allowed; }
+
+.status-msg {
+  margin-top: 14px; padding: 12px 14px;
+  border-radius: var(--r-sm); font-size: 13px;
+  display: none; text-align: center; font-weight: 600;
+}
+.status-msg.sucesso { display: block; background: var(--entrada2); color: var(--entrada); }
+.status-msg.erro    { display: block; background: var(--saida2); color: var(--saida); }
+.status-msg.carregando { display: block; background: var(--accent2); color: var(--accent); }
+
+.hist-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 10px 0; border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.hist-item:last-child { border-bottom: none; }
+.hist-nome { color: var(--slate); }
+.hist-ok { color: var(--entrada); font-weight: 600; }
+
+input[type="file"] { display: none; }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <p class="topbar-title">📸 Enviar Comprovante</p>
+  <p class="topbar-sub">ICNV Rocha Miranda · Tire a foto e envie para revisão</p>
+</div>
+
+<div class="container">
+
+  <div class="card">
+    <div class="form-group">
+      <label class="form-label">Mês da despesa</label>
+      <select class="form-select" id="mesSelect"></select>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Seu nome (opcional)</label>
+      <input class="form-input" id="enviadoPor" placeholder="Quem está enviando?" autocomplete="off">
+    </div>
+
+    <div id="areaSemFoto">
+      <label class="captura-area" for="fileInput">
+        <span class="captura-icon">📷</span>
+        <span class="captura-texto">Tocar para tirar foto ou escolher da galeria</span>
+        <span class="captura-sub">Comprovante, boleto, nota fiscal...</span>
+      </label>
+      <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="arquivoSelecionado(this)">
+    </div>
+
+    <div id="areaComFoto" style="display:none">
+      <div class="preview-wrap">
+        <img class="preview-img" id="previewImg" src="">
+      </div>
+      <a class="preview-trocar" onclick="trocarFoto()">↺ Trocar foto</a>
+    </div>
+
+    <button class="btn-enviar" id="btnEnviar" onclick="enviarComprovante()" disabled style="margin-top:16px">
+      Enviar para revisão
+    </button>
+
+    <div class="status-msg" id="statusMsg"></div>
+  </div>
+
+  <div class="card" id="historicoCard" style="display:none">
+    <p style="font-size:12px;font-weight:700;color:var(--slate);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Enviados nesta sessão</p>
+    <div id="historicoLista"></div>
+  </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════════
+// CONFIGURAÇÃO — mesma URL do Apps Script de Comprovantes já usado no dashboard
+// ═══════════════════════════════════════
+const URL_COMPROV = "https://script.google.com/macros/s/AKfycbyTPZabOSmFb_ctdCCZ3CoOhQ6xC3Ch9Rza7hb1jtChOV1lz14ZqpTK8NMPwxXbdOG-1A/exec";
+const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
+               "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+
+let imagemAtual = null; // { base64, mimeType, nomeArquivo }
+
+// ── Inicialização ──
+(function init(){
+  const sel = document.getElementById("mesSelect");
+  const mesAtualIdx = new Date().getMonth(); // 0-11
+  MESES.forEach(function(m, i){
+    const opt = document.createElement("option");
+    opt.value = m; opt.textContent = m;
+    if(i === mesAtualIdx) opt.selected = true;
+    sel.appendChild(opt);
+  });
+
+  // Lembrar o nome de quem envia (conveniência, guardado só neste navegador)
+  const nomeSalvo = localStorage.getItem("nv_enviado_por");
+  if(nomeSalvo) document.getElementById("enviadoPor").value = nomeSalvo;
+})();
+
+// ── Captura e compressão da imagem ──
+function arquivoSelecionado(input){
+  const file = input.files[0];
+  if(!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      // Comprimir: redimensionar para no máximo 1600px no lado maior, qualidade 0.75
+      const MAX_LADO = 1600;
+      let largura = img.width, altura = img.height;
+      if(largura > MAX_LADO || altura > MAX_LADO){
+        if(largura > altura){ altura = Math.round(altura * (MAX_LADO/largura)); largura = MAX_LADO; }
+        else { largura = Math.round(largura * (MAX_LADO/altura)); altura = MAX_LADO; }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = largura; canvas.height = altura;
+      canvas.getContext("2d").drawImage(img, 0, 0, largura, altura);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+
+      imagemAtual = {
+        base64: dataUrl.split(",")[1],
+        mimeType: "image/jpeg",
+        nomeArquivo: "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".jpg",
+      };
+
+      document.getElementById("previewImg").src = dataUrl;
+      document.getElementById("areaSemFoto").style.display = "none";
+      document.getElementById("areaComFoto").style.display = "block";
+      document.getElementById("btnEnviar").disabled = false;
+      esconderStatus();
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function trocarFoto(){
+  imagemAtual = null;
+  document.getElementById("areaSemFoto").style.display = "block";
+  document.getElementById("areaComFoto").style.display = "none";
+  document.getElementById("btnEnviar").disabled = true;
+  document.getElementById("fileInput").value = "";
+  esconderStatus();
+}
+
+function mostrarStatus(msg, tipo){
+  const el = document.getElementById("statusMsg");
+  el.textContent = msg;
+  el.className = "status-msg " + tipo;
+}
+function esconderStatus(){
+  document.getElementById("statusMsg").className = "status-msg";
+}
+
+// ── Envio ──
+async function enviarComprovante(){
+  if(!imagemAtual) return;
+
+  const mes = document.getElementById("mesSelect").value;
+  const enviadoPor = document.getElementById("enviadoPor").value.trim();
+  if(enviadoPor) localStorage.setItem("nv_enviado_por", enviadoPor);
+
+  const btn = document.getElementById("btnEnviar");
+  btn.disabled = true; btn.textContent = "Enviando...";
+  mostrarStatus("📤 Enviando e lendo o comprovante com IA...", "carregando");
+
+  try{
+    const res = await fetch(URL_COMPROV, {
+      method: "POST",
+      body: JSON.stringify({
+        acao: "enviar_para_revisao",
+        mes: mes,
+        imagemBase64: imagemAtual.base64,
+        mimeType: imagemAtual.mimeType,
+        nomeArquivo: imagemAtual.nomeArquivo,
+        enviadoPor: enviadoPor || "—",
+      }),
+    });
+    const json = await res.json();
+
+    if(json.ok){
+      mostrarStatus("✅ Enviado! Vai aparecer para revisão no dashboard.", "sucesso");
+      adicionarAoHistorico(imagemAtual.nomeArquivo, mes);
+      setTimeout(function(){
+        trocarFoto();
+        document.getElementById("btnEnviar").textContent = "Enviar para revisão";
+      }, 1400);
+    } else {
+      mostrarStatus("❌ Erro: " + (json.erro || "Falha ao enviar"), "erro");
+      btn.disabled = false; btn.textContent = "Enviar para revisão";
+    }
+  }catch(e){
+    mostrarStatus("❌ Erro de conexão: " + e.message, "erro");
+    btn.disabled = false; btn.textContent = "Enviar para revisão";
+  }
+}
+
+function adicionarAoHistorico(nome, mes){
+  const card = document.getElementById("historicoCard");
+  const lista = document.getElementById("historicoLista");
+  card.style.display = "block";
+  const item = document.createElement("div");
+  item.className = "hist-item";
+  item.innerHTML = `<span class="hist-nome">${nome} · ${mes}</span><span class="hist-ok">✓ enviado</span>`;
+  lista.insertBefore(item, lista.firstChild);
+}
+</script>
+</body>
+</html>
