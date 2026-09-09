@@ -13,30 +13,32 @@
   --navy2:     #1e293b;
   --navy3:     #334155;
   --slate:     #475569;
-  --muted:     #94a3b8;
+  --muted:     #64748b;
+  --muted-lt:  #94a3b8;
   --border:    #e2e8f0;
-  --bg:        #f8fafc;
+  --border-lt: #eef1f5;
+  --bg:        #f7f8fa;
   --white:     #ffffff;
-  --entrada:   #059669;
-  --entrada2:  #d1fae5;
-  --entrada3:  #f0fdf4;
-  --saida:     #dc2626;
-  --saida2:    #fee2e2;
-  --saida3:    #fef2f2;
-  --saldo-pos: #2563eb;
-  --saldo-neg: #dc2626;
-  --gold:      #d97706;
-  --gold2:     #fef3c7;
-  --purple:    #7c3aed;
-  --purple2:   #ede9fe;
-  --accent:    #6366f1;
-  --accent2:   #eef2ff;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
-  --shadow:    0 4px 6px -1px rgba(0,0,0,.07), 0 2px 4px -2px rgba(0,0,0,.05);
-  --shadow-lg: 0 10px 15px -3px rgba(0,0,0,.08), 0 4px 6px -4px rgba(0,0,0,.05);
-  --r:         12px;
-  --r-sm:      8px;
-  --r-lg:      16px;
+  --entrada:   #16803d;
+  --entrada2:  #dcfce7;
+  --entrada3:  #f3faf5;
+  --saida:     #c0272d;
+  --saida2:    #fbe4e4;
+  --saida3:    #fdf5f5;
+  --saldo-pos: #1d4ed8;
+  --saldo-neg: #c0272d;
+  --gold:      #a3620a;
+  --gold2:     #faf0dc;
+  --purple:    #6d28d9;
+  --purple2:   #f0ecfc;
+  --accent:    #4338ca;
+  --accent2:   #eceefb;
+  --shadow-sm: 0 1px 2px rgba(15,23,42,.045);
+  --shadow:    0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.04);
+  --shadow-lg: 0 6px 16px -4px rgba(15,23,42,.10), 0 2px 6px rgba(15,23,42,.05);
+  --r:         10px;
+  --r-sm:      6px;
+  --r-lg:      12px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -76,12 +78,12 @@ body {
 .login-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  max-width: 900px;
+  max-width: 880px;
   width: 90%;
   background: var(--white);
-  border-radius: 24px;
+  border-radius: var(--r-lg);
   overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0,0,0,.4);
+  box-shadow: 0 20px 40px -12px rgba(15,23,42,.25);
   position: relative;
   z-index: 1;
   animation: slideUp .5s cubic-bezier(.16,1,.3,1);
@@ -210,19 +212,19 @@ body {
 .form-input:disabled { background: #f1f5f9; cursor: not-allowed; }
 
 .login-submit {
-  width: 100%; padding: 13px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  width: 100%; padding: 12px;
+  background: var(--accent);
   border: none; border-radius: var(--r-sm);
-  font-size: 15px; font-weight: 700; color: #fff;
+  font-size: 14px; font-weight: 600; color: #fff;
   cursor: pointer; margin-top: 8px;
   font-family: inherit;
-  transition: opacity .2s, transform .15s, box-shadow .2s;
-  box-shadow: 0 4px 14px rgba(99,102,241,.4);
+  transition: background .15s, box-shadow .15s;
+  box-shadow: var(--shadow-sm);
 }
 
 .login-submit:hover:not(:disabled) {
-  opacity: .93; transform: translateY(-1px);
-  box-shadow: 0 6px 20px rgba(99,102,241,.5);
+  background: #372e9e;
+  box-shadow: var(--shadow);
 }
 
 .login-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
@@ -304,21 +306,21 @@ body {
 .sidebar-logo-text {
   display: flex; flex-direction: column;
   align-items: center; justify-content: center;
-  width: 44px; height: 44px;
-  background: linear-gradient(135deg, rgba(99,102,241,.3), rgba(139,92,246,.2));
-  border: 1px solid rgba(99,102,241,.4);
-  border-radius: 12px;
+  width: 40px; height: 40px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: var(--r-sm);
   flex-shrink: 0;
   line-height: 1;
 }
 .icnv-text {
-  font-size: 11px; font-weight: 800; color: #fff;
-  letter-spacing: .05em;
+  font-size: 10.5px; font-weight: 700; color: #fff;
+  letter-spacing: .04em;
 }
 .rm-text {
-  font-size: 9px; font-weight: 600;
-  color: rgba(99,102,241,.9);
-  letter-spacing: .1em;
+  font-size: 8.5px; font-weight: 600;
+  color: rgba(255,255,255,.5);
+  letter-spacing: .08em;
 }
 
 /* Login logo texto */
@@ -364,10 +366,10 @@ body {
 
 .nav-item {
   display: flex; align-items: center; gap: 10px;
-  padding: 10px 12px; border-radius: 8px;
-  cursor: pointer; margin-bottom: 2px;
+  padding: 9px 12px; border-radius: var(--r-sm);
+  cursor: pointer; margin-bottom: 1px;
   transition: background .15s, color .15s;
-  font-size: 14px; font-weight: 500;
+  font-size: 13.5px; font-weight: 500;
   color: rgba(255,255,255,.55);
   position: relative;
 }
@@ -404,10 +406,10 @@ body {
 }
 
 .user-avatar {
-  width: 32px; height: 32px; border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent), #8b5cf6);
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--accent);
   display: flex; align-items: center; justify-content: center;
-  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+  font-size: 12.5px; font-weight: 600; color: #fff; flex-shrink: 0;
 }
 
 .user-info { flex: 1; overflow: hidden; }
@@ -536,16 +538,16 @@ body {
   background: var(--white);
   border: 1px solid var(--border);
   border-radius: var(--r);
-  padding: 18px 20px;
+  padding: 16px 18px;
   box-shadow: var(--shadow-sm);
-  transition: transform .2s, box-shadow .2s;
+  transition: box-shadow .15s;
   position: relative; overflow: hidden;
 }
-.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.kpi-card:hover { box-shadow: var(--shadow); }
 
 .kpi-card::after {
   content: ''; position: absolute;
-  top: 0; left: 0; right: 0; height: 3px;
+  top: 0; left: 0; right: 0; height: 2px;
 }
 .kpi-entrada::after  { background: var(--entrada); }
 .kpi-saida::after    { background: var(--saida); }
@@ -555,18 +557,19 @@ body {
 .kpi-purple::after   { background: var(--purple); }
 .kpi-accent::after   { background: var(--accent); }
 
-.kpi-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.kpi-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 10px; }
 .kpi-icon {
-  width: 36px; height: 36px; border-radius: 10px;
-  display: flex; align-items: center; justify-content: center; font-size: 18px;
+  width: 32px; height: 32px; border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center; font-size: 15px;
+  opacity: .85;
 }
 .kpi-label {
-  font-size: 11px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .07em; color: var(--muted); margin-bottom: 4px;
+  font-size: 10.5px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--muted); margin-bottom: 4px;
 }
 .kpi-value {
-  font-size: 22px; font-weight: 800; color: var(--navy);
-  line-height: 1; letter-spacing: -.5px;
+  font-size: 21px; font-weight: 700; color: var(--navy);
+  line-height: 1.1; letter-spacing: -.3px;
 }
 .kpi-footer { margin-top: 8px; font-size: 12px; color: var(--muted); }
 .kpi-badge {
@@ -586,43 +589,34 @@ body {
 }
 
 .hero-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--slate);
   border-radius: var(--r-lg);
-  padding: 24px;
-  color: #fff;
-  position: relative; overflow: hidden;
-  box-shadow: var(--shadow-lg);
+  padding: 20px 22px;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow .15s, transform .15s;
 }
+.hero-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
 
-.hero-card::before {
-  content: ''; position: absolute;
-  width: 120px; height: 120px; border-radius: 50%;
-  background: rgba(255,255,255,.08);
-  top: -30px; right: -30px;
-}
-
-.hero-card::after {
-  content: ''; position: absolute;
-  width: 80px; height: 80px; border-radius: 50%;
-  background: rgba(255,255,255,.05);
-  bottom: -20px; left: -20px;
-}
-
-.hc-entrada { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
-.hc-saida   { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
-.hc-saldo-pos { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
-.hc-saldo-neg { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }
+.hc-entrada    { border-left-color: var(--entrada); }
+.hc-saida      { border-left-color: var(--saida); }
+.hc-saldo-pos  { border-left-color: var(--saldo-pos); }
+.hc-saldo-neg  { border-left-color: var(--saldo-neg); }
 
 .hero-label {
   font-size: 11px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: .1em; opacity: .75; margin-bottom: 10px;
-  position: relative; z-index: 1;
+  letter-spacing: .08em; color: var(--muted); margin-bottom: 10px;
 }
 .hero-value {
-  font-size: 28px; font-weight: 800; line-height: 1;
-  margin-bottom: 6px; letter-spacing: -1px;
-  position: relative; z-index: 1;
+  font-size: 26px; font-weight: 700; line-height: 1;
+  margin-bottom: 6px; letter-spacing: -.5px; color: var(--navy);
 }
-.hero-sub { font-size: 12px; opacity: .65; position: relative; z-index: 1; }
+.hc-entrada .hero-value   { color: var(--entrada); }
+.hc-saida .hero-value     { color: var(--saida); }
+.hc-saldo-pos .hero-value { color: var(--saldo-pos); }
+.hc-saldo-neg .hero-value { color: var(--saldo-neg); }
+.hero-sub { font-size: 12px; color: var(--muted); }
 
 /* ─── CHART CARDS ─── */
 .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
@@ -724,8 +718,8 @@ tr:hover td { background: var(--bg); }
 .semana-card:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
 
 .semana-card-hdr {
-  background: linear-gradient(135deg, #059669, #047857);
-  padding: 14px 16px;
+  background: var(--entrada);
+  padding: 13px 16px;
   display: flex; align-items: center; justify-content: space-between;
 }
 .semana-card-title { font-size: 13px; font-weight: 700; color: #fff; }
@@ -793,8 +787,8 @@ tr:hover td { background: var(--bg); }
   margin-top: 10px;
 }
 .comp-btn:hover {
-  background: #f0f9ff; border-color: #2563eb;
-  color: #2563eb;
+  background: var(--accent2); border-color: var(--saldo-pos);
+  color: var(--saldo-pos);
 }
 .comp-btn-icon { font-size: 14px; }
 
@@ -802,8 +796,8 @@ tr:hover td { background: var(--bg); }
   display: inline-flex; align-items: center; gap: 4px;
   padding: 3px 8px; border-radius: 99px;
   font-size: 10px; font-weight: 700;
-  background: #dbeafe; color: #1d4ed8;
-  border: 1px solid #bfdbfe;
+  background: #dde7fb; color: var(--saldo-pos);
+  border: 1px solid #c3d4f7;
 }
 .comp-badge-none {
   background: #f1f5f9; color: #94a3b8;
@@ -897,7 +891,7 @@ tr:hover td { background: var(--bg); }
   gap: 10px;
 }
 
-.comp-arq-item:hover { border-color: #0891b2; background: #f0f9ff; }
+.comp-arq-item:hover { border-color: var(--saldo-pos); background: var(--accent2); }
 .comp-arq-item.selecionado { border-color: #0891b2; background: #e0f2fe; }
 
 .comp-arq-icon { font-size: 22px; flex-shrink: 0; }
@@ -924,8 +918,8 @@ tr:hover td { background: var(--bg); }
 .comp-action-btns { display: flex; gap: 8px; flex-shrink: 0; }
 
 .comp-btn-vincular {
-  background: #059669; border: none; border-radius: var(--r-sm);
-  padding: 10px 20px; font-size: 13px; font-weight: 700;
+  background: var(--entrada); border: none; border-radius: var(--r-sm);
+  padding: 9px 18px; font-size: 13px; font-weight: 600;
   color: #fff; cursor: pointer; font-family: inherit;
   transition: opacity .15s;
 }
@@ -1000,7 +994,7 @@ tr:hover td { background: var(--bg); }
 
 .comp-toast {
   position: fixed; bottom: 24px; right: 24px; z-index: 9999;
-  background: #059669; color: #fff;
+  background: var(--entrada); color: #fff;
   padding: 12px 20px; border-radius: var(--r-sm);
   font-size: 14px; font-weight: 600;
   box-shadow: var(--shadow-lg);
@@ -1267,7 +1261,7 @@ tr:hover td { background: var(--bg); }
         <span class="nav-dot" style="background:var(--saida)"></span> Saídas
       </div>
       <div class="nav-item" id="navFolha" onclick="trocarAba('folha')">
-        <span class="nav-dot" style="background:#d97706"></span> Pessoal
+        <span class="nav-dot" style="background:var(--gold)"></span> Pessoal
       </div>
       <div class="nav-item" id="navComprov" onclick="trocarAba('comprov')">
         <span class="nav-dot" style="background:#0891b2"></span> Comprovantes
@@ -1624,16 +1618,16 @@ function renderGeral(el){
   setTimeout(()=>{
     // Entradas pizza
     const itEnt=[
-      {l:"Dízimo",v:t.dizimo||0,c:"#059669"},
-      {l:"Oferta",v:t.oferta||0,c:"#34d399"},
-      {l:"Campanha",v:t.campanha||0,c:"#6ee7b7"},
-      {l:"PIX",v:t.totalPix||0,c:"#2563eb"},
+      {l:"Dízimo",v:t.dizimo||0,c:"#16803d"},
+      {l:"Oferta",v:t.oferta||0,c:"#4f9d6a"},
+      {l:"Campanha",v:t.campanha||0,c:"#8bbf9d"},
+      {l:"PIX",v:t.totalPix||0,c:"#1d4ed8"},
     ].filter(i=>i.v>0);
     const tEnt=itEnt.reduce((s,i)=>s+i.v,0)||1;
     charts.entP=buildPizza("cEntPizza",itEnt.map(i=>i.l),itEnt.map(i=>i.v),itEnt.map(i=>i.c),"ccEnt",tEnt);
     buildLegend("legEnt",itEnt,tEnt);
     // Saídas pizza
-    const CRSAI=["#dc2626","#ef4444","#f87171","#fca5a5","#b91c1c","#991b1b","#7f1d1d","#be123c"];
+    const CRSAI=["#c0272d","#d64550","#e07178","#e8949a","#a3222a","#8a1e24","#6f181d","#9d2d3d"];
     const itSai=Object.entries(cat||{}).map(([n,d],i)=>({l:n,v:sumCat({x:d}),c:CRSAI[i%CRSAI.length]})).sort((a,b)=>b.v-a.v).slice(0,6);
     const tSai=itSai.reduce((s,i)=>s+i.v,0)||1;
     charts.saiP=buildPizza("cSaiPizza",itSai.map(i=>i.l),itSai.map(i=>i.v),itSai.map(i=>i.c),"ccSai",tSai);
@@ -1668,35 +1662,35 @@ function renderCompMeses(el){
           {
             label:"Entradas",
             data:dataEnt,
-            borderColor:"#059669",
-            backgroundColor:"rgba(5,150,105,.08)",
-            borderWidth:2.5,
-            pointBackgroundColor:"#059669",
-            pointRadius:5,
-            pointHoverRadius:7,
-            tension:.4, fill:true,
+            borderColor:"#16803d",
+            backgroundColor:"rgba(22,128,61,.07)",
+            borderWidth:2.25,
+            pointBackgroundColor:"#16803d",
+            pointRadius:4,
+            pointHoverRadius:6,
+            tension:.35, fill:true,
           },
           {
             label:"Saídas",
             data:dataSai,
-            borderColor:"#dc2626",
-            backgroundColor:"rgba(220,38,38,.06)",
-            borderWidth:2.5,
-            pointBackgroundColor:"#dc2626",
-            pointRadius:5,
-            pointHoverRadius:7,
-            tension:.4, fill:true,
+            borderColor:"#c0272d",
+            backgroundColor:"rgba(192,39,45,.05)",
+            borderWidth:2.25,
+            pointBackgroundColor:"#c0272d",
+            pointRadius:4,
+            pointHoverRadius:6,
+            tension:.35, fill:true,
           },
           {
             label:"Saldo",
             data:dataSaldo,
-            borderColor:"#2563eb",
-            backgroundColor:"rgba(37,99,235,.05)",
-            borderWidth:2,
-            pointBackgroundColor:"#2563eb",
-            pointRadius:4,
-            pointHoverRadius:6,
-            tension:.4, fill:false,
+            borderColor:"#1d4ed8",
+            backgroundColor:"rgba(29,78,216,.04)",
+            borderWidth:1.75,
+            pointBackgroundColor:"#1d4ed8",
+            pointRadius:3.5,
+            pointHoverRadius:5.5,
+            tension:.35, fill:false,
             borderDash:[5,4],
           },
         ]
@@ -1856,11 +1850,11 @@ function renderEntradas(el){
   el.appendChild(sec);
 
   setTimeout(()=>{
-    const itT=[{l:"Dízimo",v:t.dizimo||0,c:"#059669"},{l:"Oferta",v:t.oferta||0,c:"#34d399"},{l:"Campanha",v:t.campanha||0,c:"#6ee7b7"},{l:"PIX",v:t.totalPix||0,c:"#2563eb"}].filter(i=>i.v>0);
+    const itT=[{l:"Dízimo",v:t.dizimo||0,c:"#16803d"},{l:"Oferta",v:t.oferta||0,c:"#4f9d6a"},{l:"Campanha",v:t.campanha||0,c:"#8bbf9d"},{l:"PIX",v:t.totalPix||0,c:"#1d4ed8"}].filter(i=>i.v>0);
     const totT=itT.reduce((s,i)=>s+i.v,0)||1;
     charts.tP=buildPizza("cTipoPizza",itT.map(i=>i.l),itT.map(i=>i.v),itT.map(i=>i.c),"ccTipo",totT);
     buildLegend("legTipo",itT,totT);
-    const itPx=[{l:"Cora",v:t.pixCora||0,c:"#2563eb"},{l:"Caixa 1",v:t.pixCaixa1||0,c:"#60a5fa"},{l:"Caixa 2",v:t.pixCaixa2||0,c:"#93c5fd"}].filter(i=>i.v>0);
+    const itPx=[{l:"Cora",v:t.pixCora||0,c:"#1d4ed8"},{l:"Caixa 1",v:t.pixCaixa1||0,c:"#5b82e0"},{l:"Caixa 2",v:t.pixCaixa2||0,c:"#a3bdf0"}].filter(i=>i.v>0);
     const totPx=itPx.reduce((s,i)=>s+i.v,0)||1;
     charts.pP=buildPizza("cPixPizza",itPx.map(i=>i.l),itPx.map(i=>i.v),itPx.map(i=>i.c),"ccPix",totPx);
     buildLegend("legPix",itPx,totPx);
@@ -1876,7 +1870,7 @@ function renderSaidas(el){
 function renderSaidasNivel0(el){
   const nm=getMesNome();
   const desp=DD[MES]||{}; const cat=desp.categorias||desp; const tD=desp.total||0;
-  const CRSAI=["#dc2626","#ef4444","#f87171","#fca5a5","#b91c1c","#991b1b","#7f1d1d","#be123c","#fb7185","#f43f5e","#e11d48","#be123c"];
+  const CRSAI=["#c0272d","#d64550","#e07178","#e8949a","#a3222a","#8a1e24","#6f181d","#9d2d3d","#c85a68","#b73347","#993047","#9d2d3d"];
   const catTots=Object.entries(cat||{}).map(([n,d],i)=>({n,v:sumCat({x:d}),c:CRSAI[i%CRSAI.length]})).sort((a,b)=>b.v-a.v);
   const qtd=Object.values(cat||{}).flatMap(d=>Object.values(d).flat()).length;
 
@@ -1943,7 +1937,7 @@ function renderSaidasNivel1(el){
   const desp=DD[MES]||{}; const cat=desp.categorias||desp;
   const catNome=DRILL.cat;
   const descs=cat[catNome]||{};
-  const CRSUB=["#2563eb","#7c3aed","#059669","#d97706","#0891b2","#db2777","#65a30d","#ea580c","#0284c7","#9333ea","#16a34a","#dc2626"];
+  const CRSUB=["#1d4ed8","#6d28d9","#16803d","#a3620a","#0e7490","#be185d","#4d7c0f","#c2410c","#0369a1","#7e22ce","#15803d","#c0272d"];
   const descTots=Object.entries(descs).map(([n,lans],i)=>({n,v:lans.reduce((s,l)=>s+(+l.valor||0),0),c:CRSUB[i%CRSUB.length],lans})).sort((a,b)=>b.v-a.v);
   const total=descTots.reduce((s,d)=>s+d.v,0);
 
@@ -2016,7 +2010,7 @@ function renderSaidasNivel2(el){
   // Pizza observações (se mais de 1)
   const obsMap={};
   lans.forEach(l=>{ obsMap[l.obs]=(obsMap[l.obs]||0)+(+l.valor||0); });
-  const obsTots=Object.entries(obsMap).map(([n,v],i)=>({n,v,c:["#2563eb","#7c3aed","#059669","#d97706","#0891b2","#db2777"][i%6]})).sort((a,b)=>b.v-a.v);
+  const obsTots=Object.entries(obsMap).map(([n,v],i)=>({n,v,c:["#1d4ed8","#6d28d9","#16803d","#a3620a","#0e7490","#be185d"][i%6]})).sort((a,b)=>b.v-a.v);
 
   if(obsTots.length>1){
     const g=div("chart-grid-21 fade-in");
@@ -2291,9 +2285,9 @@ function renderFolhaVisao(el, mesNome, mesDados){
       data:{
         labels:funcNames,
         datasets:[
-          {label:"Salário",   data:funcNames.map(n=>funcs[n].salario||0), backgroundColor:"rgba(79,70,229,.8)",  borderRadius:4},
-          {label:"Vales",     data:funcNames.map(n=>funcs[n].vales||0),   backgroundColor:"rgba(217,119,6,.8)",  borderRadius:4},
-          {label:"Saldo",     data:funcNames.map(n=>funcs[n].saldo||0),   backgroundColor:"rgba(5,150,105,.8)",  borderRadius:4},
+          {label:"Salário",   data:funcNames.map(n=>funcs[n].salario||0), backgroundColor:"rgba(67,56,202,.82)",  borderRadius:4},
+          {label:"Vales",     data:funcNames.map(n=>funcs[n].vales||0),   backgroundColor:"rgba(163,98,10,.82)",  borderRadius:4},
+          {label:"Saldo",     data:funcNames.map(n=>funcs[n].saldo||0),   backgroundColor:"rgba(22,128,61,.82)",  borderRadius:4},
         ]
       },
       options:{
@@ -2378,10 +2372,10 @@ function renderFolhaComparativo(el, mesNome){
       data:{
         labels:funcNames,
         datasets:[
-          {label:"Salário",    data:funcNames.map(n=>funcs[n].salario||0),  backgroundColor:"rgba(79,70,229,.85)",  borderRadius:0},
-          {label:"Aux. Alim.", data:funcNames.map(n=>funcs[n].auxAlim||0),  backgroundColor:"rgba(5,150,105,.85)",  borderRadius:0},
-          {label:"Transporte", data:funcNames.map(n=>funcs[n].transporte||0),backgroundColor:"rgba(8,145,178,.85)", borderRadius:0},
-          {label:"Extras",     data:funcNames.map(n=>(funcs[n].parte13||0)+(funcs[n].ferias||0)+(funcs[n].ajuda||0)),backgroundColor:"rgba(217,119,6,.85)",borderRadius:4},
+          {label:"Salário",    data:funcNames.map(n=>funcs[n].salario||0),  backgroundColor:"rgba(67,56,202,.85)",  borderRadius:0},
+          {label:"Aux. Alim.", data:funcNames.map(n=>funcs[n].auxAlim||0),  backgroundColor:"rgba(22,128,61,.85)",  borderRadius:0},
+          {label:"Transporte", data:funcNames.map(n=>funcs[n].transporte||0),backgroundColor:"rgba(14,116,144,.85)", borderRadius:0},
+          {label:"Extras",     data:funcNames.map(n=>(funcs[n].parte13||0)+(funcs[n].ferias||0)+(funcs[n].ajuda||0)),backgroundColor:"rgba(163,98,10,.85)",borderRadius:4},
         ]
       },
       options:{
@@ -2476,15 +2470,15 @@ function renderFolhaEvolucao(el){
         datasets:[{
           label:"Total Folha",
           data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.total||0),0)),
-          borderColor:"#4f46e5", backgroundColor:"rgba(79,70,229,.08)",
-          borderWidth:2.5, pointBackgroundColor:"#4f46e5",
-          pointRadius:5, pointHoverRadius:7, tension:.4, fill:true,
+          borderColor:"#4338ca", backgroundColor:"rgba(67,56,202,.07)",
+          borderWidth:2.25, pointBackgroundColor:"#4338ca",
+          pointRadius:4, pointHoverRadius:6, tension:.35, fill:true,
         },{
           label:"Saldo a Pagar",
           data:mesesComDados.map(m=>Object.values(DF[m]?.funcionarios||{}).reduce((s,f)=>s+(f.saldo||0),0)),
-          borderColor:"#059669", backgroundColor:"rgba(5,150,105,.05)",
-          borderWidth:2, pointBackgroundColor:"#059669",
-          pointRadius:4, pointHoverRadius:6, tension:.4, fill:false, borderDash:[5,4],
+          borderColor:"#16803d", backgroundColor:"rgba(22,128,61,.05)",
+          borderWidth:1.75, pointBackgroundColor:"#16803d",
+          pointRadius:3.5, pointHoverRadius:5.5, tension:.35, fill:false, borderDash:[5,4],
         }]
       },
       options:{
