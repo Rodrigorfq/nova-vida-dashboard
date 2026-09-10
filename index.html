@@ -2095,7 +2095,13 @@ function renderSaidasNivel2(el){
           <span class="comp-btn-icon">⬇</span>
           Baixar
         </a>
-      </div>` : ""}`;
+      </div>` : ""}
+      <div style="margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}">
+        <button class="comp-btn" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirLancamento('${l.aba}',${l.linha},this)">
+          <span class="comp-btn-icon">🗑</span>
+          Excluir lançamento
+        </button>
+      </div>`;
     grid.appendChild(c);
   });
   sec.appendChild(grid);
@@ -2113,6 +2119,41 @@ function renderSaidasAtual(){
     document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
     aplicarOcultamento();
   },80);
+}
+
+// Recarrega SÓ os dados de Despesas, ignorando o cache do Apps Script (&forcar=1) —
+// importante depois de excluir um lançamento, para não mostrar dado desatualizado
+// e para que as linhas dos demais lançamentos (que podem ter mudado de posição
+// na planilha) fiquem corretas antes de qualquer nova exclusão.
+async function recarregarApenasDespesas(){
+  try{
+    const r = await fetch(URL_DESPESAS+"?forcar=1&t="+Date.now(), {method:"GET", redirect:"follow"});
+    const j = await r.json();
+    if(!j.erro) DD = j;
+  }catch(e){ console.warn("Falha ao recarregar despesas:", e.message); }
+}
+
+async function excluirLancamento(aba, linha, btnEl){
+  if(!confirm("Excluir este lançamento? Ele será removido da planilha e não poderá ser desfeito por aqui.\\n\\nO arquivo do comprovante no Drive não será apagado.")) return;
+  btnEl.disabled = true;
+  btnEl.innerHTML = '<span class="comp-btn-icon">⏳</span> Excluindo...';
+  try{
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", aba: aba, linha: linha }) });
+    const json = await res.json();
+    if(json.ok){
+      mostrarToast("🗑 Lançamento excluído da planilha.");
+      await recarregarApenasDespesas();
+      renderSaidasAtual(); // redesenha no mesmo nível do drill-down, já sem o item excluído
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha ao excluir"), true);
+      btnEl.disabled = false;
+      btnEl.innerHTML = '<span class="comp-btn-icon">🗑</span> Excluir lançamento';
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    btnEl.disabled = false;
+    btnEl.innerHTML = '<span class="comp-btn-icon">🗑</span> Excluir lançamento';
+  }
 }
 
 // prevComp removido — comprovantes via link do Drive
