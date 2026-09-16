@@ -2656,6 +2656,9 @@ function renderComprovantes(el){
       <span id="iaDropzoneText">📤 Clique para selecionar a foto ou PDF do comprovante</span>
     </label>
     <input type="file" id="iaFileInput" accept="image/*,.pdf" style="display:none" onchange="selecionarArquivoIA(this)">
+    <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
+    <button class="topbar-btn" style="width:100%;justify-content:center" onclick="listarArquivosDriveParaIA()">📁 Escolher arquivo já salvo no Drive deste mês</button>
+    <div id="iaListaDrive"></div>
     <div id="iaResultado"></div>`;
   el.appendChild(iaPanel);
 
@@ -2957,7 +2960,7 @@ function baixarComprovantesEmLote(){
     });
 }
 // ─── UPLOAD INTELIGENTE (IA) ───
-let IA_STATE = { base64: null, mimeType: null, nomeArquivo: null, dadosExtraidos: null };
+let IA_STATE = { base64: null, mimeType: null, nomeArquivo: null, dadosExtraidos: null, linkComprovanteExistente: null };
 
 function toggleIAPanel(){
   const panel = document.getElementById("iaUploadPanel");
@@ -2968,13 +2971,73 @@ function toggleIAPanel(){
 }
 
 function resetIAPanel(){
-  IA_STATE = { base64:null, mimeType:null, nomeArquivo:null, dadosExtraidos:null };
+  IA_STATE = { base64:null, mimeType:null, nomeArquivo:null, dadosExtraidos:null, linkComprovanteExistente:null };
   const resultado = document.getElementById("iaResultado");
   if(resultado) resultado.innerHTML = "";
   const input = document.getElementById("iaFileInput");
   if(input) input.value = "";
   const dz = document.getElementById("iaDropzoneText");
   if(dz) dz.innerHTML = "📤 Clique para selecionar a foto ou PDF do comprovante";
+  const listaDrive = document.getElementById("iaListaDrive");
+  if(listaDrive) listaDrive.innerHTML = "";
+}
+
+async function listarArquivosDriveParaIA(){
+  const lista = document.getElementById("iaListaDrive");
+  if(!lista) return;
+  lista.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)"><div class="loader" style="margin:0 auto 8px"></div>Buscando arquivos do mês...</div>';
+  try{
+    const res = await fetch(URL_COMPROV + "?acao=listar_arquivos&mes=" + COMPROV_STATE.mesSel + "&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const json = await res.json();
+    const dados = (json.arquivos && json.arquivos[COMPROV_STATE.mesSel]) || {};
+    const todos = [].concat(dados.pdfs||[], dados.notas||[], dados.outros||[]);
+    if(todos.length === 0){
+      lista.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">Nenhum arquivo encontrado na pasta de ${COMPROV_STATE.mesSel}.</p>`;
+      return;
+    }
+    lista.innerHTML = "";
+    const box = div("");
+    box.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);max-height:260px;overflow-y:auto;margin-top:8px";
+    todos.forEach(function(arq){
+      const item = div("comp-arq-item");
+      item.style.margin = "6px";
+      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
+      item.innerHTML = `
+        <span class="comp-arq-icon">${icone}</span>
+        <div style="flex:1;min-width:0">
+          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
+          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
+        </div>`;
+      item.onclick = function(){ analisarArquivoDriveIA(arq.id, arq.nome); };
+      box.appendChild(item);
+    });
+    lista.appendChild(box);
+  }catch(e){
+    lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
+  }
+}
+
+async function analisarArquivoDriveIA(fileId, nome){
+  const resultado = document.getElementById("iaResultado");
+  if(resultado) resultado.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><div class="loader" style="margin:0 auto 10px"></div>Lendo o comprovante...</div>';
+  const lista = document.getElementById("iaListaDrive");
+  if(lista) lista.innerHTML = "";
+
+  try{
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"analisar_arquivo_drive", fileId: fileId }) });
+    const json = await res.json();
+    if(json.erro){
+      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${json.erro}</p></div>`;
+      return;
+    }
+    IA_STATE.linkComprovanteExistente = json.linkComprovante;
+    IA_STATE.nomeArquivo = json.nomeArquivo || nome;
+    const dz = document.getElementById("iaDropzoneText");
+    if(dz) dz.innerHTML = "📁 " + IA_STATE.nomeArquivo + "<br><span style='font-size:11px;color:var(--entrada)'>✅ Lido do Drive com sucesso — confira os dados abaixo</span>";
+    renderFormExtraidoIA(json.dados);
+  }catch(e){
+    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${e.message}</p></div>`;
+  }
 }
 
 function selecionarArquivoIA(input){
@@ -3077,10 +3140,15 @@ async function salvarViaIA(){
     valor: document.getElementById("iaValor").value,
     responsavel: document.getElementById("iaResponsavel").value,
     observacao: document.getElementById("iaObs").value,
-    imagemBase64: IA_STATE.base64,
-    mimeType: IA_STATE.mimeType,
-    nomeArquivo: IA_STATE.nomeArquivo,
   };
+  if(IA_STATE.linkComprovanteExistente){
+    // Arquivo já estava no Drive — só reaproveita o link, não envia base64 de novo
+    payload.linkComprovanteExistente = IA_STATE.linkComprovanteExistente;
+  } else {
+    payload.imagemBase64 = IA_STATE.base64;
+    payload.mimeType = IA_STATE.mimeType;
+    payload.nomeArquivo = IA_STATE.nomeArquivo;
+  }
 
   try{
     const res = await fetch(URL_COMPROV, { method: "POST", body: JSON.stringify(payload) });
