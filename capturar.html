@@ -177,6 +177,7 @@ input[type="file"] { display: none; }
     <div class="form-group">
       <label class="form-label">Mês da despesa</label>
       <select class="form-select" id="mesSelect"></select>
+      <p style="font-size:11px;color:var(--muted);margin-top:5px">🤖 O mês é detectado automaticamente pela data do comprovante. Só use esse campo se a leitura falhar.</p>
     </div>
 
     <div class="form-group">
@@ -223,11 +224,13 @@ let filaArquivos = []; // [{ base64, mimeType, nomeArquivo, previewUrl, ehPdf, s
 // ── Inicialização ──
 (function init(){
   const sel = document.getElementById("mesSelect");
-  const mesAtualIdx = new Date().getMonth(); // 0-11
-  MESES.forEach(function(m, i){
+  const optAuto = document.createElement("option");
+  optAuto.value = ""; optAuto.textContent = "🤖 Detectar automaticamente (recomendado)";
+  optAuto.selected = true;
+  sel.appendChild(optAuto);
+  MESES.forEach(function(m){
     const opt = document.createElement("option");
     opt.value = m; opt.textContent = m;
-    if(i === mesAtualIdx) opt.selected = true;
     sel.appendChild(opt);
   });
 
@@ -368,7 +371,7 @@ async function enviarFila(){
       if(json.ok){
         item.status = "enviado";
         sucesso++;
-        adicionarAoHistorico(item.nomeArquivo, mes);
+        adicionarAoHistorico(item.nomeArquivo, json.mesDetectado || mes || "?");
       } else {
         item.status = "erro";
         falhas++;
