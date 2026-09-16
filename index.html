@@ -2754,13 +2754,14 @@ async function aprovarPendenteUI(id, comp, btnEl){
 }
 
 async function rejeitarPendenteUI(id, btnEl){
-  if(!confirm("Rejeitar este comprovante? A foto continua salva no Drive, mas não será lançada na planilha.")) return;
+  if(!confirm("Rejeitar este comprovante?")) return;
+  const apagarArquivo = confirm("Também apagar o arquivo do Drive?\n\nRecomendado se você for enviar o comprovante de novo — evita ficar com arquivos duplicados. O arquivo vai para a lixeira do Drive (não é apagado de forma definitiva).");
   btnEl.disabled = true;
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"rejeitar_pendente", id: id }) });
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"rejeitar_pendente", id: id, apagarArquivo: apagarArquivo }) });
     const json = await res.json();
     if(json.ok){
-      mostrarToast("🗑 Rejeitado.");
+      mostrarToast(apagarArquivo ? "🗑 Rejeitado e arquivo movido para a lixeira do Drive." : "🗑 Rejeitado.");
       carregarPendentes();
     } else {
       mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
