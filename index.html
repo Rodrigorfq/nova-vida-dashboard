@@ -2687,13 +2687,15 @@ function renderListaPendentes(){
   PENDENTES_CACHE.forEach(function(p){
     const item = div("comp-desp-item tem-comp");
     item.style.cursor = "default";
+    const MESES_OPCOES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+    const opcoesMesHtml = MESES_OPCOES.map(function(m){ return `<option value="${m}" ${m===p.mes?"selected":""}>${m}</option>`; }).join("");
     item.innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div>
           <p class="comp-desp-desc">${p.descricao || "(sem descrição)"}</p>
           <div class="comp-desp-meta">
             <span>📤 Enviado por ${p.enviadoPor||"—"} em ${p.dataEnvio||"—"}</span>
-            <span>📅 Mês: ${p.mes}</span>
+            <span>🤖 Mês detectado: ${p.mes}</span>
           </div>
         </div>
         <a href="${p.comp}" target="_blank" style="font-size:11px;color:var(--saldo-pos);text-decoration:none;font-weight:600;flex-shrink:0">🔗 Ver foto</a>
@@ -2705,11 +2707,12 @@ function renderListaPendentes(){
         <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" value="${esc(p.categoria)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" value="${esc(p.forma)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Responsável</label><input class="ia-form-input" data-campo="responsavel" placeholder="Quem efetuou o pagamento?"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Mês (corrija se detectou errado)</label><select class="ia-form-input" data-campo="mes">${opcoesMesHtml}</select></div>
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
         <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--saida)" onclick="rejeitarPendenteUI('${p.id}', this)">✕ Rejeitar</button>
-        <button class="comp-btn-vincular" onclick="aprovarPendenteUI('${p.id}', '${p.mes}', '${p.comp}', this)">✅ Aprovar e Lançar</button>
+        <button class="comp-btn-vincular" onclick="aprovarPendenteUI('${p.id}', '${p.comp}', this)">✅ Aprovar e Lançar</button>
       </div>`;
     lista.appendChild(item);
   });
@@ -2721,13 +2724,13 @@ function lerCamposPendente(container){
   return campos;
 }
 
-async function aprovarPendenteUI(id, mes, comp, btnEl){
+async function aprovarPendenteUI(id, comp, btnEl){
   const item = btnEl.closest(".comp-desp-item");
   const campos = lerCamposPendente(item);
   btnEl.disabled = true; btnEl.textContent = "Salvando...";
   try{
     const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
-      acao:"aprovar_pendente", id: id, mes: mes, comp: comp,
+      acao:"aprovar_pendente", id: id, mes: campos.mes, comp: comp,
       data: campos.data, descricao: campos.descricao, categoria: campos.categoria,
       forma: campos.forma, valor: campos.valor, responsavel: campos.responsavel, observacao: campos.observacao,
     })});
