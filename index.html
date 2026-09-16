@@ -2737,7 +2737,12 @@ async function aprovarPendenteUI(id, comp, btnEl){
     const json = await res.json();
     if(json.ok){
       mostrarToast("✅ Aprovado e lançado na planilha!");
-      carregarTudo(); // recarrega tudo — inclui a lista de pendentes atualizada
+      // Atualiza só o necessário — os dados de Despesas (em segundo plano, sem
+      // recarregar a tela) e a lista de pendentes (removendo o já aprovado).
+      // Evita o recarregamento completo do dashboard, que ficava lento com
+      // muitos comprovantes na fila.
+      recarregarApenasDespesas();
+      carregarPendentes();
     } else {
       mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
       btnEl.disabled=false; btnEl.textContent="✅ Aprovar e Lançar";
@@ -3200,7 +3205,7 @@ async function salvarViaIA(){
     if(json.ok){
       mostrarToast("✅ Despesa lançada na planilha com sucesso!");
       toggleIAPanel();
-      carregarTudo(); // recarrega tudo (KPIs, categorias, busca) já com a nova despesa incluída
+      recarregarApenasDespesas(); // atualiza os dados em segundo plano, sem recarregar a tela
     } else {
       mostrarToast("❌ Erro: " + (json.erro||"Falha ao salvar"), true);
       if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
