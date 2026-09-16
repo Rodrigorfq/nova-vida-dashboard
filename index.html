@@ -2659,6 +2659,11 @@ function renderComprovantes(el){
     <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
     <button class="topbar-btn" style="width:100%;justify-content:center" onclick="listarArquivosDriveParaIA()">📁 Escolher arquivo já salvo no Drive deste mês</button>
     <div id="iaListaDrive"></div>
+    <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
+    <div style="display:flex;gap:8px">
+      <input class="ia-form-input" id="iaLinkDriveInput" placeholder="Cole aqui o link do Drive (compartilhar → copiar link)" style="flex:1">
+      <button class="comp-btn-vincular" style="flex-shrink:0" onclick="analisarLinkDriveColado()">Analisar</button>
+    </div>
     <div id="iaResultado"></div>`;
   el.appendChild(iaPanel);
 
@@ -3015,6 +3020,24 @@ async function listarArquivosDriveParaIA(){
   }catch(e){
     lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
   }
+}
+
+function analisarLinkDriveColado(){
+  const input = document.getElementById("iaLinkDriveInput");
+  const link = (input.value || "").trim();
+  if(!link){ mostrarToast("❌ Cole um link do Drive primeiro.", true); return; }
+
+  // Aceita qualquer formato comum de link do Drive:
+  // .../file/d/ID/view  ou  ...?id=ID  ou  .../d/ID/
+  let fileId = null;
+  let m = link.match(/\/d\/([a-zA-Z0-9_-]{15,})/);
+  if(m) fileId = m[1];
+  if(!fileId){ m = link.match(/[?&]id=([a-zA-Z0-9_-]{15,})/); if(m) fileId = m[1]; }
+
+  if(!fileId){ mostrarToast("❌ Não consegui identificar o arquivo nesse link.", true); return; }
+
+  input.value = "";
+  analisarArquivoDriveIA(fileId, "Arquivo do Drive");
 }
 
 async function analisarArquivoDriveIA(fileId, nome){
