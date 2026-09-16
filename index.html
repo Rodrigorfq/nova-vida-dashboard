@@ -2729,6 +2729,7 @@ function renderListaPendentes(){
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Descrição</label><input class="ia-form-input" data-campo="descricao" value="${esc(p.descricao)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" value="${esc(p.categoria)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" value="${esc(p.forma)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Responsável</label><input class="ia-form-input" data-campo="responsavel" placeholder="Quem efetuou o pagamento?"></div>
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
@@ -2753,7 +2754,7 @@ async function aprovarPendenteUI(id, mes, comp, btnEl){
     const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
       acao:"aprovar_pendente", id: id, mes: mes, comp: comp,
       data: campos.data, descricao: campos.descricao, categoria: campos.categoria,
-      forma: campos.forma, valor: campos.valor, observacao: campos.observacao,
+      forma: campos.forma, valor: campos.valor, responsavel: campos.responsavel, observacao: campos.observacao,
     })});
     const json = await res.json();
     if(json.ok){
@@ -3046,6 +3047,10 @@ function renderFormExtraidoIA(dados){
           <label class="ia-form-label">Forma de Pagamento</label>
           <input class="ia-form-input" id="iaForma" value="${esc(dados.forma_pagamento)}">
         </div>
+        <div class="ia-form-group">
+          <label class="ia-form-label">Responsável</label>
+          <input class="ia-form-input" id="iaResponsavel" value="${esc(dados.responsavel)}" placeholder="Quem efetuou o pagamento?">
+        </div>
         <div class="ia-form-group" style="grid-column:1/-1">
           <label class="ia-form-label">Observação</label>
           <input class="ia-form-input" id="iaObs" value="${esc(dados.observacao)}">
@@ -3070,6 +3075,7 @@ async function salvarViaIA(){
     categoria: document.getElementById("iaCategoria").value,
     forma: document.getElementById("iaForma").value,
     valor: document.getElementById("iaValor").value,
+    responsavel: document.getElementById("iaResponsavel").value,
     observacao: document.getElementById("iaObs").value,
     imagemBase64: IA_STATE.base64,
     mimeType: IA_STATE.mimeType,
