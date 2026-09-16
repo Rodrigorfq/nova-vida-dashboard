@@ -105,6 +105,36 @@ body {
   text-decoration: none; cursor: pointer;
 }
 
+/* Fila de arquivos (captura em lote) */
+.fila-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+  margin: 14px 0;
+}
+.fila-item {
+  position: relative; aspect-ratio: 1; border-radius: var(--r-sm);
+  overflow: hidden; border: 1.5px solid var(--border); background: var(--bg);
+}
+.fila-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fila-item .fila-pdf {
+  width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+  font-size: 28px; background: var(--bg);
+}
+.fila-remover {
+  position: absolute; top: 3px; right: 3px;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(15,23,42,.75); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; cursor: pointer; border: none;
+}
+.fila-status {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 3px 4px; font-size: 10px; font-weight: 700; text-align: center;
+  color: #fff;
+}
+.fila-status.enviando { background: rgba(67,56,202,.85); }
+.fila-status.enviado  { background: rgba(22,128,61,.9); }
+.fila-status.erro     { background: rgba(192,39,45,.9); }
+
 .btn-enviar {
   width: 100%; padding: 14px;
   background: var(--accent); border: none; border-radius: var(--r-sm);
@@ -157,21 +187,16 @@ input[type="file"] { display: none; }
     <div id="areaSemFoto">
       <label class="captura-area" for="fileInput">
         <span class="captura-icon">📷</span>
-        <span class="captura-texto">Tocar para tirar foto ou escolher da galeria</span>
-        <span class="captura-sub">Comprovante, boleto, nota fiscal...</span>
+        <span class="captura-texto">Tocar para tirar fotos ou escolher da galeria</span>
+        <span class="captura-sub">Pode selecionar várias notas de uma vez</span>
       </label>
-      <input type="file" id="fileInput" accept="image/*,.pdf" onchange="arquivoSelecionado(this)">
+      <input type="file" id="fileInput" accept="image/*,.pdf" multiple onchange="arquivosSelecionados(this)">
     </div>
 
-    <div id="areaComFoto" style="display:none">
-      <div class="preview-wrap">
-        <img class="preview-img" id="previewImg" src="">
-        <div id="previewPdf" style="display:none;padding:40px 16px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--slate)"></div>
-      </div>
-      <a class="preview-trocar" onclick="trocarFoto()">↺ Trocar arquivo</a>
-    </div>
+    <div id="filaGrid" class="fila-grid"></div>
+    <a class="preview-trocar" id="linkAdicionarMais" style="display:none" onclick="document.getElementById('fileInput').click()">+ Adicionar mais arquivos</a>
 
-    <button class="btn-enviar" id="btnEnviar" onclick="enviarComprovante()" disabled style="margin-top:16px">
+    <button class="btn-enviar" id="btnEnviar" onclick="enviarFila()" disabled style="margin-top:16px">
       Enviar para revisão
     </button>
 
@@ -193,7 +218,7 @@ const URL_COMPROV = "https://script.google.com/macros/s/AKfycbw4vb9wleU09tTSlzKN
 const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
                "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
 
-let imagemAtual = null; // { base64, mimeType, nomeArquivo }
+let filaArquivos = []; // [{ base64, mimeType, nomeArquivo, previewUrl, ehPdf, status }]
 
 // ── Inicialização ──
 (function init(){
@@ -211,78 +236,92 @@ let imagemAtual = null; // { base64, mimeType, nomeArquivo }
   if(nomeSalvo) document.getElementById("enviadoPor").value = nomeSalvo;
 })();
 
-// ── Captura e compressão da imagem ──
-function arquivoSelecionado(input){
-  const file = input.files[0];
-  if(!file) return;
+// ── Seleção de um ou vários arquivos (câmera ou galeria) ──
+function arquivosSelecionados(input){
+  const arquivos = Array.from(input.files || []);
+  if(arquivos.length === 0) return;
 
-  const ehPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+  arquivos.forEach(function(file){
+    const ehPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+    const item = { base64: null, mimeType: null, nomeArquivo: null, previewUrl: null, ehPdf: ehPdf, status: "pendente" };
+    filaArquivos.push(item);
+    const idx = filaArquivos.length - 1;
 
-  if(ehPdf){
-    // PDF: envia como está, sem comprimir/redimensionar (isso só se aplica a imagens)
-    const reader = new FileReader();
-    reader.onload = function(e){
-      imagemAtual = {
-        base64: e.target.result.split(",")[1],
-        mimeType: "application/pdf",
-        nomeArquivo: "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".pdf",
+    if(ehPdf){
+      const reader = new FileReader();
+      reader.onload = function(e){
+        item.base64 = e.target.result.split(",")[1];
+        item.mimeType = "application/pdf";
+        item.nomeArquivo = nomeUnico("pdf");
+        renderFilaGrid();
       };
-      document.getElementById("previewImg").style.display = "none";
-      document.getElementById("previewPdf").style.display = "block";
-      document.getElementById("previewPdf").textContent = "📄 " + file.name;
-      document.getElementById("areaSemFoto").style.display = "none";
-      document.getElementById("areaComFoto").style.display = "block";
-      document.getElementById("btnEnviar").disabled = false;
-      esconderStatus();
-    };
-    reader.readAsDataURL(file);
-    return;
-  }
+      reader.readAsDataURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = function(e){
+        const img = new Image();
+        img.onload = function(){
+          // Comprimir: redimensionar para no máximo 1600px no lado maior, qualidade 0.75
+          const MAX_LADO = 1600;
+          let largura = img.width, altura = img.height;
+          if(largura > MAX_LADO || altura > MAX_LADO){
+            if(largura > altura){ altura = Math.round(altura * (MAX_LADO/largura)); largura = MAX_LADO; }
+            else { largura = Math.round(largura * (MAX_LADO/altura)); altura = MAX_LADO; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = largura; canvas.height = altura;
+          canvas.getContext("2d").drawImage(img, 0, 0, largura, altura);
+          const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
 
-  const reader = new FileReader();
-  reader.onload = function(e){
-    const img = new Image();
-    img.onload = function(){
-      // Comprimir: redimensionar para no máximo 1600px no lado maior, qualidade 0.75
-      const MAX_LADO = 1600;
-      let largura = img.width, altura = img.height;
-      if(largura > MAX_LADO || altura > MAX_LADO){
-        if(largura > altura){ altura = Math.round(altura * (MAX_LADO/largura)); largura = MAX_LADO; }
-        else { largura = Math.round(largura * (MAX_LADO/altura)); altura = MAX_LADO; }
-      }
-      const canvas = document.createElement("canvas");
-      canvas.width = largura; canvas.height = altura;
-      canvas.getContext("2d").drawImage(img, 0, 0, largura, altura);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
-
-      imagemAtual = {
-        base64: dataUrl.split(",")[1],
-        mimeType: "image/jpeg",
-        nomeArquivo: "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".jpg",
+          item.base64 = dataUrl.split(",")[1];
+          item.mimeType = "image/jpeg";
+          item.nomeArquivo = nomeUnico("jpg");
+          item.previewUrl = dataUrl;
+          renderFilaGrid();
+        };
+        img.src = e.target.result;
       };
+      reader.readAsDataURL(file);
+    }
+  });
 
-      document.getElementById("previewPdf").style.display = "none";
-      document.getElementById("previewImg").style.display = "block";
-      document.getElementById("previewImg").src = dataUrl;
-      document.getElementById("areaSemFoto").style.display = "none";
-      document.getElementById("areaComFoto").style.display = "block";
-      document.getElementById("btnEnviar").disabled = false;
-      esconderStatus();
-    };
-    img.src = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  input.value = ""; // permite selecionar o mesmo arquivo de novo depois, se precisar
+  renderFilaGrid(); // mostra os itens já na fila (ainda processando) de imediato
 }
 
-function trocarFoto(){
-  imagemAtual = null;
-  document.getElementById("areaSemFoto").style.display = "block";
-  document.getElementById("areaComFoto").style.display = "none";
-  document.getElementById("previewPdf").style.display = "none";
-  document.getElementById("previewImg").style.display = "block";
-  document.getElementById("btnEnviar").disabled = true;
-  document.getElementById("fileInput").value = "";
-  esconderStatus();
+function nomeUnico(ext){
+  return "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + "-" + Math.random().toString(36).slice(2,6) + "." + ext;
+}
+
+function removerDaFila(idx){
+  filaArquivos.splice(idx, 1);
+  renderFilaGrid();
+}
+
+function renderFilaGrid(){
+  const grid = document.getElementById("filaGrid");
+  const linkMais = document.getElementById("linkAdicionarMais");
+  const btn = document.getElementById("btnEnviar");
+
+  grid.innerHTML = "";
+  filaArquivos.forEach(function(item, idx){
+    const div = document.createElement("div");
+    div.className = "fila-item";
+    const conteudoPreview = item.ehPdf
+      ? '<div class="fila-pdf">📄</div>'
+      : (item.previewUrl ? '<img src="'+item.previewUrl+'">' : '<div class="fila-pdf">⏳</div>');
+    const statusBadge = item.status === "pendente" ? ""
+      : '<div class="fila-status ' + item.status + '">' + (item.status === "enviando" ? "Enviando..." : item.status === "enviado" ? "✓ Enviado" : "✕ Erro") + '</div>';
+    const podeRemover = item.status === "pendente" || item.status === "erro";
+    div.innerHTML = conteudoPreview + statusBadge +
+      (podeRemover ? '<button class="fila-remover" onclick="removerDaFila(' + idx + ')">✕</button>' : "");
+    grid.appendChild(div);
+  });
+
+  const pendentes = filaArquivos.filter(function(i){ return i.status === "pendente" && i.base64; }).length;
+  linkMais.style.display = filaArquivos.length > 0 ? "block" : "none";
+  btn.disabled = pendentes === 0;
+  btn.textContent = pendentes > 0 ? "Enviar " + pendentes + " comprovante" + (pendentes>1?"s":"") + " para revisão" : "Enviar para revisão";
 }
 
 function mostrarStatus(msg, tipo){
@@ -294,47 +333,62 @@ function esconderStatus(){
   document.getElementById("statusMsg").className = "status-msg";
 }
 
-// ── Envio ──
-async function enviarComprovante(){
-  if(!imagemAtual) return;
-
+// ── Envio — processa a fila um por um (o Apps Script já serializa as
+// requisições internamente, então enviar em sequência é o mais seguro) ──
+async function enviarFila(){
   const mes = document.getElementById("mesSelect").value;
   const enviadoPor = document.getElementById("enviadoPor").value.trim();
   if(enviadoPor) localStorage.setItem("nv_enviado_por", enviadoPor);
 
   const btn = document.getElementById("btnEnviar");
-  btn.disabled = true; btn.textContent = "Enviando...";
-  mostrarStatus("📤 Enviando e lendo o comprovante com IA...", "carregando");
+  btn.disabled = true;
 
-  try{
-    const res = await fetch(URL_COMPROV, {
-      method: "POST",
-      body: JSON.stringify({
-        acao: "enviar_para_revisao",
-        mes: mes,
-        imagemBase64: imagemAtual.base64,
-        mimeType: imagemAtual.mimeType,
-        nomeArquivo: imagemAtual.nomeArquivo,
-        enviadoPor: enviadoPor || "—",
-      }),
-    });
-    const json = await res.json();
+  const pendentes = filaArquivos.filter(function(i){ return i.status === "pendente" && i.base64; });
+  let sucesso = 0, falhas = 0;
 
-    if(json.ok){
-      mostrarStatus("✅ Enviado! Vai aparecer para revisão no dashboard.", "sucesso");
-      adicionarAoHistorico(imagemAtual.nomeArquivo, mes);
-      setTimeout(function(){
-        trocarFoto();
-        document.getElementById("btnEnviar").textContent = "Enviar para revisão";
-      }, 1400);
-    } else {
-      mostrarStatus("❌ Erro: " + (json.erro || "Falha ao enviar"), "erro");
-      btn.disabled = false; btn.textContent = "Enviar para revisão";
+  for(let i = 0; i < pendentes.length; i++){
+    const item = pendentes[i];
+    item.status = "enviando";
+    renderFilaGrid();
+    mostrarStatus("📤 Enviando " + (i+1) + " de " + pendentes.length + "...", "carregando");
+
+    try{
+      const res = await fetch(URL_COMPROV, {
+        method: "POST",
+        body: JSON.stringify({
+          acao: "enviar_para_revisao",
+          mes: mes,
+          imagemBase64: item.base64,
+          mimeType: item.mimeType,
+          nomeArquivo: item.nomeArquivo,
+          enviadoPor: enviadoPor || "—",
+        }),
+      });
+      const json = await res.json();
+      if(json.ok){
+        item.status = "enviado";
+        sucesso++;
+        adicionarAoHistorico(item.nomeArquivo, mes);
+      } else {
+        item.status = "erro";
+        falhas++;
+      }
+    }catch(e){
+      item.status = "erro";
+      falhas++;
     }
-  }catch(e){
-    mostrarStatus("❌ Erro de conexão: " + e.message, "erro");
-    btn.disabled = false; btn.textContent = "Enviar para revisão";
+    renderFilaGrid();
   }
+
+  if(falhas === 0){
+    mostrarStatus("✅ " + sucesso + " comprovante(s) enviado(s) com sucesso!", "sucesso");
+  } else {
+    mostrarStatus("⚠️ " + sucesso + " enviado(s), " + falhas + " com erro (toque em ✕ para remover e tentar de novo).", "erro");
+  }
+
+  // Remove da fila os que deram certo, deixando só os com erro (pra tentar de novo se quiser)
+  filaArquivos = filaArquivos.filter(function(i){ return i.status !== "enviado"; });
+  renderFilaGrid();
 }
 
 function adicionarAoHistorico(nome, mes){
