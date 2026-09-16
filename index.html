@@ -2766,6 +2766,8 @@ async function rejeitarPendenteUI(id, btnEl){
 
 // ─── BUSCA DE DESPESAS RECORRENTES ───
 let ULTIMA_BUSCA_COM_COMPROVANTE = [];
+let ULTIMA_BUSCA_TODOS = [];
+let ULTIMA_BUSCA_TERMO = "";
 
 function renderBuscaDespesas(el){
   const card = div("chart-card fade-in");
@@ -2827,6 +2829,8 @@ function executarBuscaDespesas(){
   const totalValor = encontrados.reduce(function(s,r){ return s+(r.valor||0); }, 0);
   const comComprovante = encontrados.filter(function(r){ return r.comp && r.comp.length > 5; });
   ULTIMA_BUSCA_COM_COMPROVANTE = comComprovante;
+  ULTIMA_BUSCA_TODOS = encontrados;
+  ULTIMA_BUSCA_TERMO = termo.trim();
 
   const porMes = {};
   encontrados.forEach(function(r){ porMes[r.mesNome] = (porMes[r.mesNome]||0) + (r.valor||0); });
@@ -2841,7 +2845,10 @@ function executarBuscaDespesas(){
     <div style="height:200px;margin-bottom:18px"><canvas id="buscaChartMensal"></canvas></div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
       <p style="font-size:13px;font-weight:700;color:var(--navy)">Lançamentos encontrados</p>
-      <button class="topbar-btn ativo" id="btnBaixarZip" onclick="baixarComprovantesEmLote()" ${comComprovante.length===0?"disabled":""}>⬇ Baixar todos os comprovantes (${comComprovante.length})</button>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="topbar-btn" onclick="baixarPlanilhaResumoBusca()">📊 Baixar planilha resumo</button>
+        <button class="topbar-btn ativo" id="btnBaixarZip" onclick="baixarComprovantesEmLote()" ${comComprovante.length===0?"disabled":""}>⬇ Baixar todos os comprovantes (${comComprovante.length})</button>
+      </div>
     </div>
     <div id="buscaListaResultados"></div>`;
 
@@ -2891,6 +2898,52 @@ function executarBuscaDespesas(){
       }
     });
   }, 60);
+}
+
+function baixarPlanilhaResumoBusca(){
+  if(!ULTIMA_BUSCA_TODOS || ULTIMA_BUSCA_TODOS.length === 0) return;
+
+  const esc = function(v){
+    const s = String(v==null ? "" : v).replace(/"/g, '""');
+    return '"' + s + '"';
+  };
+  const cabecalho = ["Data","Mês","Descrição","Categoria","Forma de Pagamento","Responsável","Observação","Valor (R$)","Tem Comprovante","Link do Comprovante"];
+  const linhas = [cabecalho.map(esc).join(";")];
+
+  ULTIMA_BUSCA_TODOS.forEach(function(r){
+    const temComp = r.comp && r.comp.length > 5;
+    linhas.push([
+      r.data || "",
+      r.mesNome || "",
+      r.desc || "",
+      r.cat || "",
+      r.forma || "",
+      r.resp || "",
+      r.obs || "",
+      Number(r.valor||0).toFixed(2).replace(".", ","),
+      temComp ? "Sim" : "Não",
+      temComp ? r.comp : "",
+    ].map(esc).join(";"));
+  });
+
+  const totalValor = ULTIMA_BUSCA_TODOS.reduce(function(s,r){ return s+(r.valor||0); }, 0);
+  linhas.push("");
+  linhas.push([esc("TOTAL"),"","","","","","",esc(totalValor.toFixed(2).replace(".", ",")),"",""].join(";"));
+
+  const csv = "\uFEFF" + linhas.join("\r\n"); // \uFEFF = BOM, garante acentos corretos no Excel
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const nomeArquivo = "Resumo-" + (ULTIMA_BUSCA_TERMO || "despesas").replace(/[^a-zA-Z0-9]+/g, "-") + ".csv";
+
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = nomeArquivo;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+
+  mostrarToast("📊 Planilha resumo baixada!");
 }
 
 function baixarComprovantesEmLote(){
