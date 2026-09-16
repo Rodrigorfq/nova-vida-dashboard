@@ -160,14 +160,15 @@ input[type="file"] { display: none; }
         <span class="captura-texto">Tocar para tirar foto ou escolher da galeria</span>
         <span class="captura-sub">Comprovante, boleto, nota fiscal...</span>
       </label>
-      <input type="file" id="fileInput" accept="image/*" capture="environment" onchange="arquivoSelecionado(this)">
+      <input type="file" id="fileInput" accept="image/*,.pdf" onchange="arquivoSelecionado(this)">
     </div>
 
     <div id="areaComFoto" style="display:none">
       <div class="preview-wrap">
         <img class="preview-img" id="previewImg" src="">
+        <div id="previewPdf" style="display:none;padding:40px 16px;text-align:center;background:var(--bg);border:1px solid var(--border);border-radius:var(--r);font-size:14px;font-weight:600;color:var(--slate)"></div>
       </div>
-      <a class="preview-trocar" onclick="trocarFoto()">↺ Trocar foto</a>
+      <a class="preview-trocar" onclick="trocarFoto()">↺ Trocar arquivo</a>
     </div>
 
     <button class="btn-enviar" id="btnEnviar" onclick="enviarComprovante()" disabled style="margin-top:16px">
@@ -215,6 +216,29 @@ function arquivoSelecionado(input){
   const file = input.files[0];
   if(!file) return;
 
+  const ehPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+  if(ehPdf){
+    // PDF: envia como está, sem comprimir/redimensionar (isso só se aplica a imagens)
+    const reader = new FileReader();
+    reader.onload = function(e){
+      imagemAtual = {
+        base64: e.target.result.split(",")[1],
+        mimeType: "application/pdf",
+        nomeArquivo: "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".pdf",
+      };
+      document.getElementById("previewImg").style.display = "none";
+      document.getElementById("previewPdf").style.display = "block";
+      document.getElementById("previewPdf").textContent = "📄 " + file.name;
+      document.getElementById("areaSemFoto").style.display = "none";
+      document.getElementById("areaComFoto").style.display = "block";
+      document.getElementById("btnEnviar").disabled = false;
+      esconderStatus();
+    };
+    reader.readAsDataURL(file);
+    return;
+  }
+
   const reader = new FileReader();
   reader.onload = function(e){
     const img = new Image();
@@ -237,6 +261,8 @@ function arquivoSelecionado(input){
         nomeArquivo: "Comprovante-" + new Date().toISOString().slice(0,19).replace(/[:T]/g,"-") + ".jpg",
       };
 
+      document.getElementById("previewPdf").style.display = "none";
+      document.getElementById("previewImg").style.display = "block";
       document.getElementById("previewImg").src = dataUrl;
       document.getElementById("areaSemFoto").style.display = "none";
       document.getElementById("areaComFoto").style.display = "block";
@@ -252,6 +278,8 @@ function trocarFoto(){
   imagemAtual = null;
   document.getElementById("areaSemFoto").style.display = "block";
   document.getElementById("areaComFoto").style.display = "none";
+  document.getElementById("previewPdf").style.display = "none";
+  document.getElementById("previewImg").style.display = "block";
   document.getElementById("btnEnviar").disabled = true;
   document.getElementById("fileInput").value = "";
   esconderStatus();
