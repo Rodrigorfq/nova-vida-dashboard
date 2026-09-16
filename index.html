@@ -1330,39 +1330,6 @@ tr:hover td { background: var(--bg); }
 // ═══════════════════════════════════════
 // CONFIGURAÇÕES
 // ═══════════════════════════════════════
-// ═══════════════════════════════════════
-// PLUGIN — escreve o valor em cima de cada barra (estilo BI)
-// Puramente visual: lê o mesmo dataset já usado pelo gráfico,
-// não altera nenhum dado.
-// ═══════════════════════════════════════
-const valorNoTopoPlugin = {
-  id: "valorNoTopo",
-  afterDatasetsDraw(chart, args, opts) {
-    if (!opts || opts.enabled === false) return;
-    const ctx = chart.ctx;
-    const formatar = opts.formatter || (v => v);
-    chart.data.datasets.forEach((dataset, di) => {
-      const meta = chart.getDatasetMeta(di);
-      if (meta.hidden || dataset.type === "line") return;
-      meta.data.forEach((elemento, i) => {
-        const valor = dataset.data[i];
-        if (valor === null || valor === undefined || valor === 0) return;
-        const texto = formatar(valor, dataset, i);
-        if (!texto) return;
-        const pos = elemento.tooltipPosition ? elemento.tooltipPosition() : elemento.getCenterPoint();
-        ctx.save();
-        ctx.fillStyle = opts.color || "#334155";
-        ctx.font = opts.font || "600 10px Inter, sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "bottom";
-        ctx.fillText(texto, pos.x, pos.y - 5);
-        ctx.restore();
-      });
-    });
-  }
-};
-Chart.register(valorNoTopoPlugin);
-
 const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
 const URL_ENTRADAS = "https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec";
 const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbzdNX1EZHKBZvgF_cTjmZaPTVQPlQiVCML53eQaRG27CnomXdYgcgFlHGbayih3N1f6VA/exec";
@@ -2913,11 +2880,9 @@ function executarBuscaDespesas(){
       },
       options: {
         responsive: true, maintainAspectRatio: false,
-        layout: { padding: { top: 18 } },
         plugins: {
           legend: { display: false },
-          tooltip: { callbacks: { label: function(ctx){ return " " + fBRL(ctx.raw); } } },
-          valorNoTopo: { enabled: true, color: "#475569", formatter: function(v){ return fK(v); } }
+          tooltip: { callbacks: { label: function(ctx){ return " " + fBRL(ctx.raw); } } }
         },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 11 }, color: "#94a3b8" } },
