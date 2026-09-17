@@ -2624,8 +2624,7 @@ function renderComprovantes(el){
     </label>
     <input type="file" id="iaFileInput" accept="image/*,.pdf" style="display:none" onchange="selecionarArquivoIA(this)">
     <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
-    <button class="topbar-btn" style="width:100%;justify-content:center" onclick="listarArquivosDriveParaIA()">📁 Escolher arquivo já salvo no Drive deste mês</button>
-    <button class="topbar-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="listarArquivosPendentesParaIA()">📌 Escolher da pasta PENDENTES (PIX aguardando lançamento)</button>
+    <button class="topbar-btn" style="width:100%;justify-content:center" onclick="listarArquivosPendentesParaIA()">📌 Escolher da pasta PENDENTES (PIX aguardando lançamento)</button>
     <div id="iaListaDrive"></div>
     <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
     <div style="display:flex;gap:8px">
@@ -3015,40 +3014,6 @@ function resetIAPanel(){
   if(listaDrive) listaDrive.innerHTML = "";
 }
 
-async function listarArquivosDriveParaIA(){
-  const lista = document.getElementById("iaListaDrive");
-  if(!lista) return;
-  lista.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)"><div class="loader" style="margin:0 auto 8px"></div>Buscando arquivos do mês...</div>';
-  try{
-    const res = await fetch(URL_COMPROV + "?acao=listar_arquivos&mes=" + COMPROV_STATE.mesSel + "&t=" + Date.now(), {method:"GET", redirect:"follow"});
-    const json = await res.json();
-    const dados = (json.arquivos && json.arquivos[COMPROV_STATE.mesSel]) || {};
-    const todos = [].concat(dados.pdfs||[], dados.notas||[], dados.outros||[]);
-    if(todos.length === 0){
-      lista.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">Nenhum arquivo encontrado na pasta de ${COMPROV_STATE.mesSel}.</p>`;
-      return;
-    }
-    lista.innerHTML = "";
-    const box = div("");
-    box.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);max-height:260px;overflow-y:auto;margin-top:8px";
-    todos.forEach(function(arq){
-      const item = div("comp-arq-item");
-      item.style.margin = "6px";
-      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
-      item.innerHTML = `
-        <span class="comp-arq-icon">${icone}</span>
-        <div style="flex:1;min-width:0">
-          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
-          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
-        </div>`;
-      item.onclick = function(){ analisarArquivoDriveIA(arq.id, arq.nome); };
-      box.appendChild(item);
-    });
-    lista.appendChild(box);
-  }catch(e){
-    lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
-  }
-}
 
 async function listarArquivosPendentesParaIA(){
   const lista = document.getElementById("iaListaDrive");
@@ -3067,26 +3032,66 @@ async function listarArquivosPendentesParaIA(){
       lista.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">Nenhum arquivo encontrado na pasta PENDENTES.</p>`;
       return;
     }
-    lista.innerHTML = "";
-    const box = div("");
-    box.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);max-height:260px;overflow-y:auto;margin-top:8px";
-    todos.forEach(function(arq){
-      const item = div("comp-arq-item");
-      item.style.margin = "6px";
-      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
-      item.innerHTML = `
-        <span class="comp-arq-icon">${icone}</span>
-        <div style="flex:1;min-width:0">
-          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
-          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
-        </div>`;
-      item.onclick = function(){ analisarArquivoDriveIA(arq.id, arq.nome); };
-      box.appendChild(item);
-    });
-    lista.appendChild(box);
+    renderizarListaComCheckbox(lista, todos);
   }catch(e){
     lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
   }
+}
+
+// Renderiza a lista de arquivos com caixinha de marcar — permite selecionar
+// vários de uma vez e mandar todos juntos para a fila de revisão.
+function renderizarListaComCheckbox(lista, todos){
+  lista.innerHTML = "";
+  const box = div("");
+  box.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);max-height:260px;overflow-y:auto;margin-top:8px";
+  todos.forEach(function(arq){
+    const item = div("comp-arq-item");
+    item.style.margin = "6px";
+    item.style.cursor = "default";
+    const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
+    item.innerHTML = `
+      <input type="checkbox" class="arq-checkbox" data-id="${arq.id}" style="margin-right:8px;flex-shrink:0;width:17px;height:17px;cursor:pointer">
+      <span class="comp-arq-icon">${icone}</span>
+      <div style="flex:1;min-width:0">
+        <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
+        <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
+      </div>`;
+    box.appendChild(item);
+  });
+  lista.appendChild(box);
+
+  const btnWrap = div("");
+  btnWrap.style.marginTop = "8px";
+  btnWrap.innerHTML = `<button class="comp-btn-vincular" id="btnEnviarSelecionados" style="width:100%;justify-content:center;display:flex" onclick="enviarArquivosSelecionadosParaRevisao()">📤 Enviar selecionados para revisão</button>`;
+  lista.appendChild(btnWrap);
+}
+
+// Envia todos os arquivos marcados, um por um, para a fila de "Comprovantes
+// aguardando revisão" — a mesma usada pelos comprovantes vindos do celular.
+async function enviarArquivosSelecionadosParaRevisao(){
+  const checkboxes = document.querySelectorAll("#iaListaDrive .arq-checkbox:checked");
+  if(checkboxes.length === 0){ mostrarToast("❌ Selecione pelo menos um arquivo.", true); return; }
+
+  const ids = Array.from(checkboxes).map(function(cb){ return cb.dataset.id; });
+  const btn = document.getElementById("btnEnviarSelecionados");
+  if(btn) btn.disabled = true;
+
+  let sucesso = 0, falhas = 0;
+  for(let i = 0; i < ids.length; i++){
+    if(btn) btn.textContent = "Enviando " + (i+1) + " de " + ids.length + "...";
+    try{
+      const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"enviar_para_revisao", fileId: ids[i] }) });
+      const json = await res.json();
+      if(json.ok) sucesso++; else falhas++;
+    }catch(e){ falhas++; }
+  }
+
+  mostrarToast(falhas === 0
+    ? "✅ " + sucesso + " comprovante(s) enviado(s) para revisão!"
+    : "⚠️ " + sucesso + " enviado(s), " + falhas + " com erro.");
+
+  document.getElementById("iaListaDrive").innerHTML = "";
+  carregarPendentes(); // atualiza o painel "Comprovantes aguardando revisão" com os novos itens
 }
 
 function analisarLinkDriveColado(){
