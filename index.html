@@ -2625,6 +2625,7 @@ function renderComprovantes(el){
     <input type="file" id="iaFileInput" accept="image/*,.pdf" style="display:none" onchange="selecionarArquivoIA(this)">
     <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
     <button class="topbar-btn" style="width:100%;justify-content:center" onclick="listarArquivosDriveParaIA()">📁 Escolher arquivo já salvo no Drive deste mês</button>
+    <button class="topbar-btn" style="width:100%;justify-content:center;margin-top:6px" onclick="listarArquivosPendentesParaIA()">📌 Escolher da pasta PENDENTES (PIX aguardando lançamento)</button>
     <div id="iaListaDrive"></div>
     <p style="text-align:center;font-size:12px;color:var(--muted);margin:10px 0">— ou —</p>
     <div style="display:flex;gap:8px">
@@ -3025,6 +3026,45 @@ async function listarArquivosDriveParaIA(){
     const todos = [].concat(dados.pdfs||[], dados.notas||[], dados.outros||[]);
     if(todos.length === 0){
       lista.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">Nenhum arquivo encontrado na pasta de ${COMPROV_STATE.mesSel}.</p>`;
+      return;
+    }
+    lista.innerHTML = "";
+    const box = div("");
+    box.style.cssText = "border:1px solid var(--border);border-radius:var(--r-sm);max-height:260px;overflow-y:auto;margin-top:8px";
+    todos.forEach(function(arq){
+      const item = div("comp-arq-item");
+      item.style.margin = "6px";
+      const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
+      item.innerHTML = `
+        <span class="comp-arq-icon">${icone}</span>
+        <div style="flex:1;min-width:0">
+          <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
+          <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
+        </div>`;
+      item.onclick = function(){ analisarArquivoDriveIA(arq.id, arq.nome); };
+      box.appendChild(item);
+    });
+    lista.appendChild(box);
+  }catch(e){
+    lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
+  }
+}
+
+async function listarArquivosPendentesParaIA(){
+  const lista = document.getElementById("iaListaDrive");
+  if(!lista) return;
+  lista.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)"><div class="loader" style="margin:0 auto 8px"></div>Buscando arquivos da pasta PENDENTES...</div>';
+  try{
+    const res = await fetch(URL_COMPROV + "?acao=listar_arquivos_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const json = await res.json();
+    if(json.erro){
+      lista.innerHTML = `<p style="font-size:12px;color:var(--saida);text-align:center;padding:12px 0">${json.erro}</p>`;
+      return;
+    }
+    const dados = json.arquivos || {};
+    const todos = [].concat(dados.pdfs||[], dados.notas||[], dados.outros||[]);
+    if(todos.length === 0){
+      lista.innerHTML = `<p style="font-size:12px;color:var(--muted);text-align:center;padding:12px 0">Nenhum arquivo encontrado na pasta PENDENTES.</p>`;
       return;
     }
     lista.innerHTML = "";
