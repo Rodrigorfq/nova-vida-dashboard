@@ -2815,8 +2815,16 @@ function renderBuscaDespesas(el){
   el.appendChild(card);
 }
 
+// Remove acentos e deixa em minúsculas, pra busca não se importar com
+// diferenças de acentuação (ex: "combustível" bate com "combustivel")
+function normalizarTexto(s){
+  return String(s||"")
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // remove os acentos
+}
+
 function buscarDespesasPorTermo(termo){
-  const termoLower = termo.toLowerCase().trim();
+  const termoLower = normalizarTexto(termo).trim();
   const resultados = [];
   Object.keys(DD).forEach(function(mesKey){
     const cat = DD[mesKey].categorias || DD[mesKey];
@@ -2825,7 +2833,7 @@ function buscarDespesasPorTermo(termo){
       var catNome = entradaCat[0], descs = entradaCat[1];
       Object.entries(descs).forEach(function(entradaDesc){
         var descNome = entradaDesc[0], lans = entradaDesc[1];
-        var bate = descNome.toLowerCase().includes(termoLower) || catNome.toLowerCase().includes(termoLower);
+        var bate = normalizarTexto(descNome).includes(termoLower) || normalizarTexto(catNome).includes(termoLower);
         if(!bate) return;
         lans.forEach(function(l){
           resultados.push({ mesKey: mesKey, mesNome: mesNome, cat: catNome, desc: descNome,
