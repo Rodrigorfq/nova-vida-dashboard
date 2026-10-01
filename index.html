@@ -1160,6 +1160,44 @@ tr:hover td { background: var(--bg); }
 @media (max-width: 480px) {
   .kpi-grid { grid-template-columns: 1fr; }
 }
+
+/* ─── RELATÓRIO MENSAL ─── */
+.rel-banner {
+  background: var(--accent2); border: 1px solid #d7daf5; border-radius: var(--r);
+  padding: 10px 14px; margin-bottom: 16px; font-size: 12.5px; color: var(--accent);
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+.rel-banner.rel-aviso { background: var(--gold2); border-color: #f0d78c; color: #7a5a10; }
+.rel-section-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--muted); margin: 22px 0 10px;
+}
+.rel-section-label:first-child { margin-top: 0; }
+.rel-conselho-box {
+  background: var(--white); border: 1px solid var(--border); border-radius: var(--r-lg);
+  padding: 18px; font-size: 13.5px; line-height: 1.7; color: var(--navy2);
+  min-height: 90px; white-space: pre-wrap;
+}
+.rel-conselho-box:empty::before {
+  content: "Clique em “Gerar conselho com IA” para criar um rascunho de orientação para o mês seguinte.";
+  color: var(--muted-lt); font-style: italic;
+}
+.rel-conselho-box[contenteditable="true"] { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent2); cursor: text; }
+.rel-pill { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 99px; }
+.rel-pill-salvo { background: var(--entrada2); color: var(--entrada); }
+.rel-pill-rascunho { background: var(--gold2); color: var(--gold); }
+.rel-btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.rel-print-header { display: none; }
+
+@media print {
+  .sidebar, .topbar, .sidebar-overlay, .rel-no-print { display: none !important; }
+  .main-content { margin-left: 0 !important; }
+  .page-body { padding: 0 !important; }
+  body { background: #fff !important; }
+  .rel-print-header { display: block; margin-bottom: 18px; }
+  .chart-card, .table-card, .kpi-card, .rel-conselho-box { box-shadow: none !important; border: 1px solid #ddd !important; break-inside: avoid; }
+  .rel-section-label { break-after: avoid; }
+}
 </style>
 </head>
 <body>
@@ -1266,6 +1304,9 @@ tr:hover td { background: var(--bg); }
       <div class="nav-item" id="navComprov" onclick="trocarAba('comprov')">
         <span class="nav-dot" style="background:#0891b2"></span> Comprovantes
       </div>
+      <div class="nav-item" id="navRelatorio" onclick="trocarAba('relatorio')">
+        <span class="nav-dot" style="background:var(--purple)"></span> Relatório Mensal
+      </div>
     </nav>
 
     <div class="sidebar-bottom">
@@ -1342,6 +1383,7 @@ const SESSAO_DIAS = 7;
 
 // Estado
 let DD = {}, DE = {}, DF = {}, MES = "", ABA = "geral", visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
+let ENTRADAS_DESATUALIZADO = false, FOLHA_DESATUALIZADO = false;
 let DRILL = { level: 0, cat: null, desc: null };
 let charts = {};
 
@@ -1447,7 +1489,7 @@ function fazerLogout(){
 // Busca uma URL e interpreta como JSON, com diagnóstico claro se a resposta
 // vier inválida (ex: página de erro do Google em vez de JSON) e uma nova
 // tentativa automática — esse tipo de falha costuma ser passageira.
-async function buscarJsonComDiagnostico(url, tentativas=2){
+async function buscarJsonComDiagnostico(url, tentativas=3){
   let ultimoErro;
   for(let i=0; i<tentativas; i++){
     try{
@@ -1460,7 +1502,7 @@ async function buscarJsonComDiagnostico(url, tentativas=2){
       }
     }catch(e){
       ultimoErro = e;
-      if(i < tentativas-1) await new Promise(res=>setTimeout(res, 1500)); // pequena pausa antes de tentar de novo
+      if(i < tentativas-1) await new Promise(res=>setTimeout(res, 1500 * (i+1))); // espera progressiva: 1.5s, depois 3s
     }
   }
   throw ultimoErro;
@@ -1486,13 +1528,35 @@ async function carregarTudo(){
     if(jD.erro) throw new Error(jD.mensagem||jD.erro);
     DD = jD;
 
-    // Entradas é opcional — falha não bloqueia
-    if(!jE.erro){ DE=jE; console.log("Entradas OK:", Object.keys(DE).length, "meses"); }
-    else console.warn("Entradas não carregadas:", jE.erro);
+    // Entradas é opcional — se falhar, usa a última cópia boa salva neste
+    // navegador em vez de mostrar zerado (evita o susto de um "saldo negativo"
+    // que na verdade é só falha de carregamento, não um dado real).
+    ENTRADAS_DESATUALIZADO = false;
+    if(!jE.erro){
+      DE=jE;
+      try{ localStorage.setItem("nv_cache_entradas", JSON.stringify(DE)); }catch(e){}
+      console.log("Entradas OK:", Object.keys(DE).length, "meses");
+    } else {
+      console.warn("Entradas não carregadas:", jE.erro);
+      try{
+        const reserva = localStorage.getItem("nv_cache_entradas");
+        if(reserva){ DE = JSON.parse(reserva); ENTRADAS_DESATUALIZADO = true; }
+      }catch(e){}
+    }
 
-    // Folha é opcional — falha não bloqueia
-    if(!jF.erro){ DF=jF; console.log("Folha OK:", Object.keys(DF).length, "meses"); }
-    else console.warn("Folha não carregada:", jF.erro);
+    // Folha é opcional — mesma lógica de reserva
+    FOLHA_DESATUALIZADO = false;
+    if(!jF.erro){
+      DF=jF;
+      try{ localStorage.setItem("nv_cache_folha", JSON.stringify(DF)); }catch(e){}
+      console.log("Folha OK:", Object.keys(DF).length, "meses");
+    } else {
+      console.warn("Folha não carregada:", jF.erro);
+      try{
+        const reserva = localStorage.getItem("nv_cache_folha");
+        if(reserva){ DF = JSON.parse(reserva); FOLHA_DESATUALIZADO = true; }
+      }catch(e){}
+    }
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); sel.appendChild(o); });
@@ -1515,7 +1579,7 @@ function toggleSidebar(forcar){
 function trocarAba(aba){
   ABA=aba;
   toggleSidebar(false); // fecha o menu no mobile ao selecionar uma aba
-  ["geral","entrada","saida","folha","comprov"].forEach(a=>{
+  ["geral","entrada","saida","folha","comprov","relatorio"].forEach(a=>{
     const n=$("nav"+a.charAt(0).toUpperCase()+a.slice(1));
     if(n) n.className="nav-item"+(aba===a?" active":"");
   });
@@ -1525,6 +1589,7 @@ function trocarAba(aba){
     saida:   ["Saídas","Despesas e custos"],
     folha:   ["Pessoal","Folha de pagamento e funcionários"],
     comprov: ["Comprovantes","Vincular arquivos do Drive às despesas"],
+    relatorio: ["Relatório Mensal","Resumo para apresentar à liderança"],
   };
   $("topbarTitle").textContent=titles[aba][0];
   $("topbarSub").textContent=titles[aba][1];
@@ -1544,6 +1609,7 @@ function render(){
   else if(ABA==="saida") renderSaidas(el);
   else if(ABA==="folha") renderFolha(el);
   else if(ABA==="comprov") renderComprovantes(el);
+  else if(ABA==="relatorio") renderRelatorio(el);
   setTimeout(()=>{
     document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
     document.querySelectorAll("[data-bar]").forEach(b=>b.style.width=b.dataset.bar+"%");
@@ -1566,6 +1632,17 @@ function renderGeral(el){
   const t=ent?ent.total:{};
   const cat=desp.categorias||desp;
   const nm=getMesNome();
+
+  if(ENTRADAS_DESATUALIZADO || FOLHA_DESATUALIZADO){
+    const aviso=div("fade-in");
+    aviso.style.cssText="background:var(--gold2);border:1px solid #f0d78c;border-radius:var(--r);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#7a5a10;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
+    const partes=[];
+    if(ENTRADAS_DESATUALIZADO) partes.push("Entradas");
+    if(FOLHA_DESATUALIZADO) partes.push("Folha");
+    aviso.innerHTML=`<span>⚠️ Não consegui buscar os dados mais recentes de <b>${partes.join(" e ")}</b> agora — mostrando a última cópia salva neste navegador.</span>
+      <button class="topbar-btn" style="flex-shrink:0" onclick="carregarTudo()">🔄 Tentar de novo</button>`;
+    el.appendChild(aviso);
+  }
 
   // Hero KPIs
   const hero=div("hero-finance fade-in");
@@ -2665,6 +2742,8 @@ function renderComprovantes(el){
 
 // ─── FILA DE PENDENTES (comprovantes capturados pelo celular, aguardando revisão) ───
 let PENDENTES_CACHE = [];
+let CONSELHOS_CACHE = {};      // { "AGOSTO": {texto, dataSalvo, dataGeracao}, ... } — carregado do backend
+let RELATORIO_METRICAS = null; // métricas calculadas do mês do relatório (cache pro botão de gerar IA)
 
 function renderPendentes(el){
   const card = div("chart-card fade-in");
@@ -2793,6 +2872,314 @@ async function rejeitarPendenteUI(id, btnEl){
     mostrarToast("❌ Erro de conexão: " + e.message, true);
     btnEl.disabled = false;
   }
+}
+
+// ═══════════════════════════════════════════════════════
+// RELATÓRIO MENSAL — apanhado dos meses anteriores + detalhe
+// do mês vigente + conselho da IA (com memória do mês passado)
+// ═══════════════════════════════════════════════════════
+
+// Calcula, a partir dos dados já carregados (DD/DE/DF), todas as métricas
+// de um mês. Reaproveitado tanto pra exibir na tela quanto pra enviar à IA.
+function calcularMetricasParaMes(mesKeyDD){
+  const desp = DD[mesKeyDD] || {};
+  const cat  = desp.categorias || desp;
+  const tD   = desp.total || 0;
+  const ek   = getEntKey(mesKeyDD);
+  const ent  = ek ? DE[ek] : null;
+  const t    = ent ? (ent.total||{}) : {};
+  const tE   = t.totalGeral || 0;
+  const nomeMes = mesKeyDD.replace("Despesas(","").replace(")","").replace("Despesas ","").trim().toUpperCase();
+  const folhaTotal = (DF[nomeMes] && DF[nomeMes].totalGeral) || 0;
+  const catTots = Object.entries(cat||{}).map(([n,d])=>({nome:n, valor:sumCat({x:d})})).sort((a,b)=>b.valor-a.valor);
+  const topCategorias = catTots.map(c=>({nome:c.nome, valor:c.valor, pct: tD ? (c.valor/tD*100) : 0}));
+  return {
+    mes: nomeMes,
+    mesKeyDD,
+    entradas: { total:tE, dizimo:t.dizimo||0, oferta:t.oferta||0, campanha:t.campanha||0, pix:t.totalPix||0 },
+    saidas:   { total:tD, catedral:t.catedral||0, extra:t.extra||0, folha:folhaTotal, topCategorias },
+    saldo: tE - tD,
+  };
+}
+
+// Monta o pacote completo de métricas (mês atual + anterior + variação +
+// histórico) usado tanto pra exibir o relatório quanto pra enviar à IA.
+function montarMetricasRelatorio(mesAtualKey){
+  const meses = Object.keys(DD);
+  const idx = meses.indexOf(mesAtualKey);
+  const atual = calcularMetricasParaMes(mesAtualKey);
+  const mesAnteriorKey = idx > 0 ? meses[idx-1] : null;
+  let anterior = null, variacao = null;
+  if(mesAnteriorKey){
+    anterior = calcularMetricasParaMes(mesAnteriorKey);
+    variacao = {
+      entradasPct: anterior.entradas.total ? ((atual.entradas.total - anterior.entradas.total) / anterior.entradas.total * 100) : 0,
+      saidasPct:   anterior.saidas.total   ? ((atual.saidas.total   - anterior.saidas.total)   / anterior.saidas.total   * 100) : 0,
+    };
+  }
+  const historicoKeys = meses.slice(Math.max(0, idx-5), idx+1); // até 6 meses, incluindo o atual
+  const historico = historicoKeys.map(k=>{
+    const c = calcularMetricasParaMes(k);
+    return { mes:c.mes, entradas:c.entradas.total, saidas:c.saidas.total, saldo:c.saldo };
+  });
+  // Meses anteriores ao atual (para a seção de histórico/apanhado)
+  const anterioresKeys = meses.slice(0, idx);
+  const anterioresTodos = anterioresKeys.map(calcularMetricasParaMes);
+  return { mesAtual: atual.mes, mesAnteriorNome: anterior?anterior.mes:null, atual, anterior, variacao, historico, anterioresTodos };
+}
+
+function renderRelatorio(el){
+  const sec = div("rel-no-print");
+  sec.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Carregando relatório...</div>';
+  el.appendChild(sec);
+  carregarConselhosRelatorio().then(()=>{
+    if(ABA!=="relatorio") return; // usuário já trocou de aba antes da resposta chegar
+    el.innerHTML = "";
+    renderRelatorioConteudo(el);
+    setTimeout(()=>{
+      document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
+      aplicarOcultamento();
+    },50);
+  });
+}
+
+async function carregarConselhosRelatorio(){
+  try{
+    const res = await fetch(URL_COMPROV + "?acao=listar_conselhos&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const json = await res.json();
+    if(!json.erro) CONSELHOS_CACHE = json.conselhos || {};
+  }catch(e){
+    console.warn("Não foi possível carregar conselhos salvos:", e.message);
+  }
+}
+
+function renderRelatorioConteudo(el){
+  const metricas = montarMetricasRelatorio(MES);
+  RELATORIO_METRICAS = metricas;
+  const nm = metricas.mesAtual;
+
+  // Cabeçalho de impressão (só aparece no papel)
+  const printHdr = div("rel-print-header");
+  printHdr.innerHTML = `<h2 style="font-size:20px;margin-bottom:4px">Relatório Financeiro Mensal — ${nm} / 2026</h2>
+    <p style="font-size:12px;color:#666">Igreja Cristã Nova Vida de Rocha Miranda · gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
+    <hr style="margin:10px 0;border:none;border-top:1px solid #ccc">`;
+  el.appendChild(printHdr);
+
+  // Barra de ações (não imprime)
+  const acoes = div("rel-no-print fade-in");
+  acoes.style.cssText = "display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px";
+  acoes.innerHTML = `<button class="topbar-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>`;
+  el.appendChild(acoes);
+
+  // ── SEÇÃO 1: APANHADO DOS MESES ANTERIORES ──
+  const labelHist = div("rel-section-label"); labelHist.textContent = "Histórico · Meses Anteriores";
+  el.appendChild(labelHist);
+
+  if(metricas.anterioresTodos.length === 0){
+    const aviso = div("rel-banner");
+    aviso.textContent = "📌 " + nm + " é o primeiro mês registrado no sistema — ainda não há meses anteriores para comparar.";
+    el.appendChild(aviso);
+  } else {
+    const tbl = div("table-card fade-in");
+    tbl.innerHTML = `<table><thead><tr><th>Mês</th><th class="td-right">Entradas</th><th class="td-right">Saídas</th><th class="td-right">Saldo</th></tr></thead><tbody id="relTblHistorico"></tbody></table>`;
+    el.appendChild(tbl);
+    const tb = tbl.querySelector("#relTblHistorico");
+    metricas.anterioresTodos.forEach(m=>{
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td class="td-bold">${m.mes}</td><td class="td-right td-green">${fBRL(m.entradas.total)}</td><td class="td-right td-red">${fBRL(m.saidas.total)}</td><td class="td-right" style="font-weight:700;color:${m.saldo>=0?"var(--saldo-pos)":"var(--saida)"}">${fBRL(m.saldo)}</td>`;
+      tb.appendChild(tr);
+    });
+  }
+
+  // Gráfico comparativo (até 6 meses, incluindo o atual)
+  if(metricas.historico.length > 1){
+    const card = div("chart-card fade-in");
+    card.style.marginTop = "14px";
+    card.innerHTML = `<div class="chart-card-hdr"><p class="chart-card-title">Comparativo — Últimos Meses</p><p class="chart-card-sub">Entradas vs Saídas</p></div><div style="height:240px"><canvas id="relChartHist"></canvas></div>`;
+    el.appendChild(card);
+    setTimeout(()=>{
+      const canvas = document.getElementById("relChartHist"); if(!canvas) return;
+      charts.relHist = new Chart(canvas, {
+        type: "bar",
+        data: {
+          labels: metricas.historico.map(h=>h.mes),
+          datasets: [
+            { label:"Entradas", data: metricas.historico.map(h=>h.entradas), backgroundColor:"#16803d", borderRadius:4 },
+            { label:"Saídas",   data: metricas.historico.map(h=>h.saidas),   backgroundColor:"#c0272d", borderRadius:4 },
+          ]
+        },
+        options: {
+          responsive:true, maintainAspectRatio:false,
+          plugins:{ legend:{position:"top", labels:{usePointStyle:true,pointStyleWidth:10,font:{size:12,weight:"600"},color:"#475569",padding:16}},
+            tooltip:{callbacks:{label:ctx=>` ${ctx.dataset.label}: ${fBRL(ctx.raw)}`}} },
+          scales:{ x:{grid:{display:false},ticks:{font:{size:11,weight:"600"},color:"#94a3b8"}}, y:{ticks:{font:{size:11},color:"#94a3b8",callback:v=>fK(v)},beginAtZero:true} }
+        }
+      });
+    }, 100);
+  }
+
+  // ── SEÇÃO 2: DETALHE DO MÊS VIGENTE ──
+  const labelAtual = div("rel-section-label"); labelAtual.textContent = "Mês Vigente · " + nm;
+  el.appendChild(labelAtual);
+
+  const a = metricas.atual;
+  const v = metricas.variacao;
+  const pct = n => (n>=0?"+":"") + n.toFixed(1) + "%";
+
+  // Resumo executivo
+  const hero = div("hero-finance fade-in");
+  hero.innerHTML = `
+    <div class="hero-card hc-entrada">
+      <p class="hero-label">Total de Entradas</p>
+      <p class="hero-value">${fBRL(a.entradas.total)}</p>
+      <p class="hero-sub">${v ? pct(v.entradasPct) + " vs " + metricas.mesAnteriorNome : nm + " · 2026"}</p>
+    </div>
+    <div class="hero-card hc-saida">
+      <p class="hero-label">Total de Saídas</p>
+      <p class="hero-value">${fBRL(a.saidas.total)}</p>
+      <p class="hero-sub">${v ? pct(v.saidasPct) + " vs " + metricas.mesAnteriorNome : nm + " · 2026"}</p>
+    </div>
+    <div class="hero-card ${a.saldo>=0?"hc-saldo-pos":"hc-saldo-neg"}">
+      <p class="hero-label">Saldo do Mês</p>
+      <p class="hero-value">${fBRL(a.saldo)}</p>
+      <p class="hero-sub">${a.saldo>=0?"Positivo ↑":"Negativo ↓"}</p>
+    </div>`;
+  el.appendChild(hero);
+
+  // Composição das entradas + Catedral/Extra/Folha
+  const g2 = div("chart-grid-2 fade-in");
+  const cEnt = div("table-card");
+  cEnt.innerHTML = `<table><thead><tr><th colspan="3" style="font-size:12px">Composição das Entradas</th></tr></thead><tbody>
+    <tr><td>Dízimo</td><td class="td-right">${fBRL(a.entradas.dizimo)}</td><td class="td-right">${a.entradas.total?(a.entradas.dizimo/a.entradas.total*100).toFixed(1):0}%</td></tr>
+    <tr><td>Oferta</td><td class="td-right">${fBRL(a.entradas.oferta)}</td><td class="td-right">${a.entradas.total?(a.entradas.oferta/a.entradas.total*100).toFixed(1):0}%</td></tr>
+    <tr><td>Campanha</td><td class="td-right">${fBRL(a.entradas.campanha)}</td><td class="td-right">${a.entradas.total?(a.entradas.campanha/a.entradas.total*100).toFixed(1):0}%</td></tr>
+    <tr><td>PIX</td><td class="td-right">${fBRL(a.entradas.pix)}</td><td class="td-right">${a.entradas.total?(a.entradas.pix/a.entradas.total*100).toFixed(1):0}%</td></tr>
+  </tbody></table>`;
+  const cRep = div("table-card");
+  cRep.innerHTML = `<table><thead><tr><th colspan="2" style="font-size:12px">Repasses e Folha</th></tr></thead><tbody>
+    <tr><td>Catedral (10%)</td><td class="td-right">${fBRL(a.saidas.catedral)}</td></tr>
+    <tr><td>Extra (5%)</td><td class="td-right">${fBRL(a.saidas.extra)}</td></tr>
+    <tr><td>Folha de Pagamento</td><td class="td-right">${fBRL(a.saidas.folha)}</td></tr>
+  </tbody></table>`;
+  g2.appendChild(cEnt); g2.appendChild(cRep);
+  el.appendChild(g2);
+
+  // Maiores categorias de saída
+  const labelCat = div("rel-section-label"); labelCat.textContent = "Maiores Categorias de Saída";
+  el.appendChild(labelCat);
+  const tblCat = div("table-card fade-in");
+  tblCat.innerHTML = `<table><thead><tr><th>Categoria</th><th class="td-right">Valor</th><th class="td-right">%</th></tr></thead><tbody id="relTblCat"></tbody></table>`;
+  el.appendChild(tblCat);
+  const tbCat = tblCat.querySelector("#relTblCat");
+  a.saidas.topCategorias.slice(0,8).forEach(c=>{
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td class="td-bold">${c.nome}</td><td class="td-right td-red">${fBRL(c.valor)}</td><td class="td-right">${c.pct.toFixed(1)}%</td>`;
+    tbCat.appendChild(tr);
+  });
+
+  // ── SEÇÃO 3: CONSELHO DA IA PARA O MÊS SEGUINTE ──
+  const labelConselho = div("rel-section-label"); labelConselho.textContent = "Conselho para o Mês Seguinte";
+  el.appendChild(labelConselho);
+
+  const salvo = CONSELHOS_CACHE[nm];
+  if(!metricas.mesAnteriorNome){
+    const aviso = div("rel-banner rel-aviso rel-no-print");
+    aviso.textContent = "ℹ️ Como ainda não há mês anterior registrado, a IA vai focar só nas orientações pra frente — sem avaliar cumprimento de conselho passado.";
+    el.appendChild(aviso);
+  } else if(!CONSELHOS_CACHE[metricas.mesAnteriorNome]){
+    const aviso = div("rel-banner rel-aviso rel-no-print");
+    aviso.textContent = `ℹ️ Não há conselho salvo de ${metricas.mesAnteriorNome} — a IA vai focar só nas orientações pra ${proximoMesNome(nm)}, sem avaliar cumprimento.`;
+    el.appendChild(aviso);
+  }
+
+  const statusRow = div("rel-no-print");
+  statusRow.style.cssText = "margin-bottom:8px";
+  statusRow.innerHTML = salvo
+    ? `<span class="rel-pill rel-pill-salvo">✅ Salvo em ${salvo.dataSalvo}</span>`
+    : `<span class="rel-pill rel-pill-rascunho">✏️ Ainda não salvo</span>`;
+  el.appendChild(statusRow);
+
+  const box = div("rel-conselho-box");
+  box.id = "relConselhoBox";
+  box.contentEditable = "true";
+  box.innerText = salvo ? salvo.texto : "";
+  el.appendChild(box);
+
+  const btnRow = div("rel-btn-row rel-no-print");
+  btnRow.innerHTML = `
+    <button class="topbar-btn" id="relBtnGerar" onclick="gerarConselhoIAUI()">🤖 ${salvo?"Gerar novamente com IA":"Gerar conselho com IA"}</button>
+    <button class="comp-btn-vincular" id="relBtnSalvar" onclick="salvarConselhoUI()">💾 Salvar conselho</button>`;
+  el.appendChild(btnRow);
+}
+
+function proximoMesNome(mesAtual){
+  const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
+  const i = MESES.indexOf(mesAtual);
+  return i>=0 ? MESES[(i+1)%12] : "o mês seguinte";
+}
+
+async function gerarConselhoIAUI(){
+  const btn = document.getElementById("relBtnGerar");
+  const box = document.getElementById("relConselhoBox");
+  if(!btn || !box || !RELATORIO_METRICAS) return;
+  btn.disabled = true; const txtOrig = btn.textContent; btn.textContent = "⏳ Gerando...";
+  try{
+    const mesAnterior = RELATORIO_METRICAS.mesAnteriorNome;
+    const conselhoAnterior = mesAnterior && CONSELHOS_CACHE[mesAnterior] ? CONSELHOS_CACHE[mesAnterior].texto : "";
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+      acao: "gerar_conselho_ia",
+      metricas: RELATORIO_METRICAS,
+      conselhoAnterior: conselhoAnterior,
+    })});
+    const json = await res.json();
+    if(json.ok){
+      box.innerText = json.texto;
+      mostrarToast("🤖 Rascunho gerado — revise antes de salvar.");
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha ao gerar conselho"), true);
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+  }finally{
+    btn.disabled = false; btn.textContent = txtOrig;
+  }
+}
+
+async function salvarConselhoUI(){
+  const box = document.getElementById("relConselhoBox");
+  const btn = document.getElementById("relBtnSalvar");
+  if(!box || !RELATORIO_METRICAS) return;
+  const texto = box.innerText.trim();
+  if(!texto){ mostrarToast("❌ Escreva ou gere um conselho antes de salvar.", true); return; }
+  if(!confirm("Salvar este texto como o conselho oficial de " + RELATORIO_METRICAS.mesAtual + "?\n\nEle será usado no mês seguinte para avaliar se foi seguido.")) return;
+  btn.disabled = true;
+  try{
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+      acao: "salvar_conselho", mes: RELATORIO_METRICAS.mesAtual, texto: texto,
+    })});
+    const json = await res.json();
+    if(json.ok){
+      mostrarToast("✅ Conselho salvo com sucesso!");
+      await carregarConselhosRelatorio();
+      renderRelatorioAtual();
+    } else {
+      mostrarToast("❌ Erro: " + (json.erro||"Falha ao salvar"), true);
+    }
+  }catch(e){
+    mostrarToast("❌ Erro de conexão: " + e.message, true);
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function renderRelatorioAtual(){
+  Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
+  const el=$("pageBody"); el.innerHTML="";
+  renderRelatorioConteudo(el);
+  setTimeout(()=>{
+    document.querySelectorAll(".fade-in").forEach((e,i)=>setTimeout(()=>e.classList.add("show"),i*60));
+    aplicarOcultamento();
+  },80);
 }
 
 // ─── BUSCA DE DESPESAS RECORRENTES ───
