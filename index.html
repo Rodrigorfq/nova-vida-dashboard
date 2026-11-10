@@ -1155,6 +1155,13 @@ tr:hover td { background: var(--bg); }
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .page-body { padding: 16px; }
   .topbar { padding: 0 16px; }
+  #syncInfo, .topbar-sub { display: none; }
+  #refreshBtn .btxt { display: none; }
+  .topbar-right { gap: 4px; }
+  .topbar-right .mes-select { padding: 6px 4px; font-size: 12px; max-width: 92px; }
+  .topbar-right .topbar-btn { padding: 6px 8px; }
+  .topbar-title { font-size: 15px; white-space: nowrap; }
+  #eyeBtn { font-size: 0; gap: 0; }
 }
 
 @media (max-width: 480px) {
@@ -1205,6 +1212,20 @@ tr:hover td { background: var(--bg); }
 <!-- ═══════════════════════════════════════
      LOGIN
 ═══════════════════════════════════════ -->
+<div id="senhaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px">
+  <div style="background:#fff;border-radius:14px;padding:24px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35)">
+    <h3 style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Alterar senha</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666">Use pelo menos 10 caracteres e uma senha que você não usa em outro lugar.</p>
+    <input id="senhaNova" type="password" autocomplete="new-password" placeholder="Nova senha" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;margin-bottom:8px;font-size:14px;box-sizing:border-box">
+    <input id="senhaNova2" type="password" autocomplete="new-password" placeholder="Repita a nova senha" onkeydown="if(event.key==='Enter') salvarNovaSenha()" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:14px;box-sizing:border-box">
+    <p id="senhaMsg" style="min-height:18px;margin:8px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="topbar-btn" onclick="fecharAlterarSenha()">Cancelar</button>
+      <button class="topbar-btn" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarNovaSenha()">Salvar senha</button>
+    </div>
+  </div>
+</div>
+
 <div id="loginWrap">
   <div class="login-grid">
     <div class="login-left">
@@ -1241,7 +1262,7 @@ tr:hover td { background: var(--bg); }
         <div class="form-input-wrap">
           <span class="form-icon">✉</span>
           <input class="form-input" id="emailInput" type="email" placeholder="seu@email.com"
-            autocomplete="off" spellcheck="false"
+            autocomplete="username" spellcheck="false"
             onkeydown="if(event.key==='Enter') document.getElementById('senhaInput').focus()">
         </div>
       </div>
@@ -1249,8 +1270,8 @@ tr:hover td { background: var(--bg); }
         <label class="form-label" for="senhaInput">Senha</label>
         <div class="form-input-wrap">
           <span class="form-icon">🔒</span>
-          <input class="form-input" id="senhaInput" type="text" placeholder="Digite sua senha"
-            autocomplete="new-password" style="-webkit-text-security:disc;"
+          <input class="form-input" id="senhaInput" type="password" placeholder="Digite sua senha"
+            autocomplete="current-password"
             onkeydown="if(event.key==='Enter') fazerLogin()">
         </div>
       </div>
@@ -1310,12 +1331,18 @@ tr:hover td { background: var(--bg); }
     </nav>
 
     <div class="sidebar-bottom">
+      <div id="syncInfoSide" style="font-size:11px;color:rgba(255,255,255,.45);padding:0 6px 8px"></div>
       <div class="sidebar-user">
         <div class="user-avatar" id="userAvatar">R</div>
         <div class="user-info">
           <div class="user-name" id="userName">—</div>
-          <div class="user-role">Liderança</div>
+          <div class="user-role" id="userRole">Liderança</div>
         </div>
+        <button class="logout-btn" onclick="abrirAlterarSenha()" title="Alterar senha" aria-label="Alterar senha">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </button>
         <button class="logout-btn" onclick="fazerLogout()" title="Sair">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -1344,6 +1371,9 @@ tr:hover td { background: var(--bg); }
         </div>
       </div>
       <div class="topbar-right">
+        <span id="syncInfo" style="font-size:11.5px;color:var(--text3,#888);white-space:nowrap"></span>
+        <button class="topbar-btn" id="refreshBtn" onclick="atualizarAgora()" title="Ler as planilhas agora e atualizar o painel"><span>🔄</span><span class="btxt"> Atualizar</span></button>
+        <select class="mes-select" id="anoSelect" onchange="trocarAno()" style="display:none" aria-label="Ano"></select>
         <select class="mes-select" id="mesSelect" onchange="trocarMes()">
           <option>Carregando...</option>
         </select>
@@ -1372,18 +1402,19 @@ tr:hover td { background: var(--bg); }
 // CONFIGURAÇÕES
 // ═══════════════════════════════════════
 const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
-const URL_ENTRADAS = "https://script.google.com/macros/s/AKfycbyQHl8Yj11PErMN2JGAB0y4ZTZz_y2GP741uS9FVbbBVvH3yOJNb9emqsZOQ9yoN6uTKw/exec";
-const URL_FOLHA   = "https://script.google.com/macros/s/AKfycbzdNX1EZHKBZvgF_cTjmZaPTVQPlQiVCML53eQaRG27CnomXdYgcgFlHGbayih3N1f6VA/exec";
 const URL_COMPROV = "https://script.google.com/macros/s/AKfycbw4vb9wleU09tTSlzKNh6m31uU9dBJTu6vjXufDqg9-_AM__HdiR4rP7mgznpnQZW8qHg/exec";
-const SENHA_CORRETA = "ICNV@rm2026";
-const EMAILS_AUTH = ["rodrigo.digofq@gmail.com","icnvrochamiranda@gmail.com","ronaldodq@gmail.com"];
-const NOMES = {"rodrigo.digofq@gmail.com":"Rodrigo","icnvrochamiranda@gmail.com":"Igreja","ronaldodq@gmail.com":"Pr. Ronaldo"};
+// Banco de dados (Supabase). A chave abaixo é a PÚBLICA (publishable): pode ficar no código.
+// Ela sozinha não abre nada: quem lê os dados é o usuário logado, e o banco só libera para e-mails autorizados.
+// NUNCA coloque aqui a chave secreta (secret / service_role).
+// Endereço do "Atualizar agora" (app da web do projeto Sincronizador). Vazio = só o ciclo automático de 30 min.
+const URL_SYNC = "https://script.google.com/macros/s/AKfycbyyYY5W8kSBwBMnaCLWMwP4HCu4Fn99AphudWaVzpyfdnbyCJDuMtdKKlgcNR6_degsQQ/exec";
+const SUPABASE_URL = "https://cmrnwtfvjoztwcbzdnmc.supabase.co";
+const SUPABASE_KEY = "sb_publishable_MyzC8wk_mwrpEoglHleTzw_gLerwTjY";
 const MAX_TENT = 3;
 const SESSAO_DIAS = 7;
 
 // Estado
 let DD = {}, DE = {}, DF = {}, MES = "", ABA = "geral", visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
-let ENTRADAS_DESATUALIZADO = false, FOLHA_DESATUALIZADO = false;
 let DRILL = { level: 0, cat: null, desc: null };
 let charts = {};
 
@@ -1392,6 +1423,16 @@ const $ = id => document.getElementById(id);
 const fBRL = v => "R$ " + Number(v||0).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fK   = v => v >= 1000 ? "R$ "+(v/1000).toFixed(1)+"k" : fBRL(v);
 const sumCat = (cats) => Object.values(cats||{}).flatMap(d=>Object.values(d).flat()).reduce((s,l)=>s+(+l.valor||0),0);
+
+// Cria um gráfico garantindo que o canvas não tenha outro gráfico preso a ele.
+// (Se a tela for redesenhada duas vezes em menos de 100 ms, o desenho antigo ainda
+// criava o gráfico e o novo dava "Canvas is already in use".)
+function novoChart(canvas, cfg){
+  const el = typeof canvas==="string" ? document.getElementById(canvas) : canvas;
+  const antigo = el && Chart.getChart(el);
+  if(antigo) antigo.destroy();
+  return new Chart(canvas, cfg);
+}
 
 // ─── LOGIN ───
 function atualizarDots(){
@@ -1421,51 +1462,140 @@ function bloquear(){
   },1000);
 }
 
-function verificarSessao(){
-  const exp=localStorage.getItem("nvExp");
-  if(exp && Date.now()>parseInt(exp)){
-    localStorage.removeItem("nvExp"); localStorage.removeItem("nvLogado"); localStorage.removeItem("nvNome");
-    $("sessionBadge").style.display="block"; return false;
-  }
-  if(localStorage.getItem("nvLogado")==="true"){
-    entrarApp(localStorage.getItem("nvNome")||"",false); return true;
-  }
-  return false;
+// ═══════════════════════════════════════
+// SESSÃO (login de verdade pelo Supabase Auth)
+// Guardamos só o token de acesso e o de renovação. A senha nunca fica salva.
+// ═══════════════════════════════════════
+let SESSAO = null;          // { access, refresh, exp, email, inicio }
+let USUARIO = null;         // { nome, papel, igreja_id }
+let ANO = null, ANOS = [];
+let ULTIMA_SYNC = null;
+let renovando = null;       // promessa compartilhada: evita renovar o token duas vezes ao mesmo tempo
+
+function sessaoLer(){
+  try{ return JSON.parse(localStorage.getItem("nvAuth")||"null"); }catch(e){ return null; }
+}
+function sessaoGravar(s){
+  SESSAO = s;
+  try{ if(s) localStorage.setItem("nvAuth", JSON.stringify(s)); else localStorage.removeItem("nvAuth"); }catch(e){}
+}
+function sessaoDeResposta(j, inicio){
+  return { access:j.access_token, refresh:j.refresh_token, exp:Date.now()+(j.expires_in||3600)*1000,
+           email:(j.user&&j.user.email)||"", inicio:inicio||Date.now() };
+}
+async function authChamar(caminho, opcoes){
+  const o = opcoes||{};
+  const h = Object.assign({apikey:SUPABASE_KEY, "Content-Type":"application/json"}, o.headers||{});
+  return fetch(SUPABASE_URL+caminho, {method:o.method||"GET", headers:h, body:o.body});
 }
 
-function fazerLogin(){
+async function renovarToken(){
+  if(renovando) return renovando;
+  renovando = (async()=>{
+    try{
+      if(!SESSAO || !SESSAO.refresh) throw new Error("sessao_expirada");
+      const r = await authChamar("/auth/v1/token?grant_type=refresh_token", {method:"POST", body:JSON.stringify({refresh_token:SESSAO.refresh})});
+      if(r.status===400 || r.status===401 || r.status===403){ sessaoGravar(null); throw new Error("sessao_expirada"); }
+      if(!r.ok) throw new Error("Não consegui renovar o login ("+r.status+").");
+      sessaoGravar(sessaoDeResposta(await r.json(), SESSAO.inicio));
+    } finally { renovando = null; }
+  })();
+  return renovando;
+}
+async function tokenValido(){
+  if(!SESSAO) throw new Error("sessao_expirada");
+  if(Date.now() > SESSAO.exp - 60000) await renovarToken();
+  return SESSAO.access;
+}
+
+// Leitura do banco (REST). Só o que as políticas liberam para o usuário logado.
+async function dbGet(caminho){
+  for(let tentativa=0; tentativa<2; tentativa++){
+    const tk = await tokenValido();
+    const r = await fetch(SUPABASE_URL+"/rest/v1/"+caminho, {headers:{apikey:SUPABASE_KEY, Authorization:"Bearer "+tk}});
+    if(r.status===401 && tentativa===0){ SESSAO.exp = 0; continue; }   // token recusado: renova e tenta de novo
+    if(!r.ok){
+      let msg = ""; try{ msg = (await r.json()).message||""; }catch(e){}
+      const err = new Error("Banco de dados: "+(msg||("erro "+r.status))); err.status = r.status; throw err;
+    }
+    return r.json();
+  }
+  throw new Error("sessao_expirada");
+}
+// Busca em páginas de 1000 linhas (limite do servidor). Precisa de "order" para a paginação ser estável.
+async function dbGetTudo(caminho){
+  const tudo = [];
+  for(let off=0; ; off+=1000){
+    const pag = await dbGet(caminho+(caminho.includes("?")?"&":"?")+"limit=1000&offset="+off);
+    tudo.push(...pag);
+    if(pag.length < 1000) break;
+  }
+  return tudo;
+}
+
+function verificarSessao(){
+  const s = sessaoLer();
+  if(!s){ return false; }
+  if(Date.now() - (s.inicio||0) > SESSAO_DIAS*864e5){
+    sessaoGravar(null); $("sessionBadge").style.display="block"; return false;
+  }
+  SESSAO = s;
+  identificarEEntrar(false).catch(e=>{
+    sessaoGravar(null);
+    if(e.message==="sessao_expirada") $("sessionBadge").style.display="block";
+  });
+  return true;
+}
+
+// Confirma que o e-mail está na lista de autorizados (tabela usuarios_autorizados) e abre o painel.
+async function identificarEEntrar(animar){
+  const u = await dbGet("usuarios_autorizados?select=nome,papel,igreja_id&limit=1");
+  if(!u.length){
+    await sairDoSupabase();
+    throw new Error("Este e-mail não tem permissão para ver o painel.");
+  }
+  USUARIO = u[0];
+  entrarApp(USUARIO.nome, animar);
+}
+
+async function fazerLogin(){
   if(bloqAte && Date.now()<bloqAte) return;
   const email=$("emailInput").value.trim().toLowerCase();
   const senha=$("senhaInput").value;
   if(!email){ mostrarErro("Informe seu e-mail."); return; }
-  if(!EMAILS_AUTH.includes(email)){
-    tent=Math.max(0,tent-1); atualizarDots();
-    mostrarErro("E-mail não autorizado.");
-    if(tent===0) bloquear(); else mostrarAviso("Tentativas: "+tent);
-    return;
-  }
   if(!senha){ mostrarErro("Informe a senha."); return; }
-  if(senha!==SENHA_CORRETA){
-    tent=Math.max(0,tent-1); atualizarDots();
-    $("senhaInput").value="";
-    if(tent===0){ bloquear(); mostrarErro("Bloqueado por 5 min."); }
-    else mostrarErro("Senha incorreta. Tentativas: "+tent);
-    return;
-  }
-  const nome=NOMES[email]||email;
-  localStorage.setItem("nvLogado","true");
-  localStorage.setItem("nvNome",nome);
-  localStorage.setItem("nvExp",String(Date.now()+SESSAO_DIAS*864e5));
   const btn=$("loginBtn");
   btn.innerHTML='<span class="btn-spin"></span>Entrando...'; btn.disabled=true;
-  // Notificar
+  const restaurar=()=>{ btn.innerHTML="Entrar no Dashboard"; btn.disabled=false; };
+  try{
+    const r = await authChamar("/auth/v1/token?grant_type=password", {method:"POST", body:JSON.stringify({email, password:senha})});
+    if(r.status===429){ restaurar(); mostrarErro("Muitas tentativas. Aguarde alguns minutos."); return; }
+    if(!r.ok){
+      restaurar(); $("senhaInput").value="";
+      tent=Math.max(0,tent-1); atualizarDots();
+      if(tent===0){ bloquear(); mostrarErro("Bloqueado por 5 min."); }
+      else mostrarErro("E-mail ou senha incorretos. Tentativas: "+tent);
+      return;
+    }
+    sessaoGravar(sessaoDeResposta(await r.json()));
+    $("senhaInput").value="";
+    try{ await identificarEEntrar(true); }
+    catch(e){ sessaoGravar(null); restaurar(); mostrarErro(e.message); return; }
+    notificarAcesso(email);
+  }catch(e){
+    restaurar(); mostrarErro("Sem conexão com o servidor. Tente de novo.");
+  }
+}
+
+// Aviso de acesso por e-mail (continua pelo Apps Script, como antes)
+function notificarAcesso(email){
   try{
     const ag=new Date(); const nav=navigator.userAgent;
     let nb="Outro"; if(nav.includes("Edg")) nb="Edge"; else if(nav.includes("Chrome")) nb="Chrome"; else if(nav.includes("Firefox")) nb="Firefox"; else if(nav.includes("Safari")) nb="Safari";
-    let dv=/Android|iPhone|iPad/i.test(nav)?"Celular":"Computador";
+    const dv=/Android|iPhone|iPad/i.test(nav)?"Celular":"Computador";
+    const nome=(USUARIO&&USUARIO.nome)||email;
     fetch(URL_DESPESAS+"?acao=notificar_acesso&nome="+encodeURIComponent(nome)+"&email="+encodeURIComponent(email)+"&data="+encodeURIComponent(ag.toLocaleDateString("pt-BR"))+"&hora="+encodeURIComponent(ag.toLocaleTimeString("pt-BR"))+"&navegador="+encodeURIComponent(nb)+"&dispositivo="+encodeURIComponent(dv)+"&t="+Date.now(),{method:"GET",redirect:"follow",mode:"no-cors"}).catch(()=>{});
   }catch(e){}
-  setTimeout(()=>entrarApp(nome,true),700);
 }
 
 function entrarApp(nome,animar){
@@ -1475,96 +1605,280 @@ function entrarApp(nome,animar){
     $("appWrap").style.display="flex";
     $("userName").textContent=nome;
     $("userAvatar").textContent=nome.charAt(0).toUpperCase();
+    $("userRole").textContent=(USUARIO&&USUARIO.papel==="admin")?"Administrador":"Liderança";
     carregarTudo();
   }, animar?500:0);
 }
 
-function fazerLogout(){
+async function sairDoSupabase(){
+  try{
+    if(SESSAO) await authChamar("/auth/v1/logout", {method:"POST", headers:{Authorization:"Bearer "+SESSAO.access}});
+  }catch(e){}
+  sessaoGravar(null);
+}
+async function fazerLogout(){
   if(!confirm("Deseja sair?")) return;
-  ["nvLogado","nvNome","nvExp"].forEach(k=>localStorage.removeItem(k));
+  await sairDoSupabase();
   location.reload();
 }
 
-// ─── CARREGAR DADOS ───
-// Busca uma URL e interpreta como JSON, com diagnóstico claro se a resposta
-// vier inválida (ex: página de erro do Google em vez de JSON) e uma nova
-// tentativa automática — esse tipo de falha costuma ser passageira.
-async function buscarJsonComDiagnostico(url, tentativas=3){
-  let ultimoErro;
-  for(let i=0; i<tentativas; i++){
-    try{
-      const r = await fetch(url, {method:"GET", redirect:"follow"});
-      const texto = await r.text();
-      try{
-        return JSON.parse(texto);
-      }catch(parseErr){
-        throw new Error(`Resposta inválida (status ${r.status}): ${texto.slice(0,150).replace(/\s+/g,' ')}`);
-      }
-    }catch(e){
-      ultimoErro = e;
-      if(i < tentativas-1) await new Promise(res=>setTimeout(res, 1500 * (i+1))); // espera progressiva: 1.5s, depois 3s
-    }
-  }
-  throw ultimoErro;
+// ─── ALTERAR SENHA ───
+function abrirAlterarSenha(){
+  $("senhaModal").style.display="flex";
+  $("senhaNova").value=""; $("senhaNova2").value=""; $("senhaMsg").textContent="";
+  $("senhaNova").focus();
 }
+function fecharAlterarSenha(){ $("senhaModal").style.display="none"; }
+async function salvarNovaSenha(){
+  const a=$("senhaNova").value, b=$("senhaNova2").value, msg=$("senhaMsg");
+  msg.style.color="var(--saida)";
+  if(a.length<10){ msg.textContent="Use pelo menos 10 caracteres."; return; }
+  if(a!==b){ msg.textContent="As duas senhas não são iguais."; return; }
+  try{
+    const tk = await tokenValido();
+    const r = await authChamar("/auth/v1/user", {method:"PUT", headers:{Authorization:"Bearer "+tk}, body:JSON.stringify({password:a})});
+    if(!r.ok){
+      let m=""; try{ m=(await r.json()).msg||""; }catch(e){}
+      msg.textContent = m ? ("Não foi possível: "+m) : "Não foi possível trocar a senha agora."; return;
+    }
+    msg.style.color="var(--entrada)"; msg.textContent="Senha alterada.";
+    setTimeout(fecharAlterarSenha, 1200);
+  }catch(e){ msg.textContent="Sem conexão. Tente de novo."; }
+}
+
+// ═══════════════════════════════════════
+// ADAPTADORES: linhas do banco → mesmo formato que o painel já usava
+// (assim todas as telas continuam funcionando sem mudar)
+// ═══════════════════════════════════════
+const MESES_NOME = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+const ORDEM_FUNC = ["Alexandre","Carmen","Luis","Rodrigo","Vinicius","Edilaine","Adv.Douglas"];
+const r2 = v => Math.round((Number(v)||0)*100)/100;
+const dataBR = iso => { const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||""); return m ? m[3]+"/"+m[2]+"/"+m[1] : "—"; };
+const textoOuTraco = t => { const s = (t==null) ? "" : String(t).trim(); return s || "—"; };
+
+function montarDD(saidas, categorias){
+  const grupo = {};
+  (categorias||[]).forEach(c=>{ grupo[c.nome_bruto] = c.grupo; });
+  const porMes = {};
+  (saidas||[]).forEach(s=>{ (porMes[s.mes] = porMes[s.mes] || []).push(s); });
+  const DDn = {};
+  Object.keys(porMes).map(Number).sort((a,b)=>a-b).forEach(m=>{
+    const est = {}; let total = 0;
+    porMes[m].forEach(s=>{
+      const cat = grupo[s.categoria] || s.categoria;
+      const desc = textoOuTraco(s.descricao);
+      (est[cat] = est[cat] || {});
+      (est[cat][desc] = est[cat][desc] || []).push({
+        obs: textoOuTraco(s.observacao), resp: textoOuTraco(s.responsavel), data: dataBR(s.data),
+        forma: textoOuTraco(s.forma_pagamento), valor: Number(s.valor)||0, comp: s.comprovante_url||"",
+        codigo: s.codigo, linha: s.origem_linha, aba: s.origem_aba
+      });
+      total += Number(s.valor)||0;
+    });
+    DDn["Despesas "+MESES_NOME[m-1]] = { categorias: est, total: r2(total) };
+  });
+  return DDn;
+}
+
+function montarDE(entradas, semanas){
+  const por = {};            // mes -> semana -> {linhas:[], info}
+  const pega = (m,n)=>{ por[m] = por[m]||{}; return (por[m][n] = por[m][n]||{linhas:[], info:null}); };
+  (entradas||[]).forEach(e=>pega(e.mes,e.semana).linhas.push(e));
+  (semanas||[]).forEach(s=>{ pega(s.mes,s.semana).info = s; });
+  const DEn = {};
+  Object.keys(por).map(Number).sort((a,b)=>a-b).forEach(m=>{
+    const sems = {};
+    const tot = {dizimo:0,oferta:0,campanha:0,totalCultos:0,pixCora:0,pixCaixa1:0,pixCaixa2:0,totalPix:0,totalGeral:0,catedral:0,extra:0};
+    Object.keys(por[m]).map(Number).sort((a,b)=>a-b).forEach(n=>{
+      const { linhas, info } = por[m][n];
+      const sem = { periodo:(info&&info.periodo)||"", cultos:{dizimo:0,oferta:0,campanha:0,total:0},
+                    pix:{cora:0,caixa1:0,caixa2:0,total:0}, totalGeral:0, catedral10:0, extra5:0, detalhes:{} };
+      linhas.forEach(l=>{
+        const v = Number(l.valor)||0;
+        if(l.tipo==="pix_cora") sem.pix.cora += v;
+        else if(l.tipo==="pix_caixa1") sem.pix.caixa1 += v;
+        else if(l.tipo==="pix_caixa2") sem.pix.caixa2 += v;
+        else {
+          sem.cultos[l.tipo] += v;
+          const d = (sem.detalhes[l.culto] = sem.detalhes[l.culto] || {dizimo:0,oferta:0,campanha:0,total:0});
+          d[l.tipo] += v;
+        }
+      });
+      Object.values(sem.detalhes).forEach(d=>{ d.dizimo=r2(d.dizimo); d.oferta=r2(d.oferta); d.campanha=r2(d.campanha); d.total=r2(d.dizimo+d.oferta+d.campanha); });
+      sem.cultos.dizimo=r2(sem.cultos.dizimo); sem.cultos.oferta=r2(sem.cultos.oferta); sem.cultos.campanha=r2(sem.cultos.campanha);
+      sem.cultos.total = r2(sem.cultos.dizimo+sem.cultos.oferta+sem.cultos.campanha);
+      sem.pix.cora=r2(sem.pix.cora); sem.pix.caixa1=r2(sem.pix.caixa1); sem.pix.caixa2=r2(sem.pix.caixa2);
+      sem.pix.total = r2(sem.pix.cora+sem.pix.caixa1+sem.pix.caixa2);
+      sem.totalGeral = r2(sem.cultos.total+sem.pix.total);
+      sem.catedral10 = (info&&Number(info.catedral_planilha)>0) ? Number(info.catedral_planilha) : r2(sem.totalGeral*0.10);
+      sem.extra5     = (info&&Number(info.extra_planilha)>0)    ? Number(info.extra_planilha)    : r2(sem.totalGeral*0.05);
+      sems["Semana "+n] = sem;
+      tot.dizimo+=sem.cultos.dizimo; tot.oferta+=sem.cultos.oferta; tot.campanha+=sem.cultos.campanha; tot.totalCultos+=sem.cultos.total;
+      tot.pixCora+=sem.pix.cora; tot.pixCaixa1+=sem.pix.caixa1; tot.pixCaixa2+=sem.pix.caixa2; tot.totalPix+=sem.pix.total;
+      tot.totalGeral+=sem.totalGeral; tot.catedral+=sem.catedral10; tot.extra+=sem.extra5;
+    });
+    Object.keys(tot).forEach(k=>{ tot[k]=r2(tot[k]); });
+    DEn["Entradas "+MESES_NOME[m-1]] = { semanas: sems, total: tot };
+  });
+  return DEn;
+}
+
+function montarDF(folha, funcionarios, vales, resumo){
+  const nomePorId = {};
+  (funcionarios||[]).forEach(f=>{ nomePorId[f.id] = f.nome; });
+  const valesPor = {};       // mes|nome -> [{data,valor}]
+  (vales||[]).forEach(v=>{
+    const k = v.mes+"|"+nomePorId[v.funcionario_id];
+    (valesPor[k] = valesPor[k]||[]).push({data:dataBR(v.data), valor:Number(v.valor)||0});
+  });
+  const resumoPor = {};
+  (resumo||[]).forEach(r=>{ resumoPor[r.mes] = r.total_geral_planilha; });
+  const porMes = {};
+  (folha||[]).forEach(f=>{ (porMes[f.mes] = porMes[f.mes]||[]).push(f); });
+  const ordem = n => { const i = ORDEM_FUNC.indexOf(n); return i<0 ? 999 : i; };
+  const DFn = {};
+  Object.keys(porMes).map(Number).sort((a,b)=>a-b).forEach(m=>{
+    const md = { funcionarios:{}, totalGeral:0, totalVales:0, totalSaldo:0 };
+    porMes[m].map(f=>({f, nome:nomePorId[f.funcionario_id]})).filter(x=>x.nome)
+      .sort((a,b)=>ordem(a.nome)-ordem(b.nome) || a.nome.localeCompare(b.nome))
+      .forEach(({f,nome})=>{
+        md.funcionarios[nome] = { salario:+f.salario, auxAlim:+f.aux_alimentacao, transporte:+f.transporte, total:+f.total,
+          vales:+f.vales, saldo:+f.saldo, parte13:+f.parte_13, ferias:+f.ferias, ajuda:+f.ajuda,
+          valesHist: valesPor[m+"|"+nome] || [] };
+        md.totalGeral += +f.total; md.totalVales += +f.vales; md.totalSaldo += +f.saldo;
+      });
+    const g = Number(resumoPor[m]);
+    if(g>0) md.totalGeral = g;
+    md.totalGeral=r2(md.totalGeral); md.totalVales=r2(md.totalVales); md.totalSaldo=r2(md.totalSaldo);
+    DFn[MESES_NOME[m-1].toUpperCase()] = md;
+  });
+  return DFn;
+}
+
+// Todo mês que tem entradas ou folha também aparece no seletor, mesmo sem despesas ainda.
+function completarMeses(dd){
+  Object.keys(DE).forEach(k=>{ const n="Despesas "+k.replace("Entradas ",""); if(!dd[n]) dd[n]={categorias:{},total:0}; });
+  Object.keys(DF).forEach(k=>{ const n="Despesas "+k.charAt(0)+k.slice(1).toLowerCase(); if(!dd[n]) dd[n]={categorias:{},total:0}; });
+  return Object.fromEntries(Object.entries(dd).sort((x,y)=>MESES_NOME.indexOf(x[0].replace("Despesas ",""))-MESES_NOME.indexOf(y[0].replace("Despesas ",""))));
+}
+
+// Lançamentos que você acabou de excluir. Ficam escondidos até o banco confirmar
+// (a planilha muda na hora; o banco só depois da sincronização).
+const OCULTOS = new Set();
+function filtrarOcultos(saidas){
+  if(!OCULTOS.size) return saidas;
+  const noBanco = new Set(saidas.map(s=>s.codigo));
+  OCULTOS.forEach(c=>{ if(!noBanco.has(c)) OCULTOS.delete(c); });   // banco já confirmou a exclusão
+  return saidas.filter(s=>!OCULTOS.has(s.codigo));
+}
+function removerDoDD(codigo){
+  Object.values(DD).forEach(mes=>{
+    let total=0;
+    Object.keys(mes.categorias).forEach(cat=>{
+      Object.keys(mes.categorias[cat]).forEach(desc=>{
+        mes.categorias[cat][desc] = mes.categorias[cat][desc].filter(l=>l.codigo!==codigo);
+        if(!mes.categorias[cat][desc].length) delete mes.categorias[cat][desc];
+      });
+      if(!Object.keys(mes.categorias[cat]).length) delete mes.categorias[cat];
+    });
+    total = sumCat(mes.categorias);
+    mes.total = r2(total);
+  });
+}
+
+// Pede ao sincronizador para ler as planilhas agora (em vez de esperar o ciclo de 30 min).
+async function sincronizarAgora(){
+  if(!URL_SYNC) return {pulado:true};
+  const tk = await tokenValido();
+  const res = await fetch(URL_SYNC, {method:"POST", body:JSON.stringify({acao:"sincronizar_agora", token:tk}), redirect:"follow"});
+  const j = await res.json();
+  if(j.erro) throw new Error(j.erro);
+  return j;
+}
+async function atualizarAgora(){
+  const b=$("refreshBtn"); b.disabled=true; b.innerHTML='<span>⏳</span><span class="btxt"> Sincronizando...</span>';
+  try{ await sincronizarAgora(); }
+  catch(e){
+    if(e.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
+    mostrarToast("⚠️ Não consegui ler as planilhas agora ("+e.message+"). Mostrando o que já está no banco.", true);
+  }
+  await carregarTudo();
+  b.disabled=false; b.innerHTML='<span>🔄</span><span class="btxt"> Atualizar</span>';
+}
+
+// ─── CARREGAR DADOS (agora direto do banco) ───
+async function carregarAnos(){
+  try{
+    const a = await dbGet("anos_disponiveis?select=ano&order=ano.desc");
+    return [...new Set(a.map(x=>x.ano))];
+  }catch(e){
+    // visão ainda não criada: descobre pelos próprios lançamentos
+    const anos = new Set();
+    for(const t of ["saidas","entradas","folha_mensal"]){
+      try{ (await dbGet(t+"?select=ano&order=ano.desc&limit=1")).forEach(x=>anos.add(x.ano)); }catch(e2){}
+    }
+    return [...anos].sort((a,b)=>b-a);
+  }
+}
+
+function pintarSeletorAno(){
+  const sel=$("anoSelect"); sel.innerHTML="";
+  ANOS.forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; sel.appendChild(o); });
+  sel.value=ANO; sel.style.display = ANOS.length>1 ? "" : "none";
+}
+function trocarAno(){ ANO=parseInt($("anoSelect").value); MES=""; carregarTudo(); }
 
 async function carregarTudo(){
   $("pageBody").innerHTML='<div class="loading-state"><div class="loader"></div><p class="loader-text">Carregando dados financeiros...</p></div>';
   try{
-    // Disparar as 3 buscas em PARALELO (não uma depois da outra) — reduz drasticamente o tempo de carregamento
-    const pDespesas = buscarJsonComDiagnostico(URL_DESPESAS+"?t="+Date.now());
-
-    const pEntradas = (URL_ENTRADAS && URL_ENTRADAS.startsWith("https://script.google.com"))
-      ? buscarJsonComDiagnostico(URL_ENTRADAS+"?t="+Date.now()).catch(e=>({erro:e.message}))
-      : Promise.resolve({erro:"não configurado"});
-
-    const pFolha = (URL_FOLHA && URL_FOLHA.startsWith("https://script.google.com"))
-      ? buscarJsonComDiagnostico(URL_FOLHA+"?t="+Date.now()).catch(e=>({erro:e.message}))
-      : Promise.resolve({erro:"não configurado"});
-
-    const [jD, jE, jF] = await Promise.all([pDespesas, pEntradas, pFolha]);
-
-    // Despesas é obrigatório
-    if(jD.erro) throw new Error(jD.mensagem||jD.erro);
-    DD = jD;
-
-    // Entradas é opcional — se falhar, usa a última cópia boa salva neste
-    // navegador em vez de mostrar zerado (evita o susto de um "saldo negativo"
-    // que na verdade é só falha de carregamento, não um dado real).
-    ENTRADAS_DESATUALIZADO = false;
-    if(!jE.erro){
-      DE=jE;
-      try{ localStorage.setItem("nv_cache_entradas", JSON.stringify(DE)); }catch(e){}
-      console.log("Entradas OK:", Object.keys(DE).length, "meses");
-    } else {
-      console.warn("Entradas não carregadas:", jE.erro);
-      try{
-        const reserva = localStorage.getItem("nv_cache_entradas");
-        if(reserva){ DE = JSON.parse(reserva); ENTRADAS_DESATUALIZADO = true; }
-      }catch(e){}
+    if(ANO===null){
+      ANOS = await carregarAnos();
+      ANO = ANOS.length ? ANOS[0] : new Date().getFullYear();
+      if(!ANOS.length) ANOS=[ANO];
+      pintarSeletorAno();
     }
-
-    // Folha é opcional — mesma lógica de reserva
-    FOLHA_DESATUALIZADO = false;
-    if(!jF.erro){
-      DF=jF;
-      try{ localStorage.setItem("nv_cache_folha", JSON.stringify(DF)); }catch(e){}
-      console.log("Folha OK:", Object.keys(DF).length, "meses");
-    } else {
-      console.warn("Folha não carregada:", jF.erro);
-      try{
-        const reserva = localStorage.getItem("nv_cache_folha");
-        if(reserva){ DF = JSON.parse(reserva); FOLHA_DESATUALIZADO = true; }
-      }catch(e){}
-    }
+    const a = "ano=eq."+ANO;
+    const [saidas, cats, entradas, semanas, folha, funcs, vales, resumo] = await Promise.all([
+      dbGetTudo("saidas?select=codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha&"+a+"&excluido_em=is.null&order=mes,origem_linha,codigo"),
+      dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
+      dbGetTudo("entradas?select=mes,semana,culto,tipo,valor&"+a+"&order=mes,semana,culto,tipo"),
+      dbGetTudo("semanas?select=mes,semana,periodo,catedral_planilha,extra_planilha&"+a+"&order=mes,semana"),
+      dbGetTudo("folha_mensal?select=funcionario_id,mes,salario,aux_alimentacao,transporte,total,vales,saldo,parte_13,ferias,ajuda&"+a+"&order=mes,funcionario_id"),
+      dbGetTudo("funcionarios?select=id,nome&order=nome"),
+      dbGetTudo("vales?select=funcionario_id,mes,data,valor&"+a+"&order=mes,data,id"),
+      dbGetTudo("folha_resumo?select=mes,total_geral_planilha&"+a+"&order=mes"),
+    ]);
+    DE = montarDE(entradas, semanas);
+    DF = montarDF(folha, funcs, vales, resumo);
+    DD = completarMeses(montarDD(filtrarOcultos(saidas), cats));
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
-    meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); sel.appendChild(o); });
-    MES=meses[meses.length-1]; sel.value=MES;
+    meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
+    if(!meses.includes(MES)) MES=meses[meses.length-1]||"";
+    sel.value=MES;
+    atualizarStatusSync();
     render();
   }catch(err){
-    $("pageBody").innerHTML=`<div class="error-state"><p class="error-title">Erro ao carregar</p><p class="error-text">${err.message}</p></div>`;
+    if(err.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
+    $("pageBody").innerHTML=`<div class="error-state"><p class="error-title">Erro ao carregar</p><p class="error-text">${err.message}</p><button class="topbar-btn" onclick="carregarTudo()">🔄 Tentar de novo</button></div>`;
   }
+}
+
+// "Atualizado há X min" (vem da tabela sincronizacao_status, escrita pelo sincronizador)
+async function atualizarStatusSync(){
+  const el=$("syncInfo");
+  try{
+    const s = await dbGet("sincronizacao_status?select=ultima_execucao,resultado,mensagem&limit=1");
+    ULTIMA_SYNC = s[0]||null;
+  }catch(e){ ULTIMA_SYNC=null; }
+  const lado=$("syncInfoSide");
+  if(!ULTIMA_SYNC || !ULTIMA_SYNC.ultima_execucao){ el.textContent=""; el.title=""; lado.textContent=""; return; }
+  const min = Math.max(0, Math.round((Date.now()-new Date(ULTIMA_SYNC.ultima_execucao).getTime())/60000));
+  const ok = ["ok","sem_mudancas"].includes(ULTIMA_SYNC.resultado);
+  el.textContent = (ok?"":"⚠️ ")+"Planilhas lidas há "+(min<1?"menos de 1 min":min<60?min+" min":Math.round(min/60)+" h");
+  el.title = ok ? "" : ("Última sincronização: "+ULTIMA_SYNC.resultado+(ULTIMA_SYNC.mensagem?" — "+ULTIMA_SYNC.mensagem:""));
+  el.style.color = ok ? "" : "var(--saida)";
+  lado.textContent = el.textContent; lado.title = el.title;
 }
 
 function trocarMes(){ MES=$("mesSelect").value; render(); }
@@ -1623,7 +1937,7 @@ function getEntKey(m){ const nm=m.replace("Despesas(","").replace(")","").replac
 function getDados(){
   const desp=DD[MES]||{}; const ek=getEntKey(MES); const ent=ek?DE[ek]:null;
   const tD=desp.total||0; const tE=ent?(ent.total.totalGeral||0):0;
-  return {desp,ent,tD,tE,saldo:tE-tD};
+  return {desp,ent,tD,tE,saldo:r2(tE-tD)};
 }
 
 // ─── VISÃO GERAL ───
@@ -1633,17 +1947,6 @@ function renderGeral(el){
   const cat=desp.categorias||desp;
   const nm=getMesNome();
 
-  if(ENTRADAS_DESATUALIZADO || FOLHA_DESATUALIZADO){
-    const aviso=div("fade-in");
-    aviso.style.cssText="background:var(--gold2);border:1px solid #f0d78c;border-radius:var(--r);padding:10px 14px;margin-bottom:16px;font-size:12.5px;color:#7a5a10;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap";
-    const partes=[];
-    if(ENTRADAS_DESATUALIZADO) partes.push("Entradas");
-    if(FOLHA_DESATUALIZADO) partes.push("Folha");
-    aviso.innerHTML=`<span>⚠️ Não consegui buscar os dados mais recentes de <b>${partes.join(" e ")}</b> agora — mostrando a última cópia salva neste navegador.</span>
-      <button class="topbar-btn" style="flex-shrink:0" onclick="carregarTudo()">🔄 Tentar de novo</button>`;
-    el.appendChild(aviso);
-  }
-
   // Hero KPIs
   const hero=div("hero-finance fade-in");
   const saldoClass=saldo>=0?"hc-saldo-pos":"hc-saldo-neg";
@@ -1651,12 +1954,12 @@ function renderGeral(el){
     <div class="hero-card hc-entrada">
       <p class="hero-label">Total de Entradas</p>
       <p class="hero-value">${fBRL(tE)}</p>
-      <p class="hero-sub">${nm} · 2026</p>
+      <p class="hero-sub">${nm} · ${ANO}</p>
     </div>
     <div class="hero-card hc-saida">
       <p class="hero-label">Total de Saídas</p>
       <p class="hero-value">${fBRL(tD)}</p>
-      <p class="hero-sub">${nm} · 2026</p>
+      <p class="hero-sub">${nm} · ${ANO}</p>
     </div>
     <div class="hero-card ${saldoClass}">
       <p class="hero-label">Saldo do Mês</p>
@@ -1753,7 +2056,7 @@ function renderCompMeses(el){
     const dataEnt=meses.map(m=>{ const ek=getEntKey(m); return ek?(DE[ek]?.total?.totalGeral||0):0; });
     const dataSaldo=dataEnt.map((e,i)=>e-dataSai[i]);
 
-    charts.linhas=new Chart(canvas,{
+    charts.linhas=novoChart(canvas,{
       type:"line",
       data:{
         labels,
@@ -1890,7 +2193,7 @@ function renderEntradas(el){
   // KPI cards entradas
   const kpis=div("kpi-grid fade-in");
   [
-    {label:"Total Geral",    val:t.totalGeral||0, icon:"📈", cls:"kpi-entrada", sub:nm+" · 2026"},
+    {label:"Total Geral",    val:t.totalGeral||0, icon:"📈", cls:"kpi-entrada", sub:nm+" · "+ANO},
     {label:"Dízimo",         val:t.dizimo||0,     icon:"💰", cls:"kpi-entrada", sub:`${t.totalGeral?((t.dizimo/t.totalGeral)*100).toFixed(1):0}% do total`},
     {label:"Oferta",         val:t.oferta||0,     icon:"🎁", cls:"kpi-entrada", sub:`${t.totalGeral?((t.oferta/t.totalGeral)*100).toFixed(1):0}% do total`},
     {label:"Campanha",       val:t.campanha||0,   icon:"🏆", cls:"kpi-entrada", sub:`${t.totalGeral?((t.campanha/t.totalGeral)*100).toFixed(1):0}% do total`},
@@ -1976,7 +2279,7 @@ function renderSaidasNivel0(el){
   // KPIs
   const kpis=div("kpi-grid fade-in");
   [
-    {label:"Total Saídas",    val:tD,                  icon:"💸", cls:"kpi-saida",  sub:nm+" · 2026"},
+    {label:"Total Saídas",    val:tD,                  icon:"💸", cls:"kpi-saida",  sub:nm+" · "+ANO},
     {label:"Lançamentos",     val:qtd, isMoney:false,  icon:"📋", cls:"kpi-accent", sub:"registros"},
     {label:"Categorias",      val:catTots.length, isMoney:false, icon:"📂", cls:"kpi-accent", sub:"áreas"},
     {label:"Maior Categoria", val:catTots[0]?.v||0,    icon:"📌", cls:"kpi-saida",  sub:catTots[0]?.n||"—"},
@@ -2163,7 +2466,7 @@ function renderSaidasNivel2(el){
         </a>
       </div>` : ""}
       <div style="margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}">
-        <button class="comp-btn" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirLancamento('${l.aba}',${l.linha},this)">
+        <button class="comp-btn" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirLancamento('${l.codigo}',this)">
           <span class="comp-btn-icon">🗑</span>
           Excluir lançamento
         </button>
@@ -2187,29 +2490,40 @@ function renderSaidasAtual(){
   },80);
 }
 
-// Recarrega SÓ os dados de Despesas, ignorando o cache do Apps Script (&forcar=1) —
-// importante depois de excluir um lançamento, para não mostrar dado desatualizado
-// e para que as linhas dos demais lançamentos (que podem ter mudado de posição
-// na planilha) fiquem corretas antes de qualquer nova exclusão.
+// Depois de lançar/excluir algo: pede a sincronização e recarrega SÓ as despesas do banco.
+// (As linhas excluídas continuam escondidas até o banco confirmar.)
+let avisouSemSync = false;
 async function recarregarApenasDespesas(){
   try{
-    const r = await fetch(URL_DESPESAS+"?forcar=1&t="+Date.now(), {method:"GET", redirect:"follow"});
-    const j = await r.json();
-    if(!j.erro) DD = j;
+    const r = await sincronizarAgora();
+    if(r.pulado && !avisouSemSync){ avisouSemSync=true; mostrarToast("ℹ️ Feito na planilha. Aparece aqui na próxima sincronização (até 30 min)."); }
+  }catch(e){
+    console.warn("Falha ao sincronizar:", e.message);
+    mostrarToast("⚠️ Feito na planilha, mas não consegui atualizar agora. Aparece na próxima sincronização.", true);
+  }
+  try{
+    const [saidas, cats] = await Promise.all([
+      dbGetTudo("saidas?select=codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha&ano=eq."+ANO+"&excluido_em=is.null&order=mes,origem_linha,codigo"),
+      dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
+    ]);
+    DD = completarMeses(montarDD(filtrarOcultos(saidas), cats));
+    atualizarStatusSync();
   }catch(e){ console.warn("Falha ao recarregar despesas:", e.message); }
 }
 
-async function excluirLancamento(aba, linha, btnEl){
-  if(!confirm("Excluir este lançamento? Ele será removido da planilha e não poderá ser desfeito por aqui.\\n\\nO arquivo do comprovante no Drive não será apagado.")) return;
+async function excluirLancamento(codigo, btnEl){
+  if(!confirm("Excluir este lançamento? Ele será removido da planilha e não poderá ser desfeito por aqui.\n\nO arquivo do comprovante no Drive não será apagado.")) return;
   btnEl.disabled = true;
   btnEl.innerHTML = '<span class="comp-btn-icon">⏳</span> Excluindo...';
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", aba: aba, linha: linha }) });
+    // a planilha acha a linha pelo ID na hora de excluir (o número da linha pode ter mudado)
+    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", codigo: codigo }) });
     const json = await res.json();
     if(json.ok){
       mostrarToast("🗑 Lançamento excluído da planilha.");
-      await recarregarApenasDespesas();
-      renderSaidasAtual(); // redesenha no mesmo nível do drill-down, já sem o item excluído
+      OCULTOS.add(codigo); removerDoDD(codigo);
+      renderSaidasAtual();                       // some da tela na hora
+      recarregarApenasDespesas().then(()=>renderSaidasAtual());   // e o banco confirma em seguida
     } else {
       mostrarToast("❌ Erro: " + (json.erro||"Falha ao excluir"), true);
       btnEl.disabled = false;
@@ -2312,7 +2626,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
   banner.style.cssText = "background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px;padding:20px 24px;margin-bottom:20px;display:grid;grid-template-columns:1fr auto;align-items:center;gap:20px;box-shadow:0 8px 24px rgba(0,0,0,.18);";
   banner.innerHTML = `
     <div>
-      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:6px">⚡ CUSTO TOTAL REAL — ${mesNome} / 2026</p>
+      <p style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(255,255,255,.5);margin-bottom:6px">⚡ CUSTO TOTAL REAL — ${mesNome} / ${ANO}</p>
       <p style="font-size:13px;color:rgba(255,255,255,.65);margin-bottom:4px">Inclui todos os componentes pendentes de pagamento</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
         <span style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:5px 12px;font-size:12px;color:rgba(255,255,255,.75)">✅ Saldo: <b style="color:#4ade80">${fBRL(totalSaldo)}</b></span>
@@ -2330,7 +2644,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
   el.appendChild(banner);
 
   [
-    {label:"Total Folha",       val:totalGeral,   icon:"👥", cls:"kpi-saida",  sub:mesNome+" · 2026"},
+    {label:"Total Folha",       val:totalGeral,   icon:"👥", cls:"kpi-saida",  sub:mesNome+" · "+ANO},
     {label:"Total Salários",    val:totalSal,     icon:"💰", cls:"kpi-accent", sub:"bruto mensal"},
     {label:"Total Benefícios",  val:totalBenef,   icon:"🎁", cls:"kpi-accent", sub:"Alim. + Transp."},
     {label:"Saldo a Pagar",     val:totalSaldo,   icon:"✅", cls:"kpi-entrada",sub:"após descontar vales"},
@@ -2420,7 +2734,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
 
     // Barras agrupadas
     const canvas=document.getElementById("cFuncBar"); if(!canvas) return;
-    charts.fBar=new Chart(canvas,{
+    charts.fBar=novoChart(canvas,{
       type:"bar",
       data:{
         labels:funcNames,
@@ -2507,7 +2821,7 @@ function renderFolhaComparativo(el, mesNome){
   setTimeout(()=>{
     const canvas=document.getElementById("cFuncStack"); if(!canvas) return;
     const cores=funcNames.map(n=>(FUNC_CORES[n]||{bg:"#334155"}).bg);
-    charts.fStack=new Chart(canvas,{
+    charts.fStack=novoChart(canvas,{
       type:"bar",
       data:{
         labels:funcNames,
@@ -2549,11 +2863,11 @@ function renderFolhaEvolucao(el){
   const funcList=[...funcTodos];
 
   const sec=div("fade-in");
-  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Evolucao Anual da Folha</p><p class=\"section-sub\">Custo total por mes ao longo de 2026</p></div></div>";
+  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Evolucao Anual da Folha</p><p class=\"section-sub\">Custo total por mes ao longo de "+ANO+"</p></div></div>";
 
   // Gráfico de linhas evolução total
   const card1=div("chart-card");
-  card1.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Total da Folha por Mês</p><p class="chart-card-sub">Evolução mensal · 2026</p></div><div style="height:280px"><canvas id="cFolhaLinha"></canvas></div>`;
+  card1.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Total da Folha por Mês</p><p class="chart-card-sub">Evolução mensal · ${ANO}</p></div><div style="height:280px"><canvas id="cFolhaLinha"></canvas></div>`;
   sec.appendChild(card1);
 
   // Gráfico de linhas por funcionário
@@ -2603,7 +2917,7 @@ function renderFolhaEvolucao(el){
   setTimeout(()=>{
     // Linha total geral
     const c1=document.getElementById("cFolhaLinha"); if(!c1) return;
-    charts.fLinha=new Chart(c1,{
+    charts.fLinha=novoChart(c1,{
       type:"line",
       data:{
         labels:mesesComDados.map(m=>m.slice(0,3)),
@@ -2637,7 +2951,7 @@ function renderFolhaEvolucao(el){
 
     // Linhas por funcionário
     const c2=document.getElementById("cFuncLinha"); if(!c2) return;
-    charts.fLinha2=new Chart(c2,{
+    charts.fLinha2=novoChart(c2,{
       type:"line",
       data:{
         labels:mesesComDados.map(m=>m.slice(0,3)),
@@ -2960,7 +3274,7 @@ function renderRelatorioConteudo(el){
 
   // Cabeçalho de impressão (só aparece no papel)
   const printHdr = div("rel-print-header");
-  printHdr.innerHTML = `<h2 style="font-size:20px;margin-bottom:4px">Relatório Financeiro Mensal — ${nm} / 2026</h2>
+  printHdr.innerHTML = `<h2 style="font-size:20px;margin-bottom:4px">Relatório Financeiro Mensal — ${nm} / ${ANO}</h2>
     <p style="font-size:12px;color:#666">Igreja Cristã Nova Vida de Rocha Miranda · gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
     <hr style="margin:10px 0;border:none;border-top:1px solid #ccc">`;
   el.appendChild(printHdr);
@@ -2999,7 +3313,7 @@ function renderRelatorioConteudo(el){
     el.appendChild(card);
     setTimeout(()=>{
       const canvas = document.getElementById("relChartHist"); if(!canvas) return;
-      charts.relHist = new Chart(canvas, {
+      charts.relHist = novoChart(canvas, {
         type: "bar",
         data: {
           labels: metricas.historico.map(h=>h.mes),
@@ -3032,12 +3346,12 @@ function renderRelatorioConteudo(el){
     <div class="hero-card hc-entrada">
       <p class="hero-label">Total de Entradas</p>
       <p class="hero-value">${fBRL(a.entradas.total)}</p>
-      <p class="hero-sub">${v ? pct(v.entradasPct) + " vs " + metricas.mesAnteriorNome : nm + " · 2026"}</p>
+      <p class="hero-sub">${v ? pct(v.entradasPct) + " vs " + metricas.mesAnteriorNome : nm + " · " + ANO}</p>
     </div>
     <div class="hero-card hc-saida">
       <p class="hero-label">Total de Saídas</p>
       <p class="hero-value">${fBRL(a.saidas.total)}</p>
-      <p class="hero-sub">${v ? pct(v.saidasPct) + " vs " + metricas.mesAnteriorNome : nm + " · 2026"}</p>
+      <p class="hero-sub">${v ? pct(v.saidasPct) + " vs " + metricas.mesAnteriorNome : nm + " · " + ANO}</p>
     </div>
     <div class="hero-card ${a.saldo>=0?"hc-saldo-pos":"hc-saldo-neg"}">
       <p class="hero-label">Saldo do Mês</p>
@@ -3305,7 +3619,7 @@ function executarBuscaDespesas(){
     const canvas = document.getElementById("buscaChartMensal");
     if(!canvas) return;
     if(charts.buscaMensal){ try{ charts.buscaMensal.destroy(); }catch(e){} }
-    charts.buscaMensal = new Chart(canvas, {
+    charts.buscaMensal = novoChart(canvas, {
       type: "bar",
       data: {
         labels: mesesComDados.map(function(m){ return m.slice(0,3); }),
@@ -3692,7 +4006,7 @@ function div(cls){ const d=document.createElement("div"); d.className=cls; retur
 
 function buildPizza(id,labels,data,colors,ccId,total,onClickCb){
   const canvas=document.getElementById(id); if(!canvas) return null;
-  return new Chart(canvas,{
+  return novoChart(canvas,{
     type:"doughnut",
     data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:2,borderColor:"#fff",hoverOffset:8}]},
     options:{
