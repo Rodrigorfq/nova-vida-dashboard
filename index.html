@@ -1922,7 +1922,7 @@ function trocarAba(aba){
     entrada: ["Entradas","Arrecadação e receitas"],
     saida:   ["Saídas","Despesas e custos"],
     folha:   ["Pessoal","Folha de pagamento e funcionários"],
-    conferencia: ["Conferência","Saldo do sistema × saldo real em banco e espécie"],
+    conferencia: ["Conferência","Esperado pelo sistema × saldo real em contas e espécie"],
     comprov: ["Comprovantes","Vincular arquivos do Drive às despesas"],
     relatorio: ["Relatório Mensal","Resumo para apresentar à liderança"],
   };
@@ -2206,15 +2206,15 @@ function renderTabelaMeses(el){
 // Texto vindo das planilhas nunca entra no HTML sem escapar.
 function escHtml(t){ return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
-// ─── CONFERÊNCIA: saldo do sistema × saldo real ───
-// Sistema = entradas − saídas somadas desde o início do controle.
-// Real = o que você digita na aba Fechamentos (bancos + espécie).
-// "Diferença" = real − sistema. No 1º fechamento ela vira o ponto de partida (o que já existia antes do controle);
-// depois disso, qualquer mudança nela é dinheiro que o sistema não explica.
+// ─── CONFERÊNCIA: o que era esperado × o que realmente existe ───
+// Real = total em contas + espécie no último dia do mês (você digita em Fechamentos, sem reserva/ajuda controladas à mão).
+// Esperado = real do fechamento anterior + resultado (entradas − saídas) dos meses desde então.
+// Diferença = Real − Esperado: é quanto aquele mês "não fechou".
+// O banco entrega a diferença pronta (variacao_no_mes); o esperado é Real − Diferença.
 const TOLERANCIA_CONF = 1;   // até R$ 1,00 de diferença conta como "bate"
 function situacaoConf(v){
-  if(Math.abs(v)<=TOLERANCIA_CONF) return {txt:"bate", cor:"#15803d", cls:"td-green", icone:"✓"};
-  return v>0 ? {txt:"sobra", cor:"#1d4ed8", cls:"td-blue", icone:"▲"} : {txt:"falta", cor:"#c0272d", cls:"td-red", icone:"▼"};
+  if(Math.abs(v)<=TOLERANCIA_CONF) return {txt:"bate", cls:"td-green"};
+  return v>0 ? {txt:"sobra", cls:"td-blue"} : {txt:"falta", cls:"td-red"};
 }
 function renderConferencia(el){
   if(!RES.length){
@@ -2223,40 +2223,47 @@ function renderConferencia(el){
   }
   const confPor = {}; CONF.forEach(c=>{ confPor[c.mes]=c; });
   const ult = CONF.length ? CONF[CONF.length-1] : null;
-  const ultRes = RES[RES.length-1];
   const inicio = INICIO_CONTROLE ? MESES_NOME[parseInt(INICIO_CONTROLE.slice(5,7))-1]+"/"+INICIO_CONTROLE.slice(0,4) : null;
+  const esperadoDe = c => Math.round((c.saldo_real - c.variacao_no_mes)*100)/100;
 
   const aviso=div("rel-banner fade-in");
-  aviso.innerHTML=`<span>🧮 <b>Como ler:</b> o sistema soma entradas − saídas${inicio?` desde <b>${inicio}</b>`:""}. Na aba <b>Fechamentos</b> você informa o total real (bancos + espécie). No primeiro fechamento a diferença é tratada como o dinheiro que já existia antes do controle; <b>daí em diante, qualquer mudança nessa diferença é dinheiro que o sistema não explica</b> (lançamento esquecido ou valor errado).</span>`;
+  aviso.innerHTML=`<span>🧮 <b>Como ler:</b> em <b>Fechamentos</b>, informe o <b>total em contas + espécie no último dia do mês</b> (sem o que você controla à mão). O <b>Esperado</b> é o total do fechamento anterior + o resultado dos meses desde então${inicio?` (o controle começa em <b>${inicio}</b>)`:""}. A <b>Diferença</b> é Real − Esperado: quanto aquele mês não fechou. O primeiro fechamento é só o <b>ponto de partida</b>.</span>`;
   el.appendChild(aviso);
 
   const hero=div("hero-finance fade-in"); hero.style.marginTop="16px";
-  if(ult){
-    const sit=situacaoConf(ult.variacao_nao_explicada);
+  if(ult && !ult.primeiro_fechamento){
+    const sit=situacaoConf(ult.variacao_no_mes);
     const classe = sit.txt==="bate" ? "hc-entrada" : sit.txt==="falta" ? "hc-saldo-neg" : "hc-saldo-pos";
     hero.innerHTML=`
-      <div class="hero-card hc-saldo-pos">
-        <p class="hero-label">Saldo do sistema</p>
-        <p class="hero-value">${fBRL(ult.saldo_acumulado)}</p>
-        <p class="hero-sub">acumulado até ${MESES_NOME[ult.mes-1]}</p>
-      </div>
       <div class="hero-card hc-entrada">
         <p class="hero-label">Saldo real informado</p>
         <p class="hero-value">${fBRL(ult.saldo_real)}</p>
-        <p class="hero-sub">bancos + espécie · ${MESES_NOME[ult.mes-1]}</p>
+        <p class="hero-sub">contas + espécie · ${MESES_NOME[ult.mes-1]}</p>
+      </div>
+      <div class="hero-card hc-saldo-pos">
+        <p class="hero-label">Esperado pelo sistema</p>
+        <p class="hero-value">${fBRL(esperadoDe(ult))}</p>
+        <p class="hero-sub">fechamento anterior + resultado</p>
       </div>
       <div class="hero-card ${classe}">
-        <p class="hero-label">Não explicado</p>
-        <p class="hero-value">${fBRL(ult.variacao_nao_explicada)}</p>
-        <p class="hero-sub">${sit.txt==="bate"?"Bate ✓":sit.txt==="falta"?"Falta dinheiro ↓":"Sobra dinheiro ↑"}</p>
+        <p class="hero-label">Diferença do mês</p>
+        <p class="hero-value">${fBRL(ult.variacao_no_mes)}</p>
+        <p class="hero-sub">${sit.txt==="bate"?"Bate ✓":sit.txt==="falta"?"Faltou dinheiro ↓":"Sobrou dinheiro ↑"}</p>
+      </div>`;
+  } else if(ult){
+    hero.innerHTML=`
+      <div class="hero-card hc-entrada">
+        <p class="hero-label">Saldo real informado</p>
+        <p class="hero-value">${fBRL(ult.saldo_real)}</p>
+        <p class="hero-sub">ponto de partida · ${MESES_NOME[ult.mes-1]}</p>
+      </div>
+      <div class="hero-card" style="border-left-color:var(--border)">
+        <p class="hero-label">Próximo passo</p>
+        <p class="hero-value" style="color:var(--muted);font-size:18px">Preencher o fechamento do mês seguinte</p>
+        <p class="hero-sub">para comparar com o esperado</p>
       </div>`;
   } else {
     hero.innerHTML=`
-      <div class="hero-card hc-saldo-pos">
-        <p class="hero-label">Saldo do sistema</p>
-        <p class="hero-value">${fBRL(ultRes.saldo_acumulado)}</p>
-        <p class="hero-sub">acumulado até ${MESES_NOME[ultRes.mes-1]}</p>
-      </div>
       <div class="hero-card" style="border-left-color:var(--border)">
         <p class="hero-label">Saldo real informado</p>
         <p class="hero-value" style="color:var(--muted)">—</p>
@@ -2266,37 +2273,32 @@ function renderConferencia(el){
   el.appendChild(hero);
 
   const sec=div("fade-in"); sec.style.marginTop="20px";
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Mês a mês</p><p class="section-sub">Compare o saldo do sistema com o saldo real de cada fechamento</p></div></div>';
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Mês a mês</p><p class="section-sub">Cada linha mostra quanto aquele mês não fechou</p></div></div>';
   const card=div("table-card conf-tabela"); card.style.overflowX="auto";
   const linhas = RES.map(r=>{
     const c = confPor[r.mes];
     const nome = `<span class="td-bold">${MESES_NOME[r.mes-1]}</span>`
       + (c&&c.primeiro_fechamento?'<span class="kpi-badge kpi-badge-blue" style="margin-left:6px">ponto de partida</span>':"")
-      + (c&&c.observacao?`<div style="font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px;white-space:normal;max-width:260px">${escHtml(c.observacao)}</div>`:"");
-    const saldoMes = `<td class="td-right ${r.saldo>=0?"td-green":"td-red"}">${fBRL(r.saldo)}</td>`;
-    if(!c) return `<tr><td>${nome}</td><td class="td-right td-green">${fBRL(r.entradas)}</td><td class="td-right td-red">${fBRL(r.saidas)}</td>${saldoMes}
-      <td class="td-right td-blue">${fBRL(r.saldo_acumulado)}</td><td class="td-right" colspan="4" style="color:var(--muted);font-size:12px">sem fechamento</td></tr>`;
-    const sit = situacaoConf(c.variacao_nao_explicada);
-    const mud = c.primeiro_fechamento ? "—" : fBRL(c.variacao_no_mes);
-    const mudCls = c.primeiro_fechamento ? "" : situacaoConf(c.variacao_no_mes).cls;
-    return `<tr><td>${nome}</td><td class="td-right td-green">${fBRL(r.entradas)}</td><td class="td-right td-red">${fBRL(r.saidas)}</td>${saldoMes}
-      <td class="td-right td-blue">${fBRL(r.saldo_acumulado)}</td>
-      <td class="td-right td-green">${fBRL(c.saldo_real)}</td>
-      <td class="td-right td-gold">${fBRL(c.diferenca)}</td>
-      <td class="td-right ${sit.cls}">${fBRL(c.variacao_nao_explicada)}</td>
-      <td class="td-right ${mudCls}">${mud}</td></tr>`;
+      + (c&&c.observacao?`<div style="font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px;white-space:normal;max-width:280px">${escHtml(c.observacao)}</div>`:"");
+    const comum = `<td>${nome}</td><td class="td-right td-green">${fBRL(r.entradas)}</td><td class="td-right td-red">${fBRL(r.saidas)}</td>
+      <td class="td-right ${r.saldo>=0?"td-green":"td-red"}">${fBRL(r.saldo)}</td>`;
+    if(!c) return `<tr>${comum}<td class="td-right" colspan="3" style="color:var(--muted);font-size:12px">sem fechamento</td></tr>`;
+    if(c.primeiro_fechamento) return `<tr>${comum}<td class="td-right" style="color:var(--muted)">—</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right" style="color:var(--muted)">—</td></tr>`;
+    const sit = situacaoConf(c.variacao_no_mes);
+    return `<tr>${comum}<td class="td-right td-blue">${fBRL(esperadoDe(c))}</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right ${sit.cls}">${fBRL(c.variacao_no_mes)}</td></tr>`;
   }).join("");
   card.innerHTML=`<table>
     <thead><tr>
-      <th>Mês</th><th class="td-right">Entradas</th><th class="td-right">Saídas</th><th class="td-right" title="Entradas − saídas do mês">Resultado</th>
-      <th class="td-right" title="Saldo acumulado calculado pelo sistema">Sistema</th><th class="td-right" title="Saldo real informado em Fechamentos">Real</th><th class="td-right" title="Real − Sistema">Diferença</th>
-      <th class="td-right" title="Diferença atual menos a diferença do primeiro fechamento">Não explicado</th>
-      <th class="td-right" title="Quanto a diferença mudou desde o fechamento anterior: mostra em qual mês o problema apareceu">Mudança</th>
+      <th>Mês</th><th class="td-right">Entradas</th><th class="td-right">Saídas</th>
+      <th class="td-right" title="Entradas − saídas do mês">Resultado</th>
+      <th class="td-right" title="Real do fechamento anterior + resultado dos meses desde então">Esperado</th>
+      <th class="td-right" title="Total em contas + espécie informado em Fechamentos">Real</th>
+      <th class="td-right" title="Real − Esperado">Diferença</th>
     </tr></thead><tbody>${linhas}</tbody></table>`;
   sec.appendChild(card);
   const nota=document.createElement("p");
   nota.style.cssText="font-size:12px;color:var(--muted);margin:10px 2px 0;line-height:1.6";
-  nota.innerHTML="<b>Não explicado</b> negativo = o dinheiro real é menor do que o sistema calcula (despesa esquecida ou valor lançado errado). Positivo = sobrou mais do que o sistema calcula (entrada não lançada). <b>Mudança no mês</b> aponta em qual mês a diferença apareceu. Até R$ 1,00 conta como \"bate\".";
+  nota.innerHTML="<b>Diferença negativa</b> = o dinheiro real é menor que o esperado (despesa esquecida ou valor lançado errado). <b>Positiva</b> = sobrou mais que o esperado (entrada não lançada). Se um mês ficou sem fechamento, o esperado do mês seguinte já soma o resultado dele. Até R$ 1,00 conta como \"bate\".";
   sec.appendChild(nota);
   el.appendChild(sec);
 }
