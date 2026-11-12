@@ -999,6 +999,25 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .busca-mes-info b { color: var(--saida); font-weight: 700; }
 .busca-resultado-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
 
+.ent-topo { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.ent-sel { padding: 9px 10px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 14px; background: #fff; font-family: inherit; }
+.ent-grid { width: 100%; border-collapse: collapse; min-width: 520px; }
+.ent-grid th { font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); text-align: right; padding: 8px 6px 6px; border-bottom: 1px solid var(--border); font-weight: 700; }
+.ent-grid th:first-child, .ent-grid td:first-child { text-align: left; }
+.ent-grid td { padding: 3px 4px; font-size: 13px; color: var(--navy); }
+.ent-grid td:first-child { padding-left: 6px; font-weight: 600; white-space: nowrap; }
+.ent-grid thead + tbody + tbody + thead th, .ent-grid tbody + tbody + thead th { padding-top: 14px; }
+.ent-in { width: 100%; box-sizing: border-box; min-width: 76px; padding: 7px 8px; border: 1px solid #d0d5dd; border-radius: 7px; font-size: 14px; text-align: right; font-family: inherit; font-variant-numeric: tabular-nums; }
+.ent-in:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(99,102,241,.12); }
+.ent-in.erro { border-color: var(--saida); background: #fff5f5; }
+.ent-nome { width: 100%; box-sizing: border-box; min-width: 130px; padding: 7px 8px; border: 1px dashed #b6bdc9; border-radius: 7px; font-size: 13px; font-family: inherit; }
+.ent-tot { text-align: right; font-weight: 700; padding-right: 8px !important; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.ent-sep td { padding: 6px 4px 2px; }
+.ent-resumo { display: flex; gap: 10px 18px; flex-wrap: wrap; margin-top: 14px; padding: 12px 14px; background: var(--bg, #f6f7fb); border-radius: 10px; font-size: 12.5px; color: var(--slate, #555); }
+.ent-resumo b { color: var(--navy); font-variant-numeric: tabular-nums; }
+.ent-resumo .geral { font-size: 14px; }
+.semana-edit { margin-left: 10px; padding: 3px 9px; font-size: 11.5px; background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); color: #fff; }
+.semana-edit:hover { background: rgba(255,255,255,.3); }
 .fech-acao { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 .comp-grupo-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
@@ -1342,6 +1361,39 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
       <span style="flex:1"></span>
       <button class="topbar-btn" onclick="fecharFechamento()">Cancelar</button>
       <button class="topbar-btn" id="fechSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarFechamento()">Salvar fechamento</button>
+    </div>
+  </div>
+</div>
+
+<div id="entModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="entTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:720px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="entTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Lançar semana de entradas</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.5">Digite o que entrou em cada culto e no PIX. Deixe em branco o que não teve. Ao salvar, <b>esta semana é substituída</b> pelo que está aqui.</p>
+    <div class="ent-topo">
+      <div><label class="ia-form-label" for="entMes">Mês</label><select id="entMes" onchange="entradaMesMudou()" class="ent-sel"></select></div>
+      <div><label class="ia-form-label" for="entSemana">Semana</label><select id="entSemana" onchange="entradaSemanaMudou()" class="ent-sel"></select></div>
+      <div style="flex:1;min-width:150px"><label class="ia-form-label" for="entPeriodo">Período (opcional)</label><input id="entPeriodo" maxlength="40" class="ent-sel" style="width:100%;box-sizing:border-box" placeholder="Ex.: 01/11 a 07/11"></div>
+    </div>
+    <div style="overflow-x:auto;margin-top:12px">
+      <table class="ent-grid" id="entGrade">
+        <thead><tr><th>Culto</th><th>Dízimo</th><th>Oferta</th><th>Campanha</th><th>Total</th></tr></thead>
+        <tbody id="entCultos"></tbody>
+        <tbody><tr class="ent-sep"><td colspan="5"><button class="topbar-btn" type="button" onclick="entradaAddOutro()">＋ Outro culto</button></td></tr></tbody>
+        <thead><tr><th>PIX</th><th>Cora</th><th>Caixa 1</th><th>Caixa 2</th><th>Total</th></tr></thead>
+        <tbody><tr id="entPixLinha"><td>PIX da semana</td>
+          <td><input class="ent-in" data-pix="pix_cora" inputmode="decimal" autocomplete="off" aria-label="PIX Cora" oninput="entradaTotais()"></td>
+          <td><input class="ent-in" data-pix="pix_caixa1" inputmode="decimal" autocomplete="off" aria-label="PIX Caixa 1" oninput="entradaTotais()"></td>
+          <td><input class="ent-in" data-pix="pix_caixa2" inputmode="decimal" autocomplete="off" aria-label="PIX Caixa 2" oninput="entradaTotais()"></td>
+          <td class="ent-tot" id="entPixTotal">R$ 0,00</td></tr></tbody>
+      </table>
+    </div>
+    <div class="ent-resumo" id="entResumo"></div>
+    <p id="entMsg" style="min-height:18px;margin:8px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <button class="topbar-btn" id="entRemover" style="display:none;color:var(--saida)" onclick="removerSemanaEntradas()">Remover semana</button>
+      <span style="flex:1"></span>
+      <button class="topbar-btn" onclick="fecharEntradaSemana()">Cancelar</button>
+      <button class="topbar-btn" id="entSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarSemanaEntradas()">Salvar semana</button>
     </div>
   </div>
 </div>
@@ -3025,13 +3077,173 @@ function renderConferencia(el){
 }
 
 // ─── ENTRADAS ───
+// ── Lançar / editar / remover uma SEMANA de entradas (só administrador; o banco confere de novo) ──
+const CULTOS_PADRAO = ["Matinal Quarta","Matinal Sexta","Culto dos Homens","Culto Feminino","Culto Melhor Idade","1º Culto Domingo","2º Culto Domingo","3º Culto Domingo","Matinal Segunda"];
+const TIPOS_CULTO = ["dizimo","oferta","campanha"];
+function entradaSemanaDe(mes, n){
+  const m = DE["Entradas "+MESES_NOME[mes-1]];
+  return m && m.semanas ? (m.semanas["Semana "+n]||null) : null;
+}
+function entradaLinhaCulto(nome, vals, outro){
+  const tr = document.createElement("tr"); tr.className = outro ? "ent-outro" : "ent-padrao"; if(!outro) tr.dataset.culto = nome;
+  const rot = outro ? `<input class="ent-nome" maxlength="60" placeholder="Nome do culto (ex.: Congresso)" aria-label="Nome do outro culto" value="${escHtml(nome)}" oninput="entradaTotais()">` : escHtml(nome);
+  tr.innerHTML = `<td>${rot}</td>`
+    + TIPOS_CULTO.map(tp=>`<td><input class="ent-in" data-tipo="${tp}" inputmode="decimal" autocomplete="off" aria-label="${escHtml(nome||"Outro culto")} — ${tp}" value="${vals&&vals[tp]?String(Number(vals[tp]).toFixed(2)).replace(".",","):""}" oninput="entradaTotais()"></td>`).join("")
+    + `<td class="ent-tot">R$ 0,00</td>`;
+  return tr;
+}
+function entradaAddOutro(nome, vals){
+  const tr = entradaLinhaCulto(nome||"", vals, true); $("entCultos").appendChild(tr);
+  if(!nome) tr.querySelector(".ent-nome").focus();
+  entradaTotais();
+}
+function abrirEntradaSemana(mes, semana){
+  if(!SOU_ADMIN()) return;
+  const hoje = new Date();
+  if(!mes){
+    const m = getMesNome(); const i = MESES_NOME.indexOf(m);
+    mes = i>=0 ? i+1 : (hoje.getFullYear()===ANO ? hoje.getMonth()+1 : 1);
+  }
+  const sm = $("entMes"); sm.innerHTML = "";
+  MESES_NOME.forEach((n,i)=>{ const o=document.createElement("option"); o.value=i+1; o.textContent=n+" de "+ANO; sm.appendChild(o); });
+  sm.value = String(mes);
+  if(!semana){
+    const feitas = [1,2,3,4,5,6].filter(n=>entradaSemanaDe(mes,n));
+    semana = feitas.length<6 ? ([1,2,3,4,5,6].find(n=>!feitas.includes(n))) : 6;
+  }
+  entradaListarSemanas(mes); $("entSemana").value = String(semana);
+  entradaPreencher();
+  $("entModal").style.display = "flex"; $("entModal").scrollTop = 0;
+  setTimeout(()=>{ const a = document.querySelector("#entCultos .ent-in"); if(a) a.focus(); }, 30);
+}
+function entradaListarSemanas(mes){
+  const ss = $("entSemana"); const atual = ss.value; ss.innerHTML = "";
+  for(let n=1;n<=6;n++){ const o=document.createElement("option"); o.value=n; o.textContent="Semana "+n+(entradaSemanaDe(mes,n)?" ✓ já lançada":""); ss.appendChild(o); }
+  if(atual) ss.value = atual;
+}
+function fecharEntradaSemana(){ $("entModal").style.display = "none"; }
+function entradaMesMudou(){   // mês novo: sugere a primeira semana ainda não lançada daquele mês
+  const mes = Number($("entMes").value);
+  const feitas = [1,2,3,4,5,6].filter(n=>entradaSemanaDe(mes,n));
+  entradaListarSemanas(mes);
+  $("entSemana").value = String(feitas.length<6 ? [1,2,3,4,5,6].find(n=>!feitas.includes(n)) : 6);
+  entradaPreencher();
+}
+function entradaSemanaMudou(){ entradaListarSemanas(Number($("entMes").value)); entradaPreencher(); }
+function entradaPreencher(){
+  const mes = Number($("entMes").value), n = Number($("entSemana").value);
+  const sem = entradaSemanaDe(mes, n);
+  $("entTitulo").textContent = sem ? "Alterar semana de entradas" : "Lançar semana de entradas";
+  $("entRemover").style.display = sem ? "" : "none";
+  $("entPeriodo").value = sem ? (sem.periodo||"") : "";
+  $("entPeriodo").placeholder = "Ex.: "+String((n-1)*7+1).padStart(2,"0")+"/"+String(mes).padStart(2,"0")+" a "+String(Math.min(n*7,new Date(ANO,mes,0).getDate())).padStart(2,"0")+"/"+String(mes).padStart(2,"0");
+  const det = sem ? (sem.detalhes||{}) : {};
+  const tb = $("entCultos"); tb.innerHTML = "";
+  CULTOS_PADRAO.forEach(c=>tb.appendChild(entradaLinhaCulto(c, det[c], false)));
+  const extras = Object.keys(det).filter(c=>!CULTOS_PADRAO.includes(c));
+  extras.forEach(c=>tb.appendChild(entradaLinhaCulto(c, det[c], true)));
+  if(!extras.length) tb.appendChild(entradaLinhaCulto("", null, true));
+  const px = sem ? sem.pix : null;
+  document.querySelectorAll("#entPixLinha .ent-in").forEach(i=>{
+    const k = {pix_cora:"cora",pix_caixa1:"caixa1",pix_caixa2:"caixa2"}[i.dataset.pix]; const v = px?Number(px[k]):0;
+    i.value = v ? v.toFixed(2).replace(".",",") : "";
+  });
+  $("entMsg").textContent = ""; $("entSalvar").disabled = false; $("entSalvar").textContent = "Salvar semana";
+  entradaTotais();
+}
+// Lê a grade: devolve {linhas, erro, totais}. Vazio = 0; número inválido ou negativo = erro naquele campo.
+function entradaLer(marcar){
+  const linhas = []; let erro = null; const t = {cultos:0, pix:0};
+  const ler = (inp)=>{
+    inp.classList.remove("erro"); const s = inp.value.trim(); if(!s) return 0;
+    const v = parseValorBR(s);
+    if(isNaN(v) || v<0 || v>=1e9){ if(marcar) inp.classList.add("erro"); erro = erro || "Confira os valores marcados em vermelho (use números, ex.: 1.234,50)."; return 0; }
+    return v;
+  };
+  document.querySelectorAll("#entCultos tr").forEach(tr=>{
+    const nomeEl = tr.querySelector(".ent-nome");
+    const nome = nomeEl ? nomeEl.value.trim() : tr.dataset.culto; let soma = 0;
+    tr.querySelectorAll(".ent-in").forEach(inp=>{
+      const v = ler(inp); soma += v;
+      if(v>0){ if(!nome){ erro = erro || "Dê um nome ao culto que tem valores."; if(marcar && nomeEl) nomeEl.classList.add("erro"); } else linhas.push({culto:nome, tipo:inp.dataset.tipo, valor:Math.round(v*100)/100}); }
+    });
+    if(nomeEl) nomeEl.classList.toggle("erro", !!(marcar && soma>0 && !nome));
+    tr.querySelector(".ent-tot").textContent = fBRL(soma); t.cultos += soma;
+  });
+  let pix = 0;
+  document.querySelectorAll("#entPixLinha .ent-in").forEach(inp=>{ const v = ler(inp); pix += v; if(v>0) linhas.push({culto:"PIX", tipo:inp.dataset.pix, valor:Math.round(v*100)/100}); });
+  $("entPixTotal").textContent = fBRL(pix); t.pix = pix;
+  return {linhas, erro, totais:t};
+}
+function entradaTotais(){
+  const r = entradaLer(false); const g = r.totais.cultos + r.totais.pix;
+  $("entResumo").innerHTML = `<span>Cultos <b>${fBRL(r.totais.cultos)}</b></span><span>PIX <b>${fBRL(r.totais.pix)}</b></span><span class="geral">Total da semana <b>${fBRL(g)}</b></span><span>Catedral 10% <b>${fBRL(Math.round(g*10)/100)}</b></span><span>Extra 5% <b>${fBRL(Math.round(g*5)/100)}</b></span>`;
+}
+async function recarregarEntradas(mesParaMostrar){
+  const a = "ano=eq."+ANO;
+  const [entradas, semanas, saldos] = await Promise.all([
+    dbGetTudo("entradas?select=mes,semana,culto,tipo,valor&"+a+"&order=mes,semana,culto,tipo"),
+    dbGetTudo("semanas?select=mes,semana,periodo,catedral_planilha,extra_planilha&"+a+"&order=mes,semana"),
+    carregarSaldos(),
+  ]);
+  RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
+  DE = montarDE(entradas, semanas);
+  DD = completarMeses(DD);
+  const sel = $("mesSelect"); sel.innerHTML = "";
+  Object.keys(DD).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
+  if(mesParaMostrar){ const k = "Despesas "+MESES_NOME[mesParaMostrar-1]; if(DD[k]) MES = k; }
+  if(!DD[MES]) MES = Object.keys(DD).pop()||"";
+  sel.value = MES;
+  render();
+}
+function entradaErroTexto(e){
+  return (e.status===401||e.status===403||/Sem permissão/i.test(e.message)) ? "Você não tem permissão para lançar entradas." :
+         e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
+         (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
+}
+async function salvarSemanaEntradas(){
+  const msg = $("entMsg"); msg.style.color = "var(--saida)";
+  const mes = Number($("entMes").value), n = Number($("entSemana").value);
+  const r = entradaLer(true);
+  if(r.erro){ msg.textContent = r.erro; return; }
+  if(!r.linhas.length){ msg.textContent = "Informe pelo menos um valor. Para apagar a semana, use \"Remover semana\"."; return; }
+  const btn = $("entSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    const res = await dbEscrever("POST", "rpc/salvar_semana_entradas",
+      {p_ano:ANO, p_mes:mes, p_semana:n, p_periodo:$("entPeriodo").value.trim()||null, p_linhas:r.linhas}, "return=representation");
+    if(!res || typeof res.total==="undefined") throw new Error("O banco não confirmou o lançamento.");
+    fecharEntradaSemana();
+    await recarregarEntradas(mes);
+    mostrarToast("✅ Semana "+n+" de "+MESES_NOME[mes-1]+" salva — total "+fBRL(res.total)+".", false, 5000);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar semana";
+    msg.textContent = entradaErroTexto(e);
+  }
+}
+async function removerSemanaEntradas(){
+  const mes = Number($("entMes").value), n = Number($("entSemana").value), msg = $("entMsg"); msg.style.color = "var(--saida)";
+  if(!entradaSemanaDe(mes,n)) return;
+  if(!confirm("Remover TODA a semana "+n+" de "+MESES_NOME[mes-1]+" de "+ANO+"? Os valores dessa semana saem das entradas. (Fica registrado no histórico.)")) return;
+  try{
+    await dbEscrever("POST", "rpc/excluir_semana_entradas", {p_ano:ANO, p_mes:mes, p_semana:n}, "return=representation");
+    fecharEntradaSemana();
+    await recarregarEntradas(mes);
+    mostrarToast("🗑️ Semana "+n+" de "+MESES_NOME[mes-1]+" removida.", false, 4000);
+  }catch(e){ msg.textContent = entradaErroTexto(e); }
+}
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("entModal") && $("entModal").style.display==="flex") fecharEntradaSemana(); });
+
 function renderEntradas(el){
   const ek=getEntKey(MES); const ent=ek?DE[ek]:null; const nm=getMesNome();
   if(!ent){
-    el.innerHTML=`<div class="error-state"><p class="error-title">Dados de entradas não disponíveis para ${nm}</p><p class="error-text">Preencha a planilha de entradas para ver os dados.</p></div>`;
+    el.innerHTML=`<div class="error-state"><p class="error-title">Dados de entradas não disponíveis para ${nm}</p><p class="error-text">${SOU_ADMIN()?"Use o botão abaixo para lançar a primeira semana.":"Ainda não há entradas lançadas neste mês."}</p>${SOU_ADMIN()?'<button class="topbar-btn ativo" id="btnLancarSemana" onclick="abrirEntradaSemana()">＋ Lançar semana</button>':""}</div>`;
     return;
   }
   const t=ent.total;
+  if(SOU_ADMIN()){
+    const ac=div("geral-acoes"); ac.innerHTML='<button class="topbar-btn ativo" id="btnLancarSemana" onclick="abrirEntradaSemana()">＋ Lançar semana</button>';
+    el.appendChild(ac);
+  }
 
   // KPI cards entradas
   const kpis=div("kpi-grid fade-in");
@@ -3074,7 +3286,7 @@ function renderEntradas(el){
     const c=div("semana-card");
     c.innerHTML=`
       <div class="semana-card-hdr">
-        <div><p class="semana-card-title">${nome}</p><p class="semana-card-period">${sem.periodo||""}</p></div>
+        <div><p class="semana-card-title">${nome}${SOU_ADMIN()?`<button class="topbar-btn semana-edit" data-semana="${parseInt(nome.replace(/\D/g,""),10)}" onclick="abrirEntradaSemana(${MESES_NOME.indexOf(getMesNome())+1},${parseInt(nome.replace(/\D/g,""),10)})" title="Alterar ${nome}">✎ Editar</button>`:""}</p><p class="semana-card-period">${sem.periodo||""}</p></div>
         <p class="semana-card-total">${fBRL(tot)}</p>
       </div>
       <div class="semana-card-body">
