@@ -2218,11 +2218,6 @@ function abrirComprov(){
   if(ANO===null || ANO===undefined) ANO = anoPadrao();
   if(ANO_CARREGADO!==ANO){ carregarTudo(); } else { render(); }
 }
-function trocarAnoComprov(a){
-  ANO=Number(a); MES=""; COMPROV_STATE.mesSel=""; ANO_CARREGADO=null;
-  RES=[]; CONF=[]; DD={}; DE={}; DF={};
-  carregarTudo();
-}
 function abrirMes(m){
   const chave="Despesas "+MESES_NOME[m-1];
   if(DD[chave]) MES=chave;
@@ -3678,7 +3673,6 @@ function renderFolhaEvolucao(el){
 
 // ─── COMPROVANTES / VINCULADOR ───
 let COMPROV_STATE = {
-  mesSel: "",
   despSel: null,
   arqSel: null,
   despesas: {},
@@ -3687,12 +3681,8 @@ let COMPROV_STATE = {
 };
 
 function renderComprovantes(el){
-  // Seletor de mês (usado para saber em qual aba a IA deve lançar novas despesas)
-  const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
-                 "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
-  if(!COMPROV_STATE.mesSel) COMPROV_STATE.mesSel = (getMesNome() || MESES[new Date().getMonth()]).toUpperCase();
-
-  // Header com seletor
+  // Sem seletor de ano/mês: o mês de cada lançamento vem da data do próprio comprovante.
+  // Header
   const hdr = div("fade-in");
   hdr.style.cssText = "margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;";
   hdr.innerHTML = `
@@ -3700,26 +3690,6 @@ function renderComprovantes(el){
       <p style="font-size:18px;font-weight:800;color:var(--navy)">Comprovantes</p>
       <p style="font-size:13px;color:var(--muted);margin-top:2px">Envie novos comprovantes com leitura automática, ou pesquise despesas já lançadas</p>
     </div>`;
-
-  const selAno = document.createElement("select");
-  selAno.className = "comp-mes-select"; selAno.id = "compAnoSelect"; selAno.style.marginBottom = "0";
-  selAno.title = "Ano dos comprovantes"; selAno.setAttribute("aria-label","Ano");
-  anosDoInicio().forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; if(a===ANO) o.selected=true; selAno.appendChild(o); });
-  selAno.onchange = function(){ trocarAnoComprov(this.value); };
-  hdr.appendChild(selAno);
-
-  const sel = document.createElement("select");
-  sel.className = "comp-mes-select"; sel.id = "compMesSelect"; sel.setAttribute("aria-label","Mês");
-  sel.style.marginBottom = "0";
-  sel.title = "Mês em que novos comprovantes via IA serão lançados";
-  MESES.forEach(m => {
-    const opt = document.createElement("option");
-    opt.value = m; opt.textContent = m;
-    if(m === COMPROV_STATE.mesSel) opt.selected = true;
-    sel.appendChild(opt);
-  });
-  sel.onchange = function(){ COMPROV_STATE.mesSel = this.value; };
-  hdr.appendChild(sel);
 
   const btnNovoIA = document.createElement("button");
   btnNovoIA.className = "topbar-btn ativo";
@@ -4532,11 +4502,20 @@ async function salvarViaIA(){
   const btn = document.getElementById("btnSalvarIA");
   if(btn){ btn.disabled = true; btn.textContent = "Salvando..."; }
 
+  // O mês (e o ano) vêm da data do comprovante: DD/MM/AAAA
+  const dataTxt = document.getElementById("iaData").value;
+  const mData = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(dataTxt);
+  const mesNum = mData ? Number(mData[2]) : 0;
+  if(!mData || mesNum < 1 || mesNum > 12 || Number(mData[1]) < 1 || Number(mData[1]) > 31){
+    mostrarToast("❌ Confira o campo Data (use DD/MM/AAAA): é por ela que o sistema escolhe o mês.", true);
+    if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
+    return;
+  }
   const payload = {
     acao: "salvar_despesa_ia",
-    mes: COMPROV_STATE.mesSel,
-    ano: ANO,
-    data: document.getElementById("iaData").value,
+    mes: MESES_NOME[mesNum-1].toUpperCase(),
+    ano: Number(mData[3]),
+    data: dataTxt,
     descricao: document.getElementById("iaDescricao").value,
     categoria: document.getElementById("iaCategoria").value,
     forma: document.getElementById("iaForma").value,
