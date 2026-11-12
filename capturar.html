@@ -181,6 +181,11 @@ input[type="file"] { display: none; }
     </div>
 
     <div class="form-group">
+      <label class="form-label">Código de envio</label>
+      <input class="form-input" id="codigoEnvio" type="password" placeholder="Peça o código para a liderança" autocomplete="off">
+    </div>
+
+    <div class="form-group">
       <label class="form-label">Seu nome (opcional)</label>
       <input class="form-input" id="enviadoPor" placeholder="Quem está enviando?" autocomplete="off">
     </div>
@@ -237,6 +242,8 @@ let filaArquivos = []; // [{ base64, mimeType, nomeArquivo, previewUrl, ehPdf, s
   // Lembrar o nome de quem envia (conveniência, guardado só neste navegador)
   const nomeSalvo = localStorage.getItem("nv_enviado_por");
   if(nomeSalvo) document.getElementById("enviadoPor").value = nomeSalvo;
+  const codigoSalvo = localStorage.getItem("nv_codigo_envio");   // só neste aparelho
+  if(codigoSalvo) document.getElementById("codigoEnvio").value = codigoSalvo;
 })();
 
 // ── Seleção de um ou vários arquivos (câmera ou galeria) ──
@@ -342,12 +349,15 @@ async function enviarFila(){
   const mes = document.getElementById("mesSelect").value;
   const enviadoPor = document.getElementById("enviadoPor").value.trim();
   if(enviadoPor) localStorage.setItem("nv_enviado_por", enviadoPor);
+  const codigoEnvio = document.getElementById("codigoEnvio").value.trim();
+  if(!codigoEnvio){ mostrarStatus("Informe o código de envio.", "erro"); return; }
+  localStorage.setItem("nv_codigo_envio", codigoEnvio);
 
   const btn = document.getElementById("btnEnviar");
   btn.disabled = true;
 
   const pendentes = filaArquivos.filter(function(i){ return i.status === "pendente" && i.base64; });
-  let sucesso = 0, falhas = 0;
+  let sucesso = 0, falhas = 0, ultimoErro = "";
 
   for(let i = 0; i < pendentes.length; i++){
     const item = pendentes[i];
@@ -365,6 +375,7 @@ async function enviarFila(){
           mimeType: item.mimeType,
           nomeArquivo: item.nomeArquivo,
           enviadoPor: enviadoPor || "—",
+          codigoEnvio: codigoEnvio,
         }),
       });
       const json = await res.json();
@@ -375,6 +386,8 @@ async function enviarFila(){
       } else {
         item.status = "erro";
         falhas++;
+        ultimoErro = json.erro || "";
+        if(/código de envio incorreto/i.test(ultimoErro)){ localStorage.removeItem("nv_codigo_envio"); break; }   // não adianta insistir com o código errado
       }
     }catch(e){
       item.status = "erro";
@@ -386,7 +399,7 @@ async function enviarFila(){
   if(falhas === 0){
     mostrarStatus("✅ " + sucesso + " comprovante(s) enviado(s) com sucesso!", "sucesso");
   } else {
-    mostrarStatus("⚠️ " + sucesso + " enviado(s), " + falhas + " com erro (toque em ✕ para remover e tentar de novo).", "erro");
+    mostrarStatus("⚠️ " + sucesso + " enviado(s), " + falhas + " com erro" + (ultimoErro ? ": " + ultimoErro : "") + " (toque em ✕ para remover e tentar de novo).", "erro");
   }
 
   // Remove da fila os que deram certo, deixando só os com erro (pra tentar de novo se quiser)
