@@ -989,6 +989,14 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--r-sm);
   margin-bottom: 8px; display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
 }
+.busca-mes-sep {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap;
+  margin: 18px 0 10px; padding: 10px 2px 8px; border-top: 2px solid var(--border);
+}
+.busca-mes-sep:first-child { margin-top: 4px; border-top: none; padding-top: 0; }
+.busca-mes-nome { font-size: 14px; font-weight: 800; color: var(--navy); letter-spacing: .01em; }
+.busca-mes-info { font-size: 12px; color: var(--muted); }
+.busca-mes-info b { color: var(--saida); font-weight: 700; }
 .busca-resultado-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
 
 .comp-grupo-label {
@@ -4075,7 +4083,7 @@ function buscarDespesasPorTermo(termo){
   const resultados = [];
   Object.keys(DD).forEach(function(mesKey){
     const cat = DD[mesKey].categorias || DD[mesKey];
-    const mesNome = mesKey.replace("Despesas(","").replace(")","").toUpperCase().trim();
+    const mesNome = mesKey.replace(/^Despesas\s*\(?/i,"").replace(/\)\s*$/,"").toUpperCase().trim();
     Object.entries(cat||{}).forEach(function(entradaCat){
       var catNome = entradaCat[0], descs = entradaCat[1];
       Object.entries(descs).forEach(function(entradaDesc){
@@ -4139,7 +4147,22 @@ function executarBuscaDespesas(){
     <div id="buscaListaResultados"></div>`;
 
   const lista = document.getElementById("buscaListaResultados");
+  const contaMes = {};
+  encontrados.forEach(function(r){ contaMes[r.mesNome] = (contaMes[r.mesNome]||0) + 1; });
+  let mesAtualLista = null;
   encontrados.forEach(function(r){
+    if(r.mesNome !== mesAtualLista){
+      // Divisão entre os meses: título do mês + quantos lançamentos + total do mês
+      mesAtualLista = r.mesNome;
+      const sep = document.createElement("div");
+      sep.className = "busca-mes-sep";
+      sep.setAttribute("data-mes-grupo", r.mesNome);
+      const nomeBonito = r.mesNome.charAt(0) + r.mesNome.slice(1).toLowerCase();
+      const n = contaMes[r.mesNome];
+      sep.innerHTML = `<span class="busca-mes-nome">${nomeBonito}${ANO ? " · " + ANO : ""}</span>
+        <span class="busca-mes-info">${n} lançamento${n>1?"s":""} · <b>${fBRL(porMes[r.mesNome])}</b></span>`;
+      lista.appendChild(sep);
+    }
     const item = document.createElement("div");
     item.className = "busca-resultado-item";
     const temComp = r.comp && r.comp.length > 5;
@@ -4147,7 +4170,7 @@ function executarBuscaDespesas(){
       <div style="flex:1;min-width:0">
         <p style="font-size:13px;font-weight:600;color:var(--navy)">${r.desc}</p>
         <div class="busca-resultado-meta">
-          <span>📅 ${r.data||'—'} · ${r.mesNome}</span>
+          <span>📅 ${r.data||'—'}</span>
           <span>📂 ${r.cat}</span>
           ${r.obs && r.obs!=="—" ? `<span>💬 ${r.obs}</span>` : ""}
         </div>
@@ -4168,7 +4191,7 @@ function executarBuscaDespesas(){
     charts.buscaMensal = novoChart(canvas, {
       type: "bar",
       data: {
-        labels: mesesComDados.map(function(m){ return m.slice(0,3); }),
+        labels: mesesComDados.map(function(m){ return m.charAt(0) + m.slice(1,3).toLowerCase(); }),
         datasets: [{ label: "Gasto mensal", data: mesesComDados.map(function(m){ return porMes[m]; }), backgroundColor: "rgba(192,39,45,.78)", borderRadius: 4 }]
       },
       options: {
