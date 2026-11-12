@@ -1406,7 +1406,6 @@ tr:hover td { background: var(--bg); }
 // ═══════════════════════════════════════
 // CONFIGURAÇÕES
 // ═══════════════════════════════════════
-const URL_DESPESAS = "https://script.google.com/macros/s/AKfycbxKEzhnQWuxXPZWQZlqzfcM7_9WXLSM8AO9D670koLvppKufSgjrkwK9tFwCK_5GzB0HA/exec";
 const URL_COMPROV = "https://script.google.com/macros/s/AKfycbw4vb9wleU09tTSlzKNh6m31uU9dBJTu6vjXufDqg9-_AM__HdiR4rP7mgznpnQZW8qHg/exec";
 // Banco de dados (Supabase). A chave abaixo é a PÚBLICA (publishable): pode ficar no código.
 // Ela sozinha não abre nada: quem lê os dados é o usuário logado, e o banco só libera para e-mails autorizados.
@@ -1514,6 +1513,25 @@ async function tokenValido(){
   return SESSAO.access;
 }
 
+// Chamadas ao Apps Script de Comprovantes. Todas vão por POST e levam o token do login:
+// o servidor confere no banco se a pessoa está autorizada (sem isso, o endereço público do script abriria tudo).
+async function comprovFetch(url, init){
+  const tk = await tokenValido();
+  const u = new URL(url);
+  let corpo = {};
+  if(init && init.body){ try{ corpo = JSON.parse(init.body); }catch(e){} }
+  u.searchParams.forEach((v,k)=>{ if(k!=="t") corpo[k]=v; });     // pedidos antigos de GET passam para o corpo
+  corpo.token = tk;
+  const r = await fetch(u.origin+u.pathname, {method:"POST", body:JSON.stringify(corpo), redirect:"follow"});
+  r.clone().json().then(j=>{
+    if(j && j.codigo==="nao_autorizado"){
+      mostrarToast("🔒 Sessão expirada. Entre de novo.", true);
+      setTimeout(()=>{ sessaoGravar(null); location.reload(); }, 1500);
+    }
+  }).catch(()=>{});
+  return r;
+}
+
 // Leitura do banco (REST). Só o que as políticas liberam para o usuário logado.
 async function dbGet(caminho){
   for(let tentativa=0; tentativa<2; tentativa++){
@@ -1587,20 +1605,20 @@ async function fazerLogin(){
     $("senhaInput").value="";
     try{ await identificarEEntrar(true); }
     catch(e){ sessaoGravar(null); restaurar(); mostrarErro(e.message); return; }
-    notificarAcesso(email);
+    notificarAcesso();
   }catch(e){
     restaurar(); mostrarErro("Sem conexão com o servidor. Tente de novo.");
   }
 }
 
-// Aviso de acesso por e-mail (continua pelo Apps Script, como antes)
-function notificarAcesso(email){
+// Aviso de acesso por e-mail. Quem entrou (nome e e-mail) é conferido no servidor pelo token do login;
+// o navegador só informa o tipo de navegador e de aparelho.
+function notificarAcesso(){
   try{
-    const ag=new Date(); const nav=navigator.userAgent;
+    const nav=navigator.userAgent;
     let nb="Outro"; if(nav.includes("Edg")) nb="Edge"; else if(nav.includes("Chrome")) nb="Chrome"; else if(nav.includes("Firefox")) nb="Firefox"; else if(nav.includes("Safari")) nb="Safari";
     const dv=/Android|iPhone|iPad/i.test(nav)?"Celular":"Computador";
-    const nome=(USUARIO&&USUARIO.nome)||email;
-    fetch(URL_DESPESAS+"?acao=notificar_acesso&nome="+encodeURIComponent(nome)+"&email="+encodeURIComponent(email)+"&data="+encodeURIComponent(ag.toLocaleDateString("pt-BR"))+"&hora="+encodeURIComponent(ag.toLocaleTimeString("pt-BR"))+"&navegador="+encodeURIComponent(nb)+"&dispositivo="+encodeURIComponent(dv)+"&t="+Date.now(),{method:"GET",redirect:"follow",mode:"no-cors"}).catch(()=>{});
+    comprovFetch(URL_COMPROV,{method:"POST",body:JSON.stringify({acao:"notificar_acesso",navegador:nb,dispositivo:dv})}).catch(()=>{});
   }catch(e){}
 }
 
@@ -2640,7 +2658,7 @@ async function excluirLancamento(codigo, btnEl){
   btnEl.innerHTML = '<span class="comp-btn-icon">⏳</span> Excluindo...';
   try{
     // a planilha acha a linha pelo ID na hora de excluir (o número da linha pode ter mudado)
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", codigo: codigo }) });
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", codigo: codigo }) });
     const json = await res.json();
     if(json.ok){
       mostrarToast("🗑 Lançamento excluído da planilha.");
@@ -3203,7 +3221,7 @@ async function carregarPendentes(){
   const lista = document.getElementById("pendentesLista");
   if(!lista) return;
   try{
-    const res = await fetch(URL_COMPROV + "?acao=listar_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const res = await comprovFetch(URL_COMPROV + "?acao=listar_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
     const json = await res.json();
     if(json.erro){ lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro: ${json.erro}</p>`; return; }
     PENDENTES_CACHE = json.pendentes || [];
@@ -3267,7 +3285,7 @@ async function aprovarPendenteUI(id, comp, btnEl){
   const campos = lerCamposPendente(item);
   btnEl.disabled = true; btnEl.textContent = "Salvando...";
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
       acao:"aprovar_pendente", id: id, mes: campos.mes, comp: comp,
       data: campos.data, descricao: campos.descricao, categoria: campos.categoria,
       forma: campos.forma, valor: campos.valor, responsavel: campos.responsavel, observacao: campos.observacao,
@@ -3296,7 +3314,7 @@ async function rejeitarPendenteUI(id, btnEl){
   const apagarArquivo = confirm("Também apagar o arquivo do Drive?\n\nRecomendado se você for enviar o comprovante de novo — evita ficar com arquivos duplicados. O arquivo vai para a lixeira do Drive (não é apagado de forma definitiva).");
   btnEl.disabled = true;
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"rejeitar_pendente", id: id, apagarArquivo: apagarArquivo }) });
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"rejeitar_pendente", id: id, apagarArquivo: apagarArquivo }) });
     const json = await res.json();
     if(json.ok){
       mostrarToast(apagarArquivo ? "🗑 Rejeitado e arquivo movido para a lixeira do Drive." : "🗑 Rejeitado.");
@@ -3382,7 +3400,7 @@ function renderRelatorio(el){
 
 async function carregarConselhosRelatorio(){
   try{
-    const res = await fetch(URL_COMPROV + "?acao=listar_conselhos&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const res = await comprovFetch(URL_COMPROV + "?acao=listar_conselhos&t=" + Date.now(), {method:"GET", redirect:"follow"});
     const json = await res.json();
     if(!json.erro) CONSELHOS_CACHE = json.conselhos || {};
   }catch(e){
@@ -3563,7 +3581,7 @@ async function gerarConselhoIAUI(){
   try{
     const mesAnterior = RELATORIO_METRICAS.mesAnteriorNome;
     const conselhoAnterior = mesAnterior && CONSELHOS_CACHE[mesAnterior] ? CONSELHOS_CACHE[mesAnterior].texto : "";
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
       acao: "gerar_conselho_ia",
       metricas: RELATORIO_METRICAS,
       conselhoAnterior: conselhoAnterior,
@@ -3591,7 +3609,7 @@ async function salvarConselhoUI(){
   if(!confirm("Salvar este texto como o conselho oficial de " + RELATORIO_METRICAS.mesAtual + "?\n\nEle será usado no mês seguinte para avaliar se foi seguido.")) return;
   btn.disabled = true;
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
       acao: "salvar_conselho", mes: RELATORIO_METRICAS.mesAtual, texto: texto,
     })});
     const json = await res.json();
@@ -3823,7 +3841,7 @@ function baixarComprovantesEmLote(){
   const textoOriginal = btn ? btn.textContent : "";
   if(btn){ btn.disabled = true; btn.textContent = "Preparando ZIP..."; }
 
-  fetch(URL_COMPROV, { method: "POST", body: JSON.stringify({ acao: "baixar_zip", fileIds: fileIds }) })
+  comprovFetch(URL_COMPROV, { method: "POST", body: JSON.stringify({ acao: "baixar_zip", fileIds: fileIds }) })
     .then(function(r){ return r.json(); })
     .then(function(json){
       if(json.erro){
@@ -3874,7 +3892,7 @@ async function listarArquivosPendentesParaIA(){
   if(!lista) return;
   lista.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted)"><div class="loader" style="margin:0 auto 8px"></div>Buscando arquivos da pasta PENDENTES...</div>';
   try{
-    const res = await fetch(URL_COMPROV + "?acao=listar_arquivos_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const res = await comprovFetch(URL_COMPROV + "?acao=listar_arquivos_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
     const json = await res.json();
     if(json.erro){
       lista.innerHTML = `<p style="font-size:12px;color:var(--saida);text-align:center;padding:12px 0">${json.erro}</p>`;
@@ -3934,7 +3952,7 @@ async function enviarArquivosSelecionadosParaRevisao(){
   for(let i = 0; i < ids.length; i++){
     if(btn) btn.textContent = "Enviando " + (i+1) + " de " + ids.length + "...";
     try{
-      const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"enviar_para_revisao", fileId: ids[i] }) });
+      const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"enviar_para_revisao", fileId: ids[i] }) });
       const json = await res.json();
       if(json.ok) sucesso++; else falhas++;
     }catch(e){ falhas++; }
@@ -3973,7 +3991,7 @@ async function analisarArquivoDriveIA(fileId, nome){
   if(lista) lista.innerHTML = "";
 
   try{
-    const res = await fetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"analisar_arquivo_drive", fileId: fileId }) });
+    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"analisar_arquivo_drive", fileId: fileId }) });
     const json = await res.json();
     if(json.erro){
       if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${json.erro}</p></div>`;
@@ -4011,7 +4029,7 @@ async function analisarViaIA(){
   if(resultado) resultado.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted)"><div class="loader" style="margin:0 auto 10px"></div>Lendo o comprovante...</div>';
 
   try{
-    const res = await fetch(URL_COMPROV, {
+    const res = await comprovFetch(URL_COMPROV, {
       method: "POST",
       body: JSON.stringify({ acao: "analisar_comprovante", imagemBase64: IA_STATE.base64, mimeType: IA_STATE.mimeType }),
     });
@@ -4100,7 +4118,7 @@ async function salvarViaIA(){
   }
 
   try{
-    const res = await fetch(URL_COMPROV, { method: "POST", body: JSON.stringify(payload) });
+    const res = await comprovFetch(URL_COMPROV, { method: "POST", body: JSON.stringify(payload) });
     const json = await res.json();
     if(json.ok){
       mostrarToast("✅ Despesa lançada na planilha com sucesso!");
