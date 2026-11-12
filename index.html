@@ -999,6 +999,7 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .busca-mes-info b { color: var(--saida); font-weight: 700; }
 .busca-resultado-meta { font-size: 11px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; margin-top: 3px; }
 
+.fech-acao { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
 .comp-grupo-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted);
@@ -1324,6 +1325,27 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   </div>
 </div>
 
+<div id="fechModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;padding:16px" role="dialog" aria-modal="true" aria-labelledby="fechTitulo">
+  <div style="background:#fff;border-radius:14px;padding:24px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);max-height:92vh;overflow:auto">
+    <h3 id="fechTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Lançar fechamento</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.5">Informe o <b>total em contas + espécie no último dia do mês</b> (sem o que você controla à mão). O painel compara com o esperado.</p>
+    <label class="ia-form-label" for="fechMes">Mês</label>
+    <select id="fechMes" onchange="fechamentoMesMudou()" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;margin-bottom:10px;font-size:14px;box-sizing:border-box;background:#fff"></select>
+    <label class="ia-form-label" for="fechValor">Saldo real (R$)</label>
+    <input id="fechValor" inputmode="decimal" autocomplete="off" placeholder="Ex.: 12.345,67" oninput="fechamentoPrevia()" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;margin-bottom:6px;font-size:15px;box-sizing:border-box">
+    <p id="fechPrevia" style="min-height:34px;margin:0 0 10px;font-size:12.5px;color:#555;line-height:1.5"></p>
+    <label class="ia-form-label" for="fechObs">Observação (opcional)</label>
+    <textarea id="fechObs" maxlength="500" rows="2" placeholder="Ex.: despesa de março lançada só em abril" style="width:100%;padding:10px 12px;border:1px solid #d0d5dd;border-radius:8px;font-size:13.5px;box-sizing:border-box;font-family:inherit;resize:vertical"></textarea>
+    <p id="fechMsg" style="min-height:18px;margin:8px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <button class="topbar-btn" id="fechRemover" style="display:none;color:var(--saida)" onclick="removerFechamento()">Remover</button>
+      <span style="flex:1"></span>
+      <button class="topbar-btn" onclick="fecharFechamento()">Cancelar</button>
+      <button class="topbar-btn" id="fechSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarFechamento()">Salvar fechamento</button>
+    </div>
+  </div>
+</div>
+
 <div id="loginWrap">
   <div class="login-grid">
     <div class="login-left">
@@ -1627,6 +1649,23 @@ async function dbGet(caminho){
       const err = new Error("Banco de dados: "+(msg||("erro "+r.status))); err.status = r.status; throw err;
     }
     return r.json();
+  }
+  throw new Error("sessao_expirada");
+}
+// Escrita no banco (REST) — só a tabela "fechamentos" e só para administrador (o banco recusa o resto).
+// Devolve as linhas afetadas; se o banco não afetou nenhuma, é porque a permissão negou.
+async function dbEscrever(metodo, caminho, corpo, prefer){
+  for(let tentativa=0; tentativa<2; tentativa++){
+    const tk = await tokenValido();
+    const h = {apikey:SUPABASE_KEY, Authorization:"Bearer "+tk, Prefer:(prefer||"return=representation")};
+    if(corpo!==undefined) h["Content-Type"]="application/json";
+    const r = await fetch(SUPABASE_URL+"/rest/v1/"+caminho, {method:metodo, headers:h, body:corpo!==undefined?JSON.stringify(corpo):undefined});
+    if(r.status===401 && tentativa===0){ SESSAO.exp = 0; continue; }
+    if(!r.ok){
+      let msg = ""; try{ msg = (await r.json()).message||""; }catch(e){}
+      const err = new Error(msg||("erro "+r.status)); err.status = r.status; throw err;
+    }
+    return r.json().catch(()=>[]);
   }
   throw new Error("sessao_expirada");
 }
@@ -2783,7 +2822,7 @@ function renderTabelaMeses(el){
 function escHtml(t){ return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 
 // ─── CONFERÊNCIA: o que era esperado × o que realmente existe ───
-// Real = total em contas + espécie no último dia do mês (você digita em Fechamentos, sem reserva/ajuda controladas à mão).
+// Real = total em contas + espécie no último dia do mês (lançado no painel, sem reserva/ajuda controladas à mão).
 // Esperado = real do fechamento anterior + resultado (entradas − saídas) dos meses desde então.
 // Diferença = Real − Esperado: é quanto aquele mês "não fechou".
 // O banco entrega a diferença pronta (variacao_no_mes); o esperado é Real − Diferença.
@@ -2792,6 +2831,110 @@ function situacaoConf(v){
   if(Math.abs(v)<=TOLERANCIA_CONF) return {txt:"bate", cls:"td-green"};
   return v>0 ? {txt:"sobra", cls:"td-blue"} : {txt:"falta", cls:"td-red"};
 }
+// ── Lançar / editar / remover Fechamento (só administrador; o banco confere de novo) ──
+const SOU_ADMIN = () => !!(USUARIO && USUARIO.papel==="admin");
+function parseValorBR(s){
+  let x = String(s==null?"":s).replace(/R\$|\s/g,"");
+  if(!x) return NaN;
+  if(x.includes(",")) x = x.replace(/\./g,"").replace(",",".");
+  else if(/^-?\d{1,3}(\.\d{3})+$/.test(x)) x = x.replace(/\./g,"");
+  return /^-?\d+(\.\d{1,2})?$/.test(x) ? Number(x) : NaN;
+}
+function fechamentoEsperado(mes){
+  // mesmo cálculo da conferência: fechamento anterior (dentro do ano aberto) + resultado dos meses desde então
+  const ant = CONF.filter(c=>c.mes<mes).pop();
+  if(!ant) return null;
+  let soma = 0; RES.forEach(r=>{ if(r.mes>ant.mes && r.mes<=mes) soma += r.saldo; });
+  return Math.round((Number(ant.saldo_real)+soma)*100)/100;
+}
+function abrirFechamento(mes){
+  if(!SOU_ADMIN()) return;
+  if(!RES.length) return;
+  const sel = $("fechMes"); sel.innerHTML = "";
+  RES.forEach(r=>{ const o=document.createElement("option"); o.value=r.mes; o.textContent=MESES_NOME[r.mes-1]+" de "+ANO; sel.appendChild(o); });
+  if(!mes){
+    const sem = RES.find(r=>!CONF.some(c=>c.mes===r.mes));
+    mes = (sem||RES[RES.length-1]).mes;
+  }
+  sel.value = String(mes);
+  $("fechMsg").textContent = "";
+  $("fechSalvar").disabled = false; $("fechSalvar").textContent = "Salvar fechamento";
+  fechamentoMesMudou();
+  $("fechModal").style.display = "flex";
+  setTimeout(()=>$("fechValor").focus(), 30);
+}
+function fecharFechamento(){ $("fechModal").style.display = "none"; }
+function fechamentoMesMudou(){
+  const mes = Number($("fechMes").value);
+  const c = CONF.find(x=>x.mes===mes);
+  $("fechTitulo").textContent = c ? "Alterar fechamento" : "Lançar fechamento";
+  $("fechValor").value = c ? String(Number(c.saldo_real).toFixed(2)).replace(".",",") : "";
+  $("fechObs").value = c && c.observacao ? c.observacao : "";
+  $("fechRemover").style.display = c ? "" : "none";
+  $("fechMsg").textContent = "";
+  fechamentoPrevia();
+}
+function fechamentoPrevia(){
+  const el = $("fechPrevia"); const mes = Number($("fechMes").value);
+  const r = RES.find(x=>x.mes===mes);
+  const v = parseValorBR($("fechValor").value);
+  const esp = fechamentoEsperado(mes);
+  let h = r ? `Resultado de ${MESES_NOME[mes-1]}: <b>${fBRL(r.saldo)}</b>` : "";
+  if(esp!==null){
+    h += ` · Esperado: <b>${fBRL(esp)}</b>`;
+    if(!isNaN(v)){
+      const d = Math.round((v-esp)*100)/100, s = situacaoConf(d);
+      h += `<br>Diferença: <b>${fBRL(d)}</b> — ${s.txt==="bate"?"bate ✓":s.txt==="falta"?"faltou dinheiro ↓":"sobrou dinheiro ↑"}`;
+    }
+  } else {
+    h += `<br>${CONF.length?"":"Este será o <b>ponto de partida</b> da conferência. "}O esperado é calculado depois de salvar.`;
+  }
+  el.innerHTML = h;
+}
+async function salvarFechamento(){
+  const msg = $("fechMsg"); msg.style.color = "var(--saida)";
+  const mes = Number($("fechMes").value), valor = parseValorBR($("fechValor").value);
+  if(!mes || !RES.some(r=>r.mes===mes)){ msg.textContent = "Escolha o mês."; return; }
+  if(isNaN(valor)){ msg.textContent = "Digite o saldo real em números. Ex.: 12.345,67"; $("fechValor").focus(); return; }
+  if(Math.abs(valor) >= 1e9){ msg.textContent = "Esse valor parece grande demais. Confira."; return; }
+  const btn = $("fechSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    const obs = $("fechObs").value.trim().slice(0,500);
+    const linhas = await dbEscrever("POST", "fechamentos?on_conflict=igreja_id,ano,mes",
+      {igreja_id:USUARIO.igreja_id, ano:ANO, mes:mes, saldo_real:valor, observacao:obs||null},
+      "resolution=merge-duplicates,return=representation");
+    if(!linhas.length) throw new Error("negado");
+    const sd = await carregarSaldos(); RES = sd.res; CONF = sd.conf; INICIO_CONTROLE = sd.inicio;
+    fecharFechamento(); render();
+    const c = CONF.find(x=>x.mes===mes);
+    let txt = "✅ Fechamento de "+MESES_NOME[mes-1]+" salvo";
+    if(c && c.primeiro_fechamento) txt += " — ponto de partida da conferência.";
+    else if(c){ const s = situacaoConf(c.variacao_no_mes); txt += " — esperado "+fBRL(Math.round((c.saldo_real-c.variacao_no_mes)*100)/100)+", diferença "+fBRL(c.variacao_no_mes)+(s.txt==="bate"?" (bate ✓)":s.txt==="falta"?" (faltou dinheiro)":" (sobrou dinheiro)"); }
+    mostrarToast(txt, false, 6000);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar fechamento";
+    msg.textContent = (e.status===401||e.status===403||e.message==="negado") ? "Você não tem permissão para lançar fechamentos." :
+                      e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
+                      (e instanceof TypeError ? "Sem conexão. Tente de novo." : "Não foi possível salvar: "+e.message);
+  }
+}
+async function removerFechamento(){
+  const mes = Number($("fechMes").value), msg = $("fechMsg"); msg.style.color = "var(--saida)";
+  if(!CONF.some(c=>c.mes===mes)) return;
+  if(!confirm("Remover o fechamento de "+MESES_NOME[mes-1]+" de "+ANO+"? A conferência desse mês volta a ficar sem fechamento.")) return;
+  try{
+    const linhas = await dbEscrever("DELETE", "fechamentos?igreja_id=eq."+USUARIO.igreja_id+"&ano=eq."+ANO+"&mes=eq."+mes, undefined, "return=representation");
+    if(!linhas.length) throw new Error("negado");
+    const sd = await carregarSaldos(); RES = sd.res; CONF = sd.conf; INICIO_CONTROLE = sd.inicio;
+    fecharFechamento(); render();
+    mostrarToast("🗑️ Fechamento de "+MESES_NOME[mes-1]+" removido.", false, 4000);
+  }catch(e){
+    msg.textContent = (e.status===401||e.status===403||e.message==="negado") ? "Você não tem permissão para remover fechamentos." :
+                      (e instanceof TypeError ? "Sem conexão. Tente de novo." : "Não foi possível remover: "+e.message);
+  }
+}
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("fechModal") && $("fechModal").style.display==="flex") fecharFechamento(); });
+
 function renderConferencia(el){
   if(!RES.length){
     el.innerHTML=`<div class="error-state"><p class="error-title">Sem dados de saldo em ${ANO}</p><p class="error-text">Quando houver entradas ou saídas a partir do início do controle, a conferência aparece aqui.</p></div>`;
@@ -2803,7 +2946,7 @@ function renderConferencia(el){
   const esperadoDe = c => Math.round((c.saldo_real - c.variacao_no_mes)*100)/100;
 
   const aviso=div("rel-banner fade-in");
-  aviso.innerHTML=`<span>🧮 <b>Como ler:</b> em <b>Fechamentos</b>, informe o <b>total em contas + espécie no último dia do mês</b> (sem o que você controla à mão). O <b>Esperado</b> é o total do fechamento anterior + o resultado dos meses desde então${inicio?` (o controle começa em <b>${inicio}</b>)`:""}. A <b>Diferença</b> é Real − Esperado: quanto aquele mês não fechou. O primeiro fechamento é só o <b>ponto de partida</b>.</span>`;
+  aviso.innerHTML=`<span>🧮 <b>Como ler:</b> ${SOU_ADMIN()?"clique em <b>＋ Lançar fechamento</b> e informe":"no fim de cada mês o administrador informa"} o <b>total em contas + espécie no último dia do mês</b> (sem o que você controla à mão). O <b>Esperado</b> é o total do fechamento anterior + o resultado dos meses desde então${inicio?` (o controle começa em <b>${inicio}</b>)`:""}. A <b>Diferença</b> é Real − Esperado: quanto aquele mês não fechou. O primeiro fechamento é só o <b>ponto de partida</b>.</span>`;
   el.appendChild(aviso);
 
   const hero=div("hero-finance fade-in"); hero.style.marginTop="16px";
@@ -2849,7 +2992,8 @@ function renderConferencia(el){
   el.appendChild(hero);
 
   const sec=div("fade-in"); sec.style.marginTop="20px";
-  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Mês a mês</p><p class="section-sub">Cada linha mostra quanto aquele mês não fechou</p></div></div>';
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Mês a mês</p><p class="section-sub">Cada linha mostra quanto aquele mês não fechou</p></div>'
+    +(SOU_ADMIN()?'<button class="topbar-btn ativo" id="btnLancarFech" onclick="abrirFechamento()">＋ Lançar fechamento</button>':'')+'</div>';
   const card=div("table-card conf-tabela"); card.style.overflowX="auto";
   const linhas = RES.map(r=>{
     const c = confPor[r.mes];
@@ -2858,18 +3002,19 @@ function renderConferencia(el){
       + (c&&c.observacao?`<div style="font-size:11.5px;color:var(--muted);font-weight:400;margin-top:2px;white-space:normal;max-width:280px">${escHtml(c.observacao)}</div>`:"");
     const comum = `<td>${nome}</td><td class="td-right td-green">${fBRL(r.entradas)}</td><td class="td-right td-red">${fBRL(r.saidas)}</td>
       <td class="td-right ${r.saldo>=0?"td-green":"td-red"}">${fBRL(r.saldo)}</td>`;
-    if(!c) return `<tr>${comum}<td class="td-right" colspan="3" style="color:var(--muted);font-size:12px">sem fechamento</td></tr>`;
-    if(c.primeiro_fechamento) return `<tr>${comum}<td class="td-right" style="color:var(--muted)">—</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right" style="color:var(--muted)">—</td></tr>`;
+    const acao = SOU_ADMIN() ? `<td class="td-right"><button class="topbar-btn fech-acao" data-mes="${r.mes}" onclick="abrirFechamento(${r.mes})" title="${c?"Alterar":"Lançar"} o fechamento de ${MESES_NOME[r.mes-1]}">${c?"✎ Editar":"＋ Lançar"}</button></td>` : "";
+    if(!c) return `<tr>${comum}<td class="td-right" colspan="3" style="color:var(--muted);font-size:12px">sem fechamento</td>${acao}</tr>`;
+    if(c.primeiro_fechamento) return `<tr>${comum}<td class="td-right" style="color:var(--muted)">—</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right" style="color:var(--muted)">—</td>${acao}</tr>`;
     const sit = situacaoConf(c.variacao_no_mes);
-    return `<tr>${comum}<td class="td-right td-blue">${fBRL(esperadoDe(c))}</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right ${sit.cls}">${fBRL(c.variacao_no_mes)}</td></tr>`;
+    return `<tr>${comum}<td class="td-right td-blue">${fBRL(esperadoDe(c))}</td><td class="td-right td-green">${fBRL(c.saldo_real)}</td><td class="td-right ${sit.cls}">${fBRL(c.variacao_no_mes)}</td>${acao}</tr>`;
   }).join("");
   card.innerHTML=`<table>
     <thead><tr>
       <th>Mês</th><th class="td-right">Entradas</th><th class="td-right">Saídas</th>
       <th class="td-right" title="Entradas − saídas do mês">Resultado</th>
       <th class="td-right" title="Real do fechamento anterior + resultado dos meses desde então">Esperado</th>
-      <th class="td-right" title="Total em contas + espécie informado em Fechamentos">Real</th>
-      <th class="td-right" title="Real − Esperado">Diferença</th>
+      <th class="td-right" title="Total em contas + espécie informado no fechamento do mês">Real</th>
+      <th class="td-right" title="Real − Esperado">Diferença</th>${SOU_ADMIN()?"<th></th>":""}
     </tr></thead><tbody>${linhas}</tbody></table>`;
   sec.appendChild(card);
   const nota=document.createElement("p");
@@ -4572,12 +4717,12 @@ async function salvarViaIA(){
   }
 }
 
-function mostrarToast(msg, erro=false){
+function mostrarToast(msg, erro=false, ms=3000){
   const t = document.createElement("div");
   t.className = "comp-toast" + (erro?" erro":"");
   t.textContent = msg;
   document.body.appendChild(t);
-  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(), 300); }, 3000);
+  setTimeout(()=>{ t.style.opacity="0"; t.style.transition="opacity .3s"; setTimeout(()=>t.remove(), 300); }, ms);
 }
 
 // ─── UTILITÁRIOS ───
