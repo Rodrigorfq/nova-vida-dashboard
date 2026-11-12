@@ -1156,7 +1156,7 @@ tr:hover td { background: var(--bg); }
   .page-body { padding: 16px; }
   .topbar { padding: 0 16px; }
   #syncInfo, .topbar-sub { display: none; }
-  #refreshBtn .btxt { display: none; }
+  #refreshBtn .btxt, #xlsxBtn .btxt { display: none; }
   .topbar-right { gap: 4px; }
   .topbar-right .mes-select { padding: 6px 4px; font-size: 12px; max-width: 92px; }
   .topbar-right .topbar-btn { padding: 6px 8px; }
@@ -1378,6 +1378,7 @@ tr:hover td { background: var(--bg); }
       <div class="topbar-right">
         <span id="syncInfo" style="font-size:11.5px;color:var(--text3,#888);white-space:nowrap"></span>
         <button class="topbar-btn" id="refreshBtn" onclick="atualizarAgora()" title="Ler as planilhas agora e atualizar o painel"><span>🔄</span><span class="btxt"> Atualizar</span></button>
+        <button class="topbar-btn" id="xlsxBtn" onclick="exportarExcel()" title="Baixar os dados do ano em Excel"><span>📥</span><span class="btxt"> Excel</span></button>
         <select class="mes-select" id="anoSelect" onchange="trocarAno()" style="display:none" aria-label="Ano"></select>
         <select class="mes-select" id="mesSelect" onchange="trocarMes()">
           <option>Carregando...</option>
@@ -1789,6 +1790,201 @@ async function carregarSaldos(){
     dbGet("igrejas?select=inicio_controle&limit=1").catch(()=>[]),
   ]);
   return { res, conf, inicio:(ig[0]&&ig[0].inicio_controle)||null };
+}
+
+// ── EXPORTAR PARA EXCEL ─────────────────────────────────────────────────────
+// Gera um .xlsx do ano selecionado, direto do navegador, com os mesmos dados que o painel está mostrando.
+// A biblioteca (ExcelJS) só é baixada quando você clica no botão.
+let EXCELJS_PROMESSA = null;
+function carregarExcelJS(){
+  if(window.ExcelJS) return Promise.resolve();
+  if(EXCELJS_PROMESSA) return EXCELJS_PROMESSA;
+  const fontes = [
+    "https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js",
+    "https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"
+  ];
+  const tentar = i => new Promise((ok,erro)=>{
+    if(i>=fontes.length) return erro(new Error("Não consegui baixar a biblioteca do Excel. Verifique a internet."));
+    const s = document.createElement("script"); s.src = fontes[i];
+    s.onload = ()=>ok(); s.onerror = ()=>{ s.remove(); tentar(i+1).then(ok,erro); };
+    document.head.appendChild(s);
+  });
+  EXCELJS_PROMESSA = tentar(0).catch(e=>{ EXCELJS_PROMESSA = null; throw e; });
+  return EXCELJS_PROMESSA;
+}
+
+const XL_MOEDA = '"R$" #,##0.00;[Red]-"R$" #,##0.00';
+const XL_COR_CAB = "FF1F3A5F";
+function xlData(br){                       // "05/10/2026" -> data de verdade (o Excel ordena e filtra)
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(br||""); return m ? new Date(Date.UTC(+m[3], +m[2]-1, +m[1])) : null;
+}
+function xlLimpo(t){ const s = (t==null) ? "" : String(t).trim(); return (s==="—"||s==="-") ? "" : s; }
+function xlAba(wb, nome, colunas){
+  const ws = wb.addWorksheet(nome, { views:[{ state:"frozen", ySplit:1 }] });
+  ws.columns = colunas.map(c=>({ header:c.t, key:c.k, width:c.w, style: c.f ? { numFmt:c.f } : {} }));
+  const cab = ws.getRow(1); cab.height = 22;
+  cab.eachCell(c=>{
+    c.font = { bold:true, color:{argb:"FFFFFFFF"} }; c.fill = { type:"pattern", pattern:"solid", fgColor:{argb:XL_COR_CAB} };
+    c.alignment = { vertical:"middle", horizontal:"center", wrapText:true };
+  });
+  return ws;
+}
+function xlTotal(ws, ultimaLinha, colunasSoma, rotuloCol){
+  if(ultimaLinha<2) return;
+  const r = ws.addRow({}); r.font = { bold:true };
+  ws.getCell(r.number, rotuloCol).value = "TOTAL";
+  colunasSoma.forEach(col=>{
+    const letra = ws.getColumn(col).letter;
+    const c = ws.getCell(r.number, col);
+    let soma = 0;
+    for(let i=2;i<=ultimaLinha;i++){ const v = ws.getCell(i,col).value; soma += (v && typeof v==="object") ? (Number(v.result)||0) : (Number(v)||0); }
+    c.value = { formula:`SUBTOTAL(109,${letra}2:${letra}${ultimaLinha})`, result:r2(soma) };   // acompanha o filtro da tabela
+    c.numFmt = XL_MOEDA;
+  });
+  r.eachCell({includeEmpty:true}, c=>{ c.border = { top:{style:"medium"} }; });
+}
+
+async function montarExcel(){
+  await carregarExcelJS();
+  const wb = new ExcelJS.Workbook();
+  wb.creator = "Painel Financeiro ICNV Rocha Miranda"; wb.created = new Date();
+  const ano = ANO;
+  const mesDe = k => MESES_NOME.indexOf(k.replace(/^(Despesas|Entradas) /,""));      // 0..11
+  const nomeMes = i => MESES_NOME[i];
+
+  // 1) RESUMO ───────────────────────────────────────────────
+  {
+    const ws = xlAba(wb, "Resumo", [
+      {t:"Mês",k:"mes",w:14},{t:"Entradas",k:"ent",w:16,f:XL_MOEDA},{t:"Saídas",k:"sai",w:16,f:XL_MOEDA},
+      {t:"Saldo do mês",k:"saldo",w:16,f:XL_MOEDA},{t:"Saldo acumulado",k:"acum",w:18,f:XL_MOEDA}]);
+    RES.forEach(r=>{
+      const n = ws.rowCount + 1;
+      ws.addRow({ mes:nomeMes(r.mes-1), ent:r2(r.entradas), sai:r2(r.saidas),
+        saldo:{ formula:`B${n}-C${n}`, result:r2(r.entradas-r.saidas) }, acum:r2(r.saldo_acumulado) });
+    });
+    if(RES.length){
+      const ult = ws.rowCount, t = ws.addRow({ mes:"TOTAL",
+        ent:{formula:`SUM(B2:B${ult})`,result:r2(RES.reduce((s,r)=>s+Number(r.entradas),0))},
+        sai:{formula:`SUM(C2:C${ult})`,result:r2(RES.reduce((s,r)=>s+Number(r.saidas),0))},
+        saldo:{formula:`SUM(D2:D${ult})`,result:r2(RES.reduce((s,r)=>s+Number(r.entradas)-Number(r.saidas),0))} });
+      t.font = { bold:true }; t.eachCell({includeEmpty:true},c=>{ c.border = { top:{style:"medium"} }; });
+    }
+    ws.addRow({});
+    const nota = ws.addRow({ mes:`Igreja Cristã Nova Vida – Rocha Miranda · ano ${ano} · gerado em ${new Date().toLocaleString("pt-BR")}` });
+    nota.font = { italic:true, color:{argb:"FF666666"} };
+    if(INICIO_CONTROLE){
+      const n2 = ws.addRow({ mes:`O saldo acumulado conta a partir de ${MESES_NOME[parseInt(INICIO_CONTROLE.slice(5,7))-1]}/${INICIO_CONTROLE.slice(0,4)}, início do controle.` });
+      n2.font = { italic:true, color:{argb:"FF666666"} };
+    }
+  }
+
+  // 2) SAÍDAS ───────────────────────────────────────────────
+  {
+    const ws = xlAba(wb, "Saídas", [
+      {t:"Mês",k:"mes",w:12},{t:"Data",k:"data",w:12,f:"dd/mm/yyyy"},{t:"Categoria",k:"cat",w:22},{t:"Descrição",k:"desc",w:34},
+      {t:"Responsável",k:"resp",w:16},{t:"Forma",k:"forma",w:14},{t:"Observação",k:"obs",w:34},{t:"Valor",k:"valor",w:15,f:XL_MOEDA},
+      {t:"Comprovante",k:"comp",w:13},{t:"ID",k:"id",w:12}]);
+    const lin = [];
+    Object.entries(DD).forEach(([k,mes])=>{
+      Object.entries(mes.categorias).forEach(([cat,descs])=>{
+        Object.entries(descs).forEach(([desc,ls])=>ls.forEach(l=>lin.push({ m:mesDe(k), cat, desc, l })));
+      });
+    });
+    lin.sort((a,b)=>a.m-b.m || ((xlData(a.l.data)||0)-(xlData(b.l.data)||0)) || a.cat.localeCompare(b.cat));
+    lin.forEach(({m,cat,desc,l})=>{
+      const r = ws.addRow({ mes:nomeMes(m), data:xlData(l.data), cat, desc:xlLimpo(desc), resp:xlLimpo(l.resp), forma:xlLimpo(l.forma),
+        obs:xlLimpo(l.obs), valor:r2(l.valor), comp:"", id:l.codigo||"" });
+      if(/^https?:\/\//i.test(l.comp||"")) r.getCell("comp").value = { text:"Abrir", hyperlink:l.comp };
+    });
+    xlTotal(ws, ws.rowCount, [8], 7);
+    ws.autoFilter = { from:"A1", to:"J1" };
+  }
+
+  // 3) ENTRADAS (por culto e PIX) e SEMANAS (repasses) ───────
+  {
+    const ws = xlAba(wb, "Entradas", [
+      {t:"Mês",k:"mes",w:12},{t:"Semana",k:"sem",w:10},{t:"Período",k:"per",w:22},{t:"Origem",k:"orig",w:26},
+      {t:"Dízimo",k:"diz",w:14,f:XL_MOEDA},{t:"Oferta",k:"ofe",w:14,f:XL_MOEDA},{t:"Campanha",k:"cam",w:14,f:XL_MOEDA},
+      {t:"PIX",k:"pix",w:14,f:XL_MOEDA},{t:"Total",k:"tot",w:15,f:XL_MOEDA}]);
+    const wsS = xlAba(wb, "Semanas", [
+      {t:"Mês",k:"mes",w:12},{t:"Semana",k:"sem",w:10},{t:"Período",k:"per",w:22},{t:"Cultos",k:"cul",w:15,f:XL_MOEDA},
+      {t:"PIX",k:"pix",w:15,f:XL_MOEDA},{t:"Total da semana",k:"tot",w:16,f:XL_MOEDA},{t:"Catedral (10%)",k:"cat",w:15,f:XL_MOEDA},{t:"Extra (5%)",k:"ext",w:14,f:XL_MOEDA}]);
+    Object.entries(DE).sort((a,b)=>mesDe(a[0])-mesDe(b[0])).forEach(([k,mes])=>{
+      Object.entries(mes.semanas).forEach(([sn,s])=>{
+        const base = { mes:nomeMes(mesDe(k)), sem:sn.replace("Semana ",""), per:xlLimpo(s.periodo) };
+        Object.entries(s.detalhes).forEach(([culto,d])=>{
+          const n = ws.rowCount+1;
+          ws.addRow(Object.assign({}, base, { orig:culto, diz:d.dizimo, ofe:d.oferta, cam:d.campanha, pix:0, tot:{formula:`SUM(E${n}:H${n})`,result:r2(d.dizimo+d.oferta+d.campanha)} }));
+        });
+        [["PIX Cora",s.pix.cora],["PIX Caixa 1",s.pix.caixa1],["PIX Caixa 2",s.pix.caixa2]].forEach(([nome,v])=>{
+          if(!v) return; const n = ws.rowCount+1;
+          ws.addRow(Object.assign({}, base, { orig:nome, diz:0, ofe:0, cam:0, pix:v, tot:{formula:`SUM(E${n}:H${n})`,result:v} }));
+        });
+        wsS.addRow(Object.assign({}, base, { cul:s.cultos.total, pix:s.pix.total, tot:s.totalGeral, cat:s.catedral10, ext:s.extra5 }));
+      });
+    });
+    xlTotal(ws, ws.rowCount, [5,6,7,8,9], 4);
+    ws.autoFilter = { from:"A1", to:"I1" };
+    xlTotal(wsS, wsS.rowCount, [4,5,6,7,8], 3);
+    wsS.autoFilter = { from:"A1", to:"H1" };
+  }
+
+  // 4) FOLHA e VALES ────────────────────────────────────────
+  {
+    const ws = xlAba(wb, "Folha", [
+      {t:"Mês",k:"mes",w:12},{t:"Funcionário",k:"fun",w:16},{t:"Salário",k:"sal",w:14,f:XL_MOEDA},{t:"Aux. alimentação",k:"alim",w:15,f:XL_MOEDA},
+      {t:"Transporte",k:"tra",w:14,f:XL_MOEDA},{t:"Total",k:"tot",w:14,f:XL_MOEDA},{t:"Vales",k:"val",w:14,f:XL_MOEDA},{t:"Saldo a pagar",k:"sld",w:15,f:XL_MOEDA},
+      {t:"13º",k:"p13",w:13,f:XL_MOEDA},{t:"Férias",k:"fer",w:13,f:XL_MOEDA},{t:"Ajuda",k:"aju",w:13,f:XL_MOEDA}]);
+    const wsV = xlAba(wb, "Vales", [{t:"Mês",k:"mes",w:12},{t:"Funcionário",k:"fun",w:16},{t:"Data",k:"data",w:12,f:"dd/mm/yyyy"},{t:"Valor",k:"valor",w:14,f:XL_MOEDA}]);
+    Object.entries(DF).sort((a,b)=>MESES_NOME.findIndex(m=>m.toUpperCase()===a[0])-MESES_NOME.findIndex(m=>m.toUpperCase()===b[0])).forEach(([k,mes])=>{
+      const nm = MESES_NOME.find(m=>m.toUpperCase()===k) || k;
+      Object.entries(mes.funcionarios).forEach(([nome,f])=>{
+        ws.addRow({ mes:nm, fun:nome, sal:f.salario, alim:f.auxAlim, tra:f.transporte, tot:f.total, val:f.vales, sld:f.saldo, p13:f.parte13, fer:f.ferias, aju:f.ajuda });
+        (f.valesHist||[]).forEach(v=>wsV.addRow({ mes:nm, fun:nome, data:xlData(v.data), valor:v.valor }));
+      });
+    });
+    xlTotal(ws, ws.rowCount, [3,4,5,6,7,8,9,10,11], 2);
+    ws.autoFilter = { from:"A1", to:"K1" };
+    xlTotal(wsV, wsV.rowCount, [4], 3);
+    wsV.autoFilter = { from:"A1", to:"D1" };
+  }
+
+  // 5) CONFERÊNCIA ──────────────────────────────────────────
+  {
+    const ws = xlAba(wb, "Conferência", [
+      {t:"Mês",k:"mes",w:12},{t:"Esperado",k:"esp",w:16,f:XL_MOEDA},{t:"Saldo real informado",k:"real",w:20,f:XL_MOEDA},
+      {t:"Diferença",k:"dif",w:15,f:XL_MOEDA},{t:"Situação",k:"sit",w:22},{t:"Observação",k:"obs",w:46}]);
+    const confPor = {}; CONF.forEach(c=>{ confPor[c.mes]=c; });
+    RES.forEach(r=>{
+      const c = confPor[r.mes];
+      if(!c){ ws.addRow({ mes:nomeMes(r.mes-1), sit:"sem fechamento" }); return; }
+      if(c.primeiro_fechamento){ ws.addRow({ mes:nomeMes(r.mes-1), real:r2(c.saldo_real), sit:"ponto de partida", obs:xlLimpo(c.observacao) }); return; }
+      const n = ws.rowCount+1, esp = r2(c.saldo_real - c.variacao_no_mes), dif = r2(c.variacao_no_mes);
+      const s = situacaoConf(dif).txt;
+      ws.addRow({ mes:nomeMes(r.mes-1), esp, real:r2(c.saldo_real), dif:{formula:`C${n}-B${n}`,result:dif},
+        sit: s==="bate" ? "Bate" : s==="falta" ? "Faltou dinheiro" : "Sobrou dinheiro", obs:xlLimpo(c.observacao) });
+    });
+    ws.addRow({});
+    ws.addRow({ mes:"Esperado = total do fechamento anterior + resultado dos meses desde então. Diferença = Real − Esperado (tolerância de R$ 1,00)." }).font = { italic:true, color:{argb:"FF666666"} };
+  }
+  return wb;
+}
+
+async function exportarExcel(){
+  const b = $("xlsxBtn"); if(!b || b.disabled) return;
+  const antes = b.innerHTML; b.disabled = true; b.innerHTML = '<span>⏳</span><span class="btxt"> Gerando...</span>';
+  try{
+    const wb = await montarExcel();
+    const buf = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buf], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `NovaVida_Financeiro_${ANO}.xlsx`;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    mostrarToast("✅ Excel de "+ANO+" baixado");
+  }catch(e){
+    mostrarToast("Não consegui gerar o Excel: "+(e.message||e), true);
+  }finally{
+    b.disabled = false; b.innerHTML = antes;
+  }
 }
 
 // Todo mês que tem entradas ou folha também aparece no seletor, mesmo sem despesas ainda.
