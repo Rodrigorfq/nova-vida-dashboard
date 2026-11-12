@@ -1221,7 +1221,7 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 }
 .welcome-text { position: relative; z-index: 1; min-width: 0; }
 .welcome-kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 10px; }
-.welcome-title { font-size: 32px; font-weight: 800; letter-spacing: -.5px; line-height: 1.15; margin-bottom: 8px; }
+.welcome-title { font-size: 30px; font-weight: 800; letter-spacing: -.5px; line-height: 1.15; margin-bottom: 8px; }
 .welcome-sub { font-size: 15px; color: rgba(255,255,255,.82); }
 .welcome-sync { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 14px; }
 .welcome-logo { width: 190px; height: auto; position: relative; z-index: 1; flex-shrink: 0; opacity: .95; }
@@ -1266,6 +1266,25 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 @media (max-width: 480px) {
   body[data-tela="ano"] .topbar-title { display: none; }   /* no celular o ano vai no botão ← e o mês no seletor */
 }
+
+/* ─── MENU: anos que abrem e fecham ─── */
+.nav-ano-head .chev { transition: transform .25s ease; font-size: 18px; line-height: 1; }
+.nav-ano.aberto .nav-ano-head .chev { transform: rotate(90deg); }
+.nav-ano-head { font-weight: 700; color: rgba(255,255,255,.8); }
+.nav-ano.aberto .nav-ano-head { color: #fff; }
+.nav-pill { margin-left: auto; font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 99px; background: rgba(255,255,255,.12); color: rgba(255,255,255,.75); }
+.nav-ano-sub { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .3s ease, visibility 0s linear .3s; visibility: hidden; }
+.nav-ano.aberto .nav-ano-sub { grid-template-rows: 1fr; visibility: visible; transition: grid-template-rows .3s ease, visibility 0s; }
+.nav-ano-sub > div { overflow: hidden; min-height: 0; }
+.nav-sub { padding-left: 22px; font-size: 13px; }
+
+/* ─── CARD DE COMPROVANTES NA TELA INICIAL ─── */
+.ano-badge.alerta { background: #fef3c7; color: #92400e; }
+.comp-prog { height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; }
+.comp-prog > span { display: block; height: 100%; background: #0891b2; border-radius: 99px; transition: width 1.1s cubic-bezier(.16,1,.3,1); }
+.comp-home-txt { font-size: 13px; color: var(--muted); }
+.comp-home-txt b { color: var(--navy); }
+.geral-acoes { display: flex; justify-content: flex-end; margin-bottom: 14px; }
 
 @media print {
   .sidebar, .topbar, .sidebar-overlay, .rel-no-print { display: none !important; }
@@ -1377,33 +1396,11 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
       <div class="nav-item active" id="navInicio" onclick="irParaInicio()">
         <span class="nav-icon">⌂</span> Início
       </div>
-      <div id="navGrupoAno" style="display:none">
-        <div class="sidebar-section-label" id="navAnoLabel" style="padding-left:12px">Ano</div>
-        <div class="nav-item" id="navAno" onclick="trocarAba('ano')">
-          <span class="nav-icon">▦</span> Visão do Ano
-        </div>
-      <div class="nav-item" id="navGeral" onclick="trocarAba('geral')">
-        <span class="nav-icon">⊞</span> Visão Geral
+      <div class="nav-item" id="navComprov" onclick="abrirComprov()">
+        <span class="nav-icon">▤</span> Comprovantes
       </div>
-      <div class="nav-item" id="navEntrada" onclick="trocarAba('entrada')">
-        <span class="nav-dot" style="background:var(--entrada)"></span> Entradas
-      </div>
-      <div class="nav-item" id="navSaida" onclick="trocarAba('saida')">
-        <span class="nav-dot" style="background:var(--saida)"></span> Saídas
-      </div>
-      <div class="nav-item" id="navFolha" onclick="trocarAba('folha')">
-        <span class="nav-dot" style="background:var(--gold)"></span> Pessoal
-      </div>
-      <div class="nav-item" id="navConferencia" onclick="trocarAba('conferencia')">
-        <span class="nav-dot" style="background:var(--gold,#b7791f)"></span> Conferência
-      </div>
-      <div class="nav-item" id="navComprov" onclick="trocarAba('comprov')">
-        <span class="nav-dot" style="background:#0891b2"></span> Comprovantes
-      </div>
-      <div class="nav-item" id="navRelatorio" onclick="trocarAba('relatorio')">
-        <span class="nav-dot" style="background:var(--purple)"></span> Relatório Mensal
-      </div>
-      </div>
+      <div class="sidebar-section-label" style="padding-left:12px;margin-top:6px">Anos</div>
+      <div id="navAnos"></div>
     </nav>
 
     <div class="sidebar-bottom">
@@ -1491,7 +1488,7 @@ const MAX_TENT = 3;
 const SESSAO_DIAS = 7;
 
 // Estado
-let DD = {}, DE = {}, DF = {}, MES = "", ABA = "inicio", TELA = "home", INICIO = { porAno:{} }, visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
+let DD = {}, DE = {}, DF = {}, MES = "", ABA = "inicio", TELA = "home", ANO_CARREGADO = null, MENU_ANO_ABERTO = null, INICIO = { porAno:{} }, visivel = false, tent = MAX_TENT, bloqAte = null, cdInt = null;
 let DRILL = { level: 0, cat: null, desc: null };
 let charts = {};
 
@@ -2137,7 +2134,7 @@ async function carregarAnos(){
 
 // ─── NAVEGAÇÃO: Início → Ano → Mês ───
 const TITULOS = {
-  inicio:      ["Início","Bem-vindo ao painel financeiro"],
+  inicio:      ["Início","Bem-vindo ao financeiro da Igreja"],
   ano:         ["Visão do Ano","Entradas e saídas, mês a mês"],
   geral:       ["Visão Geral","Resumo financeiro do mês"],
   entrada:     ["Entradas","Arrecadação e receitas"],
@@ -2145,25 +2142,52 @@ const TITULOS = {
   folha:       ["Pessoal","Folha de pagamento e funcionários"],
   conferencia: ["Conferência","Esperado pelo sistema × saldo real em contas e espécie"],
   comprov:     ["Comprovantes","Vincular arquivos do Drive às despesas"],
-  relatorio:   ["Relatório Mensal","Resumo para apresentar à liderança"],
+  relatorio:   ["Relatório do Mês","Resumo para apresentar à liderança"],
 };
-const ABAS_DO_ANO = ["ano","geral","entrada","saida","folha","conferencia","comprov","relatorio"];
-const ABAS_COM_MES = ["geral","entrada","saida","folha","comprov","relatorio"];
+const SUB_ABAS = [
+  ["ano","▦",""," Visão do Ano"], ["geral","⊞",""," Visão Geral"],
+  ["entrada","","var(--entrada)"," Entradas"], ["saida","","var(--saida)"," Saídas"],
+  ["folha","","var(--gold)"," Pessoal"], ["conferencia","","var(--gold,#b7791f)"," Conferência"],
+];
+const ABAS_COM_MES = ["geral","entrada","saida","folha","relatorio"];
 
-// Mostra/esconde o que depende de estar dentro de um ano (menu, botão Excel, seletor de mês...).
+// Menu lateral: cada ano abre e fecha sozinho (sem mudar de página); só clicar numa área leva até ela.
+function pintarMenuAnos(){
+  const box = $("navAnos"); if(!box) return;
+  const hoje = new Date().getFullYear();
+  box.innerHTML = anosDoInicio().map(a=>{
+    const aberto = MENU_ANO_ABERTO===a;
+    const itens = SUB_ABAS.map(([aba,icone,cor,rotulo])=>{
+      const ativo = TELA==="ano" && ANO===a && (ABA===aba || (aba==="geral" && ABA==="relatorio"));
+      const marca = icone ? `<span class="nav-icon">${icone}</span>` : `<span class="nav-dot" style="background:${cor}"></span>`;
+      return `<div class="nav-item nav-sub${ativo?" active":""}" data-aba="${aba}" onclick="irParaAnoAba(${a},'${aba}')">${marca}${rotulo}</div>`;
+    }).join("");
+    return `<div class="nav-ano${aberto?" aberto":""}" data-ano="${a}">
+      <div class="nav-item nav-ano-head" role="button" tabindex="0" aria-expanded="${aberto}" onclick="alternarAnoMenu(${a})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();alternarAnoMenu(${a});}"><span class="nav-icon chev">›</span> ${a}${a===hoje?'<span class="nav-pill">atual</span>':""}</div>
+      <div class="nav-ano-sub"><div>${itens}</div></div></div>`;
+  }).join("");
+}
+function alternarAnoMenu(a){
+  MENU_ANO_ABERTO = MENU_ANO_ABERTO===a ? null : a;
+  document.querySelectorAll(".nav-ano").forEach(n=>{
+    const ab = Number(n.dataset.ano)===MENU_ANO_ABERTO;
+    n.classList.toggle("aberto",ab); n.querySelector(".nav-ano-head").setAttribute("aria-expanded",ab);
+  });
+}
+
+// Mostra/esconde o que depende de onde você está (menu, botão Excel, seletor de mês...).
 function ajustarTela(){
-  const noAno = TELA==="ano";
+  const home = TELA==="home", noAno = TELA==="ano", comp = TELA==="comprov";
   document.body.dataset.tela = TELA;
-  $("navGrupoAno").style.display = noAno ? "" : "none";
-  $("navAnoLabel").textContent = "Ano "+ANO;
-  $("navInicio").className = "nav-item"+(noAno?"":" active");
-  ABAS_DO_ANO.forEach(a=>{ const n=$("nav"+a.charAt(0).toUpperCase()+a.slice(1)); if(n) n.className="nav-item"+(noAno&&ABA===a?" active":""); });
+  pintarMenuAnos();
+  $("navInicio").className = "nav-item"+(home?" active":"");
+  $("navComprov").className = "nav-item"+(comp?" active":"");
   $("voltarBtn").style.display = noAno ? "" : "none";
   $("anoChip").style.display = noAno ? "" : "none";
   $("anoChip").textContent = ANO; $("voltarAno").textContent = ANO;
   $("xlsxBtn").style.display = noAno ? "" : "none";
   $("mesSelect").style.display = (noAno && ABAS_COM_MES.includes(ABA)) ? "" : "none";
-  const t = TITULOS[noAno ? ABA : "inicio"] || TITULOS.inicio;
+  const t = TITULOS[home ? "inicio" : comp ? "comprov" : ABA] || TITULOS.inicio;
   $("topbarTitle").textContent = t[0]; $("topbarSub").textContent = t[1];
 }
 
@@ -2172,8 +2196,30 @@ function irParaInicio(){
   TELA="home"; ABA="inicio"; DRILL={level:0,cat:null,desc:null};
   carregarInicio();
 }
-function abrirAno(ano){
-  ANO=ano; MES=""; TELA="ano"; ABA="ano"; DRILL={level:0,cat:null,desc:null};
+// Abre um ano numa área específica (por padrão, a Visão do Ano). Se o ano já está carregado, só troca de tela.
+function abrirAno(ano, aba){
+  aba = aba || "ano";
+  MENU_ANO_ABERTO = ano; DRILL={level:0,cat:null,desc:null};
+  if(ANO===ano && ANO_CARREGADO===ano){ TELA="ano"; ABA=aba; render(); return; }
+  ANO=ano; MES=""; TELA="ano"; ABA=aba; ANO_CARREGADO=null;
+  RES=[]; CONF=[]; DD={}; DE={}; DF={};
+  carregarTudo();
+}
+function irParaAnoAba(ano, aba){ toggleSidebar(false); abrirAno(ano, aba); }
+
+// Comprovantes: fica fora dos anos; o ano e o mês são escolhidos dentro da própria tela.
+function anoPadrao(){
+  const hoje = new Date().getFullYear(), anos = anosDoInicio();
+  return anos.includes(hoje) ? hoje : anos[0];
+}
+function abrirComprov(){
+  toggleSidebar(false);
+  TELA="comprov"; ABA="comprov";
+  if(ANO===null || ANO===undefined) ANO = anoPadrao();
+  if(ANO_CARREGADO!==ANO){ carregarTudo(); } else { render(); }
+}
+function trocarAnoComprov(a){
+  ANO=Number(a); MES=""; COMPROV_STATE.mesSel=""; ANO_CARREGADO=null;
   RES=[]; CONF=[]; DD={}; DE={}; DF={};
   carregarTudo();
 }
@@ -2194,7 +2240,15 @@ async function carregarInicio(){
     try{
       (await dbGetTudo("resumo_mensal?select=ano,mes,entradas,saidas&order=ano,mes")).forEach(r=>{ (porAno[r.ano]=porAno[r.ano]||[]).push(r); });
     }catch(e){ if(e.message==="sessao_expirada") throw e; }
-    INICIO = { porAno };
+    INICIO = { porAno, comp:null };
+    try{                                    // resumo para o card de Comprovantes: despesas do último mês com lançamentos
+      const anosComDados = Object.keys(porAno).map(Number).sort((x,y)=>y-x);
+      if(anosComDados.length){
+        const ano = anosComDados[0], mes = porAno[ano][porAno[ano].length-1].mes;
+        const linhas = await dbGetTudo(`saidas?select=comprovante_url&ano=eq.${ano}&mes=eq.${mes}&excluido_em=is.null&order=codigo`);
+        INICIO.comp = { ano, mes, total:linhas.length, com:linhas.filter(l=>String(l.comprovante_url||"").trim()).length };
+      }
+    }catch(e){ if(e.message==="sessao_expirada") throw e; }
     await atualizarStatusSync();
     render();
   }catch(err){
@@ -2234,14 +2288,45 @@ function cardAno(a){
   return b;
 }
 
+function cardComprovantesInicio(){
+  const c = INICIO.comp;
+  const b = document.createElement("button");
+  b.type="button"; b.className="ano-card fade-in"; b.id="cardComprovInicio"; b.setAttribute("aria-label","Abrir os comprovantes");
+  b.onclick = ()=>abrirComprov();
+  let prog = '<p class="comp-home-txt">Sem despesas lançadas ainda.</p>';
+  if(c && c.total){
+    const pct = Math.round(c.com/c.total*100);
+    prog = `<p class="comp-home-txt"><b>${MESES_NOME[c.mes-1]}/${c.ano}:</b> ${c.com} de ${c.total} despesas com comprovante (${pct}%)</p>
+      <div class="comp-prog" aria-hidden="true"><span style="width:${pct}%"></span></div>`;
+  }
+  b.innerHTML = `<div class="ano-head"><span class="ano-num" style="font-size:22px;letter-spacing:-.4px">Comprovantes</span><span class="ano-badge" id="homeCompBadge" style="display:none"></span></div>
+    <div class="ano-linhas">
+      <div class="ano-linha"><span>Aguardando revisão</span><span id="homeCompPend" style="color:var(--navy);font-weight:800;font-variant-numeric:tabular-nums">…</span></div>
+      ${prog}
+    </div>
+    <div class="ano-foot"><span>Independe do ano e do mês</span><span class="ano-abrir">Abrir →</span></div>`;
+  return b;
+}
+// Quantos comprovantes enviados pelo celular esperam revisão (vem do Drive; se falhar, mostra "—").
+async function carregarPendentesInicio(){
+  const el = document.getElementById("homeCompPend"); if(!el) return;
+  try{
+    const res = await comprovFetch(URL_COMPROV + "?acao=listar_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
+    const j = await res.json(); if(j.erro) throw new Error(j.erro);
+    const n = (j.pendentes||[]).length;
+    const e2 = document.getElementById("homeCompPend"); if(!e2) return;
+    e2.textContent = String(n);
+    const bd = document.getElementById("homeCompBadge");
+    if(bd && n>0){ bd.textContent = n===1 ? "1 para revisar" : n+" para revisar"; bd.className = "ano-badge alerta"; bd.style.display = ""; }
+  }catch(e){ const e2 = document.getElementById("homeCompPend"); if(e2) e2.textContent = "—"; }
+}
+
 function renderInicio(el){
-  const nome = primeiroNome(USUARIO && USUARIO.nome);
   const banner = div("welcome fade-in");
   banner.innerHTML = `
     <div class="welcome-text">
-      <p class="welcome-kicker">Painel financeiro</p>
-      <h1 class="welcome-title">${saudacao()}${nome?", "+escHtml(nome):""}</h1>
-      <p class="welcome-sub">Escolha o ano em que você vai trabalhar.</p>
+      <h1 class="welcome-title">Seja bem-vindo ao financeiro da Igreja</h1>
+      <p class="welcome-sub">Escolha um ano para começar.</p>
       <p class="welcome-sync">${escHtml($("syncInfo").textContent||"")}</p>
     </div>
     <img class="welcome-logo" src="${LOGOS["vertical-claro"]}" alt="ICNV-RM · Igreja Cristã Nova Vida · Rocha Miranda">`;
@@ -2252,6 +2337,13 @@ function renderInicio(el){
   const grid = div("ano-grid");
   anosDoInicio().forEach(a=>grid.appendChild(cardAno(a)));
   el.appendChild(grid);
+  const hdr2 = div("section-hdr fade-in");
+  hdr2.innerHTML = '<div><p class="section-title">Acesso rápido</p><p class="section-sub">Atalhos que não dependem de ano</p></div>';
+  el.appendChild(hdr2);
+  const grid2 = div("ano-grid");
+  grid2.appendChild(cardComprovantesInicio());
+  el.appendChild(grid2);
+  carregarPendentesInicio();
 }
 
 // Visão do ano: o que você vê ao entrar num ano, antes de escolher um mês.
@@ -2361,6 +2453,7 @@ async function carregarTudo(){
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
     if(!meses.includes(MES)) MES=meses[meses.length-1]||"";
     sel.value=MES;
+    ANO_CARREGADO = ANO;
     atualizarStatusSync();
     render();
   }catch(err){
@@ -2396,8 +2489,9 @@ function toggleSidebar(forcar){
 }
 
 function trocarAba(aba){
-  if(TELA!=="ano") return;
-  ABA=aba;
+  if(aba==="comprov"){ abrirComprov(); return; }
+  if(ANO===null || ANO_CARREGADO!==ANO) return;
+  TELA="ano"; ABA=aba;
   toggleSidebar(false); // fecha o menu no mobile ao selecionar uma aba
   render();
 }
@@ -2412,13 +2506,13 @@ function render(){
   ajustarTela();
   const el=$("pageBody"); el.innerHTML="";
   if(TELA==="home") renderInicio(el);
+  else if(TELA==="comprov") renderComprovantes(el);
   else if(ABA==="ano") renderVisaoAno(el);
   else if(ABA==="geral") renderGeral(el);
   else if(ABA==="entrada") renderEntradas(el);
   else if(ABA==="saida") renderSaidas(el);
   else if(ABA==="folha") renderFolha(el);
   else if(ABA==="conferencia") renderConferencia(el);
-  else if(ABA==="comprov") renderComprovantes(el);
   else if(ABA==="relatorio") renderRelatorio(el);
   setTimeout(()=>{
     revelar();
@@ -2442,6 +2536,11 @@ function renderGeral(el){
   const t=ent?ent.total:{};
   const cat=desp.categorias||desp;
   const nm=getMesNome();
+
+  // Ação do mês: o relatório agora é uma função daqui (não mais uma aba solta)
+  const acoesMes=div("geral-acoes fade-in");
+  acoesMes.innerHTML=`<button class="topbar-btn" id="btnRelatorioMes" onclick="trocarAba('relatorio')">📄 Relatório de ${nm}</button>`;
+  el.appendChild(acoesMes);
 
   // Hero KPIs
   const hero=div("hero-finance fade-in");
@@ -3591,7 +3690,7 @@ function renderComprovantes(el){
   // Seletor de mês (usado para saber em qual aba a IA deve lançar novas despesas)
   const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO",
                  "JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
-  if(!COMPROV_STATE.mesSel) COMPROV_STATE.mesSel = getMesNome();
+  if(!COMPROV_STATE.mesSel) COMPROV_STATE.mesSel = (getMesNome() || MESES[new Date().getMonth()]).toUpperCase();
 
   // Header com seletor
   const hdr = div("fade-in");
@@ -3602,8 +3701,15 @@ function renderComprovantes(el){
       <p style="font-size:13px;color:var(--muted);margin-top:2px">Envie novos comprovantes com leitura automática, ou pesquise despesas já lançadas</p>
     </div>`;
 
+  const selAno = document.createElement("select");
+  selAno.className = "comp-mes-select"; selAno.id = "compAnoSelect"; selAno.style.marginBottom = "0";
+  selAno.title = "Ano dos comprovantes"; selAno.setAttribute("aria-label","Ano");
+  anosDoInicio().forEach(a=>{ const o=document.createElement("option"); o.value=a; o.textContent=a; if(a===ANO) o.selected=true; selAno.appendChild(o); });
+  selAno.onchange = function(){ trocarAnoComprov(this.value); };
+  hdr.appendChild(selAno);
+
   const sel = document.createElement("select");
-  sel.className = "comp-mes-select";
+  sel.className = "comp-mes-select"; sel.id = "compMesSelect"; sel.setAttribute("aria-label","Mês");
   sel.style.marginBottom = "0";
   sel.title = "Mês em que novos comprovantes via IA serão lançados";
   MESES.forEach(m => {
@@ -3653,8 +3759,6 @@ function renderComprovantes(el){
 
 // ─── FILA DE PENDENTES (comprovantes capturados pelo celular, aguardando revisão) ───
 let PENDENTES_CACHE = [];
-let CONSELHOS_CACHE = {};      // { "AGOSTO": {texto, dataSalvo, dataGeracao}, ... } — carregado do backend
-let RELATORIO_METRICAS = null; // métricas calculadas do mês do relatório (cache pro botão de gerar IA)
 
 function renderPendentes(el){
   const card = div("chart-card fade-in");
@@ -3786,8 +3890,8 @@ async function rejeitarPendenteUI(id, btnEl){
 }
 
 // ═══════════════════════════════════════════════════════
-// RELATÓRIO MENSAL — apanhado dos meses anteriores + detalhe
-// do mês vigente + conselho da IA (com memória do mês passado)
+// RELATÓRIO DO MÊS — apanhado dos meses anteriores + detalhe
+// do mês vigente (aberto a partir da Visão Geral)
 // ═══════════════════════════════════════════════════════
 
 // Calcula, a partir dos dados já carregados (DD/DE/DF), todas as métricas
@@ -3839,34 +3943,10 @@ function montarMetricasRelatorio(mesAtualKey){
   return { mesAtual: atual.mes, mesAnteriorNome: anterior?anterior.mes:null, atual, anterior, variacao, historico, anterioresTodos };
 }
 
-function renderRelatorio(el){
-  const sec = div("rel-no-print");
-  sec.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Carregando relatório...</div>';
-  el.appendChild(sec);
-  carregarConselhosRelatorio().then(()=>{
-    if(ABA!=="relatorio") return; // usuário já trocou de aba antes da resposta chegar
-    el.innerHTML = "";
-    renderRelatorioConteudo(el);
-    setTimeout(()=>{
-      revelar();
-      aplicarOcultamento();
-    },50);
-  });
-}
-
-async function carregarConselhosRelatorio(){
-  try{
-    const res = await comprovFetch(URL_COMPROV + "?acao=listar_conselhos&t=" + Date.now(), {method:"GET", redirect:"follow"});
-    const json = await res.json();
-    if(!json.erro) CONSELHOS_CACHE = json.conselhos || {};
-  }catch(e){
-    console.warn("Não foi possível carregar conselhos salvos:", e.message);
-  }
-}
+function renderRelatorio(el){ renderRelatorioConteudo(el); }
 
 function renderRelatorioConteudo(el){
   const metricas = montarMetricasRelatorio(MES);
-  RELATORIO_METRICAS = metricas;
   const nm = metricas.mesAtual;
 
   // Cabeçalho de impressão (só aparece no papel)
@@ -3879,8 +3959,9 @@ function renderRelatorioConteudo(el){
 
   // Barra de ações (não imprime)
   const acoes = div("rel-no-print fade-in");
-  acoes.style.cssText = "display:flex;justify-content:flex-end;gap:8px;margin-bottom:16px";
-  acoes.innerHTML = `<button class="topbar-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>`;
+  acoes.style.cssText = "display:flex;justify-content:space-between;gap:8px;margin-bottom:16px;flex-wrap:wrap";
+  acoes.innerHTML = `<button class="topbar-btn" id="relVoltar" onclick="trocarAba('geral')">← Voltar à Visão Geral</button>
+    <button class="topbar-btn" onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>`;
   el.appendChild(acoes);
 
   // ── SEÇÃO 1: APANHADO DOS MESES ANTERIORES ──
@@ -3989,109 +4070,6 @@ function renderRelatorioConteudo(el){
     tbCat.appendChild(tr);
   });
 
-  // ── SEÇÃO 3: CONSELHO DA IA PARA O MÊS SEGUINTE ──
-  const labelConselho = div("rel-section-label"); labelConselho.textContent = "Conselho para o Mês Seguinte";
-  el.appendChild(labelConselho);
-
-  const salvo = CONSELHOS_CACHE[nm];
-  if(!metricas.mesAnteriorNome){
-    const aviso = div("rel-banner rel-aviso rel-no-print");
-    aviso.textContent = "ℹ️ Como ainda não há mês anterior registrado, a IA vai focar só nas orientações pra frente — sem avaliar cumprimento de conselho passado.";
-    el.appendChild(aviso);
-  } else if(!CONSELHOS_CACHE[metricas.mesAnteriorNome]){
-    const aviso = div("rel-banner rel-aviso rel-no-print");
-    aviso.textContent = `ℹ️ Não há conselho salvo de ${metricas.mesAnteriorNome} — a IA vai focar só nas orientações pra ${proximoMesNome(nm)}, sem avaliar cumprimento.`;
-    el.appendChild(aviso);
-  }
-
-  const statusRow = div("rel-no-print");
-  statusRow.style.cssText = "margin-bottom:8px";
-  statusRow.innerHTML = salvo
-    ? `<span class="rel-pill rel-pill-salvo">✅ Salvo em ${salvo.dataSalvo}</span>`
-    : `<span class="rel-pill rel-pill-rascunho">✏️ Ainda não salvo</span>`;
-  el.appendChild(statusRow);
-
-  const box = div("rel-conselho-box");
-  box.id = "relConselhoBox";
-  box.contentEditable = "true";
-  box.innerText = salvo ? salvo.texto : "";
-  el.appendChild(box);
-
-  const btnRow = div("rel-btn-row rel-no-print");
-  btnRow.innerHTML = `
-    <button class="topbar-btn" id="relBtnGerar" onclick="gerarConselhoIAUI()">🤖 ${salvo?"Gerar novamente com IA":"Gerar conselho com IA"}</button>
-    <button class="comp-btn-vincular" id="relBtnSalvar" onclick="salvarConselhoUI()">💾 Salvar conselho</button>`;
-  el.appendChild(btnRow);
-}
-
-function proximoMesNome(mesAtual){
-  const MESES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
-  const i = MESES.indexOf(mesAtual);
-  return i>=0 ? MESES[(i+1)%12] : "o mês seguinte";
-}
-
-async function gerarConselhoIAUI(){
-  const btn = document.getElementById("relBtnGerar");
-  const box = document.getElementById("relConselhoBox");
-  if(!btn || !box || !RELATORIO_METRICAS) return;
-  btn.disabled = true; const txtOrig = btn.textContent; btn.textContent = "⏳ Gerando...";
-  try{
-    const mesAnterior = RELATORIO_METRICAS.mesAnteriorNome;
-    const conselhoAnterior = mesAnterior && CONSELHOS_CACHE[mesAnterior] ? CONSELHOS_CACHE[mesAnterior].texto : "";
-    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
-      acao: "gerar_conselho_ia",
-      metricas: RELATORIO_METRICAS,
-      conselhoAnterior: conselhoAnterior,
-    })});
-    const json = await res.json();
-    if(json.ok){
-      box.innerText = json.texto;
-      mostrarToast("🤖 Rascunho gerado — revise antes de salvar.");
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha ao gerar conselho"), true);
-    }
-  }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
-  }finally{
-    btn.disabled = false; btn.textContent = txtOrig;
-  }
-}
-
-async function salvarConselhoUI(){
-  const box = document.getElementById("relConselhoBox");
-  const btn = document.getElementById("relBtnSalvar");
-  if(!box || !RELATORIO_METRICAS) return;
-  const texto = box.innerText.trim();
-  if(!texto){ mostrarToast("❌ Escreva ou gere um conselho antes de salvar.", true); return; }
-  if(!confirm("Salvar este texto como o conselho oficial de " + RELATORIO_METRICAS.mesAtual + "?\n\nEle será usado no mês seguinte para avaliar se foi seguido.")) return;
-  btn.disabled = true;
-  try{
-    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
-      acao: "salvar_conselho", mes: RELATORIO_METRICAS.mesAtual, texto: texto,
-    })});
-    const json = await res.json();
-    if(json.ok){
-      mostrarToast("✅ Conselho salvo com sucesso!");
-      await carregarConselhosRelatorio();
-      renderRelatorioAtual();
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha ao salvar"), true);
-    }
-  }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
-  }finally{
-    btn.disabled = false;
-  }
-}
-
-function renderRelatorioAtual(){
-  Object.values(charts).forEach(c=>{ try{c.destroy();}catch(e){} }); charts={};
-  const el=$("pageBody"); el.innerHTML="";
-  renderRelatorioConteudo(el);
-  setTimeout(()=>{
-    revelar();
-    aplicarOcultamento();
-  },80);
 }
 
 // ─── BUSCA DE DESPESAS RECORRENTES ───
@@ -4557,6 +4535,7 @@ async function salvarViaIA(){
   const payload = {
     acao: "salvar_despesa_ia",
     mes: COMPROV_STATE.mesSel,
+    ano: ANO,
     data: document.getElementById("iaData").value,
     descricao: document.getElementById("iaDescricao").value,
     categoria: document.getElementById("iaCategoria").value,
