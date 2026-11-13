@@ -2124,8 +2124,7 @@ function montarDF(folha, funcionarios, vales, resumo){
           valesHist: valesPor[m+"|"+nome] || [] };
         md.totalGeral += +f.total; md.totalVales += +f.vales; md.totalSaldo += +f.saldo;
       });
-    const g = Number(resumoPor[m]);
-    if(g>0) md.totalGeral = g;
+    // (o total que vinha da planilha não é mais usado: o total é sempre a soma dos lançamentos)
     md.totalGeral=r2(md.totalGeral); md.totalVales=r2(md.totalVales); md.totalSaldo=r2(md.totalSaldo);
     DFn[MESES_NOME[m-1].toUpperCase()] = md;
   });
@@ -4135,18 +4134,225 @@ function folhaErroTexto(e){
          (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
 }
 
-// ── Barra de botões da aba Pessoal (só administrador) ──
-function barraFolha(el){
-  if(!SOU_ADMIN()) return;
-  const mes = folhaMesAtual(); if(!mes) return;
-  const tem = !!DF[getMesFolha()];
-  const bar = div("folha-barra fade-in");
-  if(!FOLHA_SQL){
-    bar.innerHTML = '<p class="folha-aviso">⚠️ Para lançar a folha pelo painel, falta rodar o arquivo <b>migracao_folha_painel.sql</b> no Supabase (SQL Editor). Enquanto isso, a folha continua sendo lida da planilha.</p>';
-    el.appendChild(bar); return;
+// ── EXCEL DA FOLHA: um do mês (cada funcionário bem separado) e um do ano (total + um por funcionário) ──
+const FX_COLS = [["Salário líquido",14],["Alimentação",14],["Transporte",13],["Total",14],["Vales",13],["Salário a pagar",15],["Férias",13],["13º",13],["Ajuda",13],["Soma de tudo",15]];
+const fxSomaDe = f => r2((f.saldo||0)+(f.ferias||0)+(f.parte13||0)+(f.ajuda||0));
+function fxObjSoma(lista){
+  const o = {salario:0, auxAlim:0, transporte:0, total:0, vales:0, saldo:0, ferias:0, parte13:0, ajuda:0};
+  lista.forEach(f=>Object.keys(o).forEach(k=>{ o[k] += (f[k]||0); }));
+  Object.keys(o).forEach(k=>{ o[k] = r2(o[k]); });
+  return o;
+}
+function fxEstiloCab(row, ate){
+  row.height = 30;
+  for(let c=1;c<=ate;c++){ const x = row.getCell(c); x.font = { bold:true, color:{argb:"FFFFFFFF"} }; x.fill = { type:"pattern", pattern:"solid", fgColor:{argb:XL_COR_CAB} }; x.alignment = { vertical:"middle", horizontal:c<=2?"left":"center", wrapText:true }; }
+}
+function fxCabecalhoTabela(ws, rotuloA, comVinculo){
+  const r = ws.addRow([rotuloA, comVinculo?"Vínculo":""].concat(FX_COLS.map(c=>c[0]))); fxEstiloCab(r, 2+FX_COLS.length); return r.number;
+}
+// uma linha da tabela (colunas C..L). Total, Salário a pagar e Soma são fórmulas do Excel.
+function fxLinha(ws, rotulo, vinculo, f){
+  const r = ws.addRow([rotulo, vinculo||"", f.salario||0, f.auxAlim||0, f.transporte||0, null, f.vales||0, null, f.ferias||0, f.parte13||0, f.ajuda||0, null]), n = r.number;
+  r.getCell(6).value = { formula:`SUM(C${n}:E${n})`, result:r2((f.salario||0)+(f.auxAlim||0)+(f.transporte||0)) };
+  r.getCell(8).value = { formula:`F${n}-G${n}`, result:r2(f.saldo||0) };
+  r.getCell(12).value = { formula:`H${n}+I${n}+J${n}+K${n}`, result:fxSomaDe(f) };
+  for(let c=3;c<=12;c++) r.getCell(c).numFmt = XL_MOEDA;
+  r.getCell(12).font = { bold:true }; r.getCell(8).font = { bold:true };
+  return n;
+}
+function fxLinhaTotal(ws, de, ate, rotulo){
+  const r = ws.addRow([rotulo, ""]), n = r.number;
+  for(let c=3;c<=12;c++){ const L = ws.getColumn(c).letter; r.getCell(c).value = { formula:`SUM(${L}${de}:${L}${ate})`, result:r2(Array.from({length:ate-de+1},(_,i)=>{ const v = ws.getCell(de+i,c).value; return (v&&typeof v==="object") ? (Number(v.result)||0) : (Number(v)||0); }).reduce((a,b)=>a+b,0)) }; r.getCell(c).numFmt = XL_MOEDA; }
+  r.font = { bold:true }; r.eachCell({includeEmpty:true}, c=>{ c.border = { top:{style:"medium"} }; c.fill = { type:"pattern", pattern:"solid", fgColor:{argb:"FFF1F5F9"} }; });
+  return n;
+}
+function fxTitulo(ws, texto, sub){
+  const r = ws.addRow([texto]); r.font = { bold:true, size:15, color:{argb:XL_COR_CAB} }; r.height = 24;
+  if(sub){ const s = ws.addRow([sub]); s.font = { italic:true, color:{argb:"FF666666"} }; }
+}
+function fxSecao(ws, texto){
+  ws.addRow([]); const r = ws.addRow([texto]); r.font = { bold:true, size:12, color:{argb:XL_COR_CAB} }; r.height = 22;
+  for(let c=1;c<=12;c++) r.getCell(c).border = { bottom:{style:"medium", color:{argb:XL_COR_CAB}} };
+}
+function fxPagina(ws, paisagem){
+  ws.pageSetup = { orientation: paisagem?"landscape":"portrait", paperSize:9, fitToPage:true, fitToWidth:1, fitToHeight:0, margins:{left:.4,right:.4,top:.5,bottom:.5,header:.2,footer:.2} };
+  ws.headerFooter = { oddFooter:"&L"+"Igreja Cristã Nova Vida — Rocha Miranda"+"&RPágina &P de &N" };
+}
+function fxNomeAba(nome, usados){
+  let n = String(nome).replace(/[\[\]:*?\/\\]/g,"-").slice(0,31) || "Aba", i = 2;
+  while(usados.has(n.toLowerCase())){ n = n.slice(0,28)+" "+(i++); }
+  usados.add(n.toLowerCase()); return n;
+}
+function fxOrdenarNomes(nomes){
+  const ord = n => { const i = ORDEM_FUNC.indexOf(n); return i<0 ? 999 : i; };
+  return [...nomes].sort((a,b)=>ordemVinculo(a)-ordemVinculo(b) || ord(a)-ord(b) || a.localeCompare(b));
+}
+
+async function montarExcelFolhaMes(mesNum){
+  await carregarExcelJS();
+  const nomeMes = MESES_NOME[mesNum-1], md = DF[nomeMes.toUpperCase()];
+  const wb = new ExcelJS.Workbook(); wb.creator = "Dashboard Financeiro — ICNV Rocha Miranda"; wb.created = new Date();
+  const nomes = fxOrdenarNomes(Object.keys(md.funcionarios));
+  const ben = mesDoBeneficio(ANO, mesNum), dias = DIAS_TRAB[ben.ano+"-"+ben.mes], pa = PARAM_FOLHA[ben.ano];
+
+  // ── Aba 1: resumo do mês ──
+  {
+    const ws = wb.addWorksheet("Resumo do mês", { views:[{ showGridLines:false }] });
+    ws.columns = [{width:22},{width:24}].concat(FX_COLS.map(c=>({width:c[1]})));
+    fxTitulo(ws, "Folha de pagamento — "+nomeMes+" de "+ANO, "Igreja Cristã Nova Vida — Rocha Miranda"+(dias!==undefined && pa ? " · benefícios de "+MESES_NOME[ben.mes-1]+": "+dias+" dias × alimentação "+fBRL(pa.al)+" e transporte "+fBRL(pa.tr)+" por dia" : ""));
+    const ini = [];
+    VINCULOS.forEach(v=>{
+      const lista = nomes.filter(n=>vinculoDe(n)===v.id); if(!lista.length) return;
+      fxSecao(ws, v.titulo); fxCabecalhoTabela(ws, "Pessoa", true);
+      const de = ws.rowCount+1;
+      lista.forEach(n=>fxLinha(ws, n, v.rotulo, md.funcionarios[n]));
+      ini.push([de, ws.rowCount]);
+      if(lista.length>1) fxLinhaTotal(ws, de, ws.rowCount, "Subtotal — "+v.titulo);
+    });
+    fxSecao(ws, "Pagamentos do mês — cada um é pago separado"); fxCabecalhoTabela(ws, "Pessoa", false);
+    const de2 = ws.rowCount+1;
+    nomes.forEach(n=>fxLinha(ws, n, "", md.funcionarios[n]));
+    fxLinhaTotal(ws, de2, ws.rowCount, "TOTAL DO MÊS");
+    ws.addRow([]);
+    ws.addRow(["Salário a pagar = (salário líquido + alimentação + transporte) − vales. Férias, 13º e Ajuda são pagos separadamente; a coluna “Soma de tudo” é só para conferência."]).font = { italic:true, color:{argb:"FF666666"} };
+    fxPagina(ws, true);
   }
-  bar.innerHTML = '<button class="topbar-btn ativo" id="btnFolhaMes" onclick="abrirFolha()">'+(tem?"✎ Editar folha de ":"＋ Lançar folha de ")+MESES_NOME[mes-1]+'</button>'
-    +'<button class="topbar-btn" id="btnFolhaParam" onclick="abrirParamFolha('+ANO+')">⚙ Valores por dia de '+ANO+'</button>';
+
+  // ── Aba 2: cada funcionário em seu bloco, uma página por pessoa ──
+  {
+    const ws = wb.addWorksheet("Por funcionário", { views:[{ showGridLines:false }] });
+    ws.columns = [{width:42},{width:18},{width:30}];
+    const caixa = (de, ate)=>{
+      for(let r=de;r<=ate;r++){ for(let c=1;c<=3;c++){ const x = ws.getCell(r,c), b = Object.assign({}, x.border||{});
+        if(r===de) b.top = {style:"medium"}; if(r===ate) b.bottom = {style:"medium"}; if(c===1) b.left = {style:"medium"}; if(c===3) b.right = {style:"medium"}; x.border = b; } }
+    };
+    const linha = (rot, valor, opc={})=>{
+      const r = ws.addRow([rot, valor, opc.nota||""]); r.getCell(2).numFmt = XL_MOEDA; r.getCell(3).alignment = { indent:1 };
+      if(opc.negrito) r.font = { bold:true };
+      if(opc.fundo) for(let c=1;c<=3;c++) r.getCell(c).fill = { type:"pattern", pattern:"solid", fgColor:{argb:opc.fundo} };
+      if(opc.recuo) r.getCell(1).alignment = { indent:2 };
+      if(opc.cinza) r.getCell(3).font = { italic:true, color:{argb:"FF666666"} };
+      return r.number;
+    };
+    nomes.forEach((nome, idx)=>{
+      const f = md.funcionarios[nome], hon = vinculoDe(nome)==="honorario";
+      if(idx>0) ws.addRow([]);
+      const ini = ws.rowCount+1;
+      const band = ws.addRow([nome, rotuloVinculo(nome)+" · "+nomeMes+"/"+ANO]); band.height = 26;
+      ws.mergeCells(band.number,2,band.number,3);
+      for(let c=1;c<=3;c++){ const x = band.getCell(c); x.font = { bold:true, size:c===1?14:11, color:{argb:"FFFFFFFF"} }; x.fill = { type:"pattern", pattern:"solid", fgColor:{argb:XL_COR_CAB} }; x.alignment = { vertical:"middle", horizontal:c===1?"left":"right" }; }
+      let rTot;
+      if(hon){
+        rTot = linha("Honorário do mês", f.salario||f.total||0, {negrito:true, nota:"valor único, sem benefícios"});
+      } else {
+        const a = linha("Salário líquido (do contador)", f.salario||0), b2 = linha("Auxílio alimentação", f.auxAlim||0, {nota:dias!==undefined&&pa?dias+" dias × "+fBRL(pa.al):""}), c2 = linha("Transporte", f.transporte||0, {nota:dias!==undefined&&pa?dias+" dias × "+fBRL(pa.tr):""});
+        rTot = linha("Total do mês", f.total||0, {negrito:true, fundo:"FFF1F5F9"});
+        ws.getCell(rTot,2).value = { formula:`SUM(B${a}:B${c2})`, result:r2((f.salario||0)+(f.auxAlim||0)+(f.transporte||0)) };
+      }
+      const hist = f.valesHist||[], v0 = ws.rowCount+1;
+      hist.forEach(v=>linha("Vale de "+(v.data||"(sem data)"), v.valor, {recuo:true, cinza:true}));
+      const rVal = linha("Total de vales", hist.length ? 0 : (f.vales||0), {negrito:!!hist.length});
+      if(hist.length) ws.getCell(rVal,2).value = { formula:`SUM(B${v0}:B${rVal-1})`, result:r2(hist.reduce((s,v)=>s+v.valor,0)) };
+      const rPag = linha(hon?"A PAGAR (honorário)":"SALÁRIO A PAGAR", f.saldo||0, {negrito:true, fundo:"FFDCFCE7", nota:hon?"":"total do mês − vales"});
+      ws.getCell(rPag,2).value = { formula:`B${rTot}-B${rVal}`, result:r2(f.saldo||0) };
+      const sub = ws.addRow(["Pagos separadamente:"]); sub.font = { bold:true, color:{argb:"FF92400E"} };
+      const rF = linha("Férias", f.ferias||0, {recuo:true}), r13 = linha("13º (parcela do mês)", f.parte13||0, {recuo:true}), rA = linha("Ajuda / extra", f.ajuda||0, {recuo:true});
+      const rS = linha("SOMA DE TUDO (só para conferir)", fxSomaDe(f), {negrito:true, fundo:"FFFEF9C3"});
+      ws.getCell(rS,2).value = { formula:`B${rPag}+B${rF}+B${r13}+B${rA}`, result:fxSomaDe(f) };
+      caixa(ini, ws.rowCount);
+      if(idx<nomes.length-1) ws.getRow(ws.rowCount).addPageBreak();
+    });
+    fxPagina(ws, false);
+  }
+  return { wb, arquivo:`Folha_${nomeMes}_${ANO}.xlsx` };
+}
+
+async function montarExcelFolhaAno(){
+  await carregarExcelJS();
+  const meses = Object.keys(DF).sort((a,b)=>MESES_NOME.findIndex(m=>m.toUpperCase()===a)-MESES_NOME.findIndex(m=>m.toUpperCase()===b));
+  const nomeDe = k => MESES_NOME.find(m=>m.toUpperCase()===k) || k;
+  const wb = new ExcelJS.Workbook(); wb.creator = "Dashboard Financeiro — ICNV Rocha Miranda"; wb.created = new Date();
+  const todos = new Set(); meses.forEach(k=>Object.keys(DF[k].funcionarios).forEach(n=>todos.add(n)));
+  const nomes = fxOrdenarNomes(todos), usados = new Set(["total do ano"]);
+
+  // ── Aba 1: total do ano ──
+  {
+    const ws = wb.addWorksheet("Total do ano", { views:[{ showGridLines:false }] });
+    ws.columns = [{width:22},{width:24}].concat(FX_COLS.map(c=>({width:c[1]})));
+    fxTitulo(ws, "Folha de pagamento — "+ANO+" (total do ano)", "Igreja Cristã Nova Vida — Rocha Miranda · "+meses.length+" mês(es) com folha");
+    fxSecao(ws, "Mês a mês (todos os funcionários)"); fxCabecalhoTabela(ws, "Mês", false);
+    const de = ws.rowCount+1;
+    meses.forEach(k=>fxLinha(ws, nomeDe(k), "", fxObjSoma(Object.values(DF[k].funcionarios))));
+    fxLinhaTotal(ws, de, ws.rowCount, "TOTAL DO ANO");
+    fxSecao(ws, "Cada funcionário no ano"); fxCabecalhoTabela(ws, "Pessoa", true);
+    const de2 = ws.rowCount+1;
+    nomes.forEach(n=>fxLinha(ws, n, rotuloVinculo(n), fxObjSoma(meses.map(k=>DF[k].funcionarios[n]).filter(Boolean))));
+    fxLinhaTotal(ws, de2, ws.rowCount, "TOTAL DO ANO");
+    fxSecao(ws, "Por vínculo"); fxCabecalhoTabela(ws, "Vínculo", false);
+    VINCULOS.forEach(v=>{
+      const lista = []; meses.forEach(k=>Object.entries(DF[k].funcionarios).forEach(([n,f])=>{ if(vinculoDe(n)===v.id) lista.push(f); }));
+      if(lista.length) fxLinha(ws, v.titulo, "", fxObjSoma(lista));
+    });
+    ws.addRow([]);
+    ws.addRow(["Salário a pagar = (salário líquido + alimentação + transporte) − vales. Férias, 13º e Ajuda são pagos separadamente; a coluna “Soma de tudo” é só para conferência."]).font = { italic:true, color:{argb:"FF666666"} };
+    fxPagina(ws, true);
+  }
+
+  // ── Uma aba por funcionário ──
+  nomes.forEach(nome=>{
+    const ws = wb.addWorksheet(fxNomeAba(nome, usados), { views:[{ showGridLines:false }] });
+    ws.columns = [{width:22},{width:24}].concat(FX_COLS.map(c=>({width:c[1]})));
+    fxTitulo(ws, nome+" — "+ANO, rotuloVinculo(nome)+" · Igreja Cristã Nova Vida — Rocha Miranda");
+    ws.addRow([]); fxCabecalhoTabela(ws, "Mês", false);
+    const de = ws.rowCount+1, vales = [];
+    meses.forEach(k=>{ const f = DF[k].funcionarios[nome]; if(!f) return; fxLinha(ws, nomeDe(k), "", f); (f.valesHist||[]).forEach(v=>vales.push([nomeDe(k), v.data, v.valor])); });
+    fxLinhaTotal(ws, de, ws.rowCount, "TOTAL DO ANO");
+    if(vales.length){
+      fxSecao(ws, "Vales do ano"); const h = ws.addRow(["Mês","Data","Valor"]); fxEstiloCab(h, 3); h.height = 20;
+      const v0 = ws.rowCount+1;
+      vales.forEach(v=>{ const r = ws.addRow([v[0], xlData(v[1])||v[1], v[2]]); r.getCell(2).numFmt = "dd/mm/yyyy"; r.getCell(2).alignment = { horizontal:"left" }; r.getCell(3).numFmt = XL_MOEDA; });
+      const t = ws.addRow(["Total de vales","", {formula:`SUM(C${v0}:C${ws.rowCount})`, result:r2(vales.reduce((s,v)=>s+v[2],0))}]); t.font = { bold:true }; t.getCell(3).numFmt = XL_MOEDA;
+    }
+    fxPagina(ws, true);
+  });
+  return { wb, arquivo:`Folha_${ANO}.xlsx` };
+}
+
+async function baixarXlsx(wb, arquivo){
+  const buf = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buf], { type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = arquivo;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+async function exportarFolhaExcel(tipo, btn){
+  if(btn && btn.disabled) return;
+  const mes = folhaMesAtual();
+  if(tipo==="mes" && (!mes || !DF[MESES_NOME[mes-1].toUpperCase()])){ mostrarToast("Este mês ainda não tem folha lançada.", true); return; }
+  if(tipo==="ano" && !Object.keys(DF).length){ mostrarToast("Este ano ainda não tem folha lançada.", true); return; }
+  const antes = btn ? btn.innerHTML : ""; if(btn){ btn.disabled = true; btn.innerHTML = "⏳ Gerando..."; }
+  try{
+    const r = tipo==="mes" ? await montarExcelFolhaMes(mes) : await montarExcelFolhaAno();
+    await baixarXlsx(r.wb, r.arquivo);
+    mostrarToast("✅ Excel baixado: "+r.arquivo);
+  }catch(e){ mostrarToast("Não consegui gerar o Excel: "+(e.message||e), true); }
+  finally{ if(btn){ btn.disabled = false; btn.innerHTML = antes; } }
+}
+
+// ── Barra de botões da aba Pessoal ──
+function barraFolha(el){
+  const mes = folhaMesAtual(); if(!mes) return;
+  const tem = !!DF[getMesFolha()], adm = SOU_ADMIN();
+  const bar = div("folha-barra fade-in");
+  let html = "";
+  if(adm && !FOLHA_SQL){
+    html += '<p class="folha-aviso" style="width:100%">⚠️ Para lançar a folha pelo painel, falta rodar o arquivo <b>migracao_folha_painel.sql</b> no Supabase (SQL Editor). Enquanto isso, a folha continua sendo lida da planilha.</p>';
+  } else if(adm){
+    html += '<button class="topbar-btn ativo" id="btnFolhaMes" onclick="abrirFolha()">'+(tem?"✎ Editar folha de ":"＋ Lançar folha de ")+MESES_NOME[mes-1]+'</button>'
+      +'<button class="topbar-btn" id="btnFolhaParam" onclick="abrirParamFolha('+ANO+')">⚙ Valores por dia de '+ANO+'</button>';
+  }
+  html += '<button class="topbar-btn" id="btnExcelMes" onclick="exportarFolhaExcel(\'mes\', this)" title="Uma planilha com cada funcionário separado">📥 Excel de '+MESES_NOME[mes-1]+'</button>'
+    +'<button class="topbar-btn" id="btnExcelAno" onclick="exportarFolhaExcel(\'ano\', this)" title="Total do ano e uma aba para cada funcionário">📥 Excel do ano '+ANO+'</button>';
+  bar.innerHTML = html;
   el.appendChild(bar);
 }
 
@@ -4168,6 +4374,7 @@ function folhaCardHtml(f, d){
       <span class="func-avatar" style="background:${cor.bg};width:30px;height:30px;font-size:14px">${n.charAt(0).toUpperCase()}</span>
       <div><b>${n}</b><span class="fp-vinc">${rotuloVinculo(f.nome)}</span></div>
       <div class="fp-res-top"><i>A pagar (saldo)</i><b class="fp-saldo">R$ 0,00</b></div>
+      <button type="button" class="topbar-btn fp-mini fp-tirar" title="Tira esta pessoa da folha deste mês (não apaga o cadastro dela)" onmousedown="event.preventDefault()" onclick="folhaTirar(this)">✕ Tirar do mês</button>
     </div>
     <div class="fp-grid">
       ${campo("fp-sal", hon ? "Honorário do mês (R$)" : "Salário líquido do contador (R$)", d ? numBRouVazio(d.salario) : "", 'oninput="folhaRecalc()"')}
@@ -4182,6 +4389,7 @@ function folhaCardHtml(f, d){
       <label><input type="checkbox" class="fp-chk-al" ${f.al?"":"checked"} onchange="folhaFlag(this,'aux')"> Almoço no local (sem alimentação)</label>
       <label><input type="checkbox" class="fp-chk-tr" ${f.tr?"":"checked"} onchange="folhaFlag(this,'tra')"> Cartão de transporte (sem transporte)</label>
     </div>`}
+    <div class="fp-flags"><label><input type="checkbox" class="fp-chk-at" ${f.ativo?"":"checked"}> Saiu da folha (não aparece nos meses seguintes)</label></div>
     <div class="fp-vales"><div class="fp-vales-hdr"><span>Vales do mês</span><button type="button" class="topbar-btn fp-mini" onmousedown="event.preventDefault()" onclick="folhaAddVale(this)">＋ vale</button></div><div class="fp-vales-lista">${vales}</div></div>
     <div class="fp-sep">
       <p class="fp-sep-tit">💳 Pagar separado</p>
@@ -4195,6 +4403,12 @@ function folhaCardHtml(f, d){
 }
 function folhaValeHtml(dataISO, valor){
   return `<div class="fp-vale"><input type="date" class="ent-sel fp-vd" min="2000-01-01" max="2100-12-31" value="${dataISO||""}" aria-label="Data do vale"><input class="ent-sel fp-vv" inputmode="decimal" autocomplete="off" placeholder="Valor" value="${valor?numBR(valor):""}" oninput="folhaRecalc()" aria-label="Valor do vale"><button type="button" class="topbar-btn fp-mini" title="Tirar este vale" onmousedown="event.preventDefault()" onclick="this.parentNode.remove();folhaRecalc()">✕</button></div>`;
+}
+function folhaTirar(btn){   // a pessoa não faz parte da folha deste mês: some da ficha e, ao salvar, os lançamentos dela neste mês são apagados
+  const card = btn.closest(".fp-card"), nome = card.dataset.nome;
+  if(!confirm("Tirar "+nome+" da folha de "+MESES_NOME[FOLHA_EST.mes-1]+"?\n\nAo salvar, os lançamentos dela neste mês são apagados. O cadastro dela continua (outros meses não mudam).")) return;
+  card.dataset.fora = "1"; card.style.display = "none"; folhaRecalc();
+  const msg = $("folhaMsg"); msg.style.color = "var(--muted)"; msg.textContent = nome+" foi tirada desta folha. Clique em “Salvar folha” para confirmar.";
 }
 function folhaAddVale(btn){
   const card = btn.closest(".fp-card"), lista = card.querySelector(".fp-vales-lista");
@@ -4269,7 +4483,7 @@ function folhaCalcCard(card){
 }
 function folhaRecalc(){
   const T = {saldo:0, fer:0, p13:0, aju:0, soma:0, vales:0, total:0};
-  document.querySelectorAll("#folhaCards .fp-card").forEach(card=>{
+  document.querySelectorAll("#folhaCards .fp-card:not([data-fora='1'])").forEach(card=>{
     const c = folhaCalcCard(card), set = (cls,v)=>{ card.querySelector("."+cls).textContent = fBRL(v); };
     set("fp-saldo",c.saldo); set("fp-r-saldo",c.saldo); set("fp-r-fer",c.fer); set("fp-r-13",c.p13); set("fp-r-aju",c.aju); set("fp-r-soma",c.soma);
     card.querySelector(".fp-saldo").style.color = c.saldo<0 ? "var(--saida)" : "";
@@ -4292,7 +4506,7 @@ function abrirFolha(){
   $("folhaCards").innerHTML = folhaPessoasDoMes(mes).map(({f,d})=>folhaCardHtml(f,d)).join("");
   // valores que já estavam salvos e diferem do cálculo → ficam como "digitados à mão"
   const dias = folhaDiasAtual(), pa = PARAM_FOLHA[ben.ano];
-  document.querySelectorAll("#folhaCards .fp-card").forEach(card=>{
+  document.querySelectorAll("#folhaCards .fp-card:not([data-fora='1'])").forEach(card=>{
     if(card.dataset.vinc==="honorario") return;
     const b = folhaBeneficios(card, dias, pa), d = (md||{funcionarios:{}}).funcionarios[card.dataset.nome];
     if(d){
@@ -4339,7 +4553,7 @@ function folhaLerFormulario(){
   const diasTxt = ($("folhaDias").value||"").trim();
   if(diasTxt && folhaDiasAtual()===null) return marca($("folhaDias"), "Dias trabalhados: informe um número de 0 a 31.");
   const pessoas = [];
-  for(const card of document.querySelectorAll("#folhaCards .fp-card")){
+  for(const card of document.querySelectorAll("#folhaCards .fp-card:not([data-fora='1'])")){
     const nome = card.dataset.nome, x = folhaLerCard(card);
     const campos = [["fp-sal",x.sal,"valor do salário"],["fp-aux",x.aux,"alimentação"],["fp-tra",x.tra,"transporte"],["fp-13",x.p13,"13º"],["fp-fer",x.fer,"férias"],["fp-aju",x.aju,"ajuda"]];
     for(const [cls,v,rot] of campos){
@@ -4358,18 +4572,17 @@ async function salvarFolhaPainel(){
   if(r.erro){ msg.textContent = r.erro; r.el.focus(); return; }
   const mes = FOLHA_EST.mes;
   // saldo negativo: vales maiores que o total → confirma
-  const neg = [...document.querySelectorAll("#folhaCards .fp-card.fp-neg")].map(c=>c.dataset.nome);
+  const neg = [...document.querySelectorAll("#folhaCards .fp-card:not([data-fora='1']).fp-neg")].map(c=>c.dataset.nome);
   if(neg.length && !confirm("Os vales de "+neg.join(", ")+" são maiores que o total do mês (saldo negativo).\n\nOK para salvar assim, Cancelar para corrigir.")) return;
   const btn = $("folhaSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
   try{
-    // 1) quem mudou "almoço no local" / "cartão de transporte" / saiu: grava o cadastro
-    for(const card of document.querySelectorAll("#folhaCards .fp-card")){
-      if(card.dataset.vinc==="honorario") continue;
-      const al = !card.querySelector(".fp-chk-al").checked, tr = !card.querySelector(".fp-chk-tr").checked;
-      if((al?1:0)!==+card.dataset.al0 || (tr?1:0)!==+card.dataset.tr0){
-        const f = FUNCS.find(x=>x.id===card.dataset.fid);
-        await dbEscrever("POST", "rpc/salvar_funcionario", {p:{id:f.id, nome:f.nome, vinculo:f.vinculo, recebe_alimentacao:al, recebe_transporte:tr, ativo:f.ativo}}, "return=representation");
-        f.al = al; f.tr = tr; card.dataset.al0 = al?1:0; card.dataset.tr0 = tr?1:0;
+    // 1) quem mudou "almoço no local" / "cartão de transporte" / "saiu da folha": grava o cadastro
+    for(const card of document.querySelectorAll("#folhaCards .fp-card:not([data-fora='1'])")){
+      const f = FUNCS.find(x=>x.id===card.dataset.fid), hon = card.dataset.vinc==="honorario";
+      const al = hon ? f.al : !card.querySelector(".fp-chk-al").checked, tr = hon ? f.tr : !card.querySelector(".fp-chk-tr").checked, at = !card.querySelector(".fp-chk-at").checked;
+      if((al?1:0)!==+card.dataset.al0 || (tr?1:0)!==+card.dataset.tr0 || (at?1:0)!==+card.dataset.at0){
+        await dbEscrever("POST", "rpc/salvar_funcionario", {p:{id:f.id, nome:f.nome, vinculo:f.vinculo, recebe_alimentacao:al, recebe_transporte:tr, ativo:at}}, "return=representation");
+        f.al = al; f.tr = tr; f.ativo = at; card.dataset.al0 = al?1:0; card.dataset.tr0 = tr?1:0; card.dataset.at0 = at?1:0;
       }
     }
     // 2) a folha do mês
