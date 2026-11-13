@@ -1019,6 +1019,42 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .semana-edit { margin-left: 10px; padding: 3px 9px; font-size: 11.5px; background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); color: #fff; }
 .semana-edit:hover { background: rgba(255,255,255,.3); }
 .fech-acao { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.folha-barra { display: flex; gap: 8px; flex-wrap: wrap; margin: 0 0 16px; }
+.folha-aviso { margin: 0; padding: 10px 14px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 10px; font-size: 12.5px; color: #92400e; line-height: 1.5; }
+.fp-benef { background: var(--bg, #f6f7fb); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; }
+.fp-benef-tit { margin: 0 0 8px; font-size: 13px; font-weight: 700; color: var(--navy,#1a1a2e); }
+.fp-hint { display: block; font-size: 11.5px; line-height: 16px; color: var(--muted); min-height: 16px; margin-top: 2px; }
+.fp-card { border: 1px solid var(--border,#e2e8f0); border-radius: 12px; padding: 14px; margin-bottom: 12px; }
+.fp-card.fp-neg { border-color: var(--saida); }
+.fp-card-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.fp-card-hdr b { display: block; font-size: 14px; color: var(--navy,#1a1a2e); }
+.fp-vinc { display: block; font-size: 11px; color: var(--muted); }
+.fp-res-top { margin-left: auto; text-align: right; }
+.fp-res-top i { display: block; font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.fp-res-top b { font-size: 16px; font-variant-numeric: tabular-nums; }
+.fp-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px 12px; }
+.fp-flags { display: flex; gap: 6px 18px; flex-wrap: wrap; margin-top: 8px; font-size: 12.5px; color: var(--slate,#555); }
+.fp-flags label { display: flex; gap: 6px; align-items: center; cursor: pointer; }
+.fp-vales { margin-top: 10px; }
+.fp-vales-hdr { display: flex; align-items: center; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--slate,#555); margin-bottom: 4px; }
+.fp-vale { display: flex; gap: 8px; margin-bottom: 6px; align-items: center; }
+.fp-vale .fp-vd { width: 150px; } .fp-vale .fp-vv { width: 130px; }
+.fp-mini { padding: 3px 9px; font-size: 11.5px; }
+.fp-sep { margin-top: 12px; padding: 10px 12px; background: #fefce8; border: 1.5px dashed #fcd34d; border-radius: 10px; }
+.fp-sep-tit { margin: 0 0 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #92400e; }
+.fp-sep-l { display: flex; justify-content: space-between; font-size: 12.5px; padding: 2px 0; color: #78350f; }
+.fp-sep-l b { font-variant-numeric: tabular-nums; }
+.fp-soma { margin-top: 4px; padding-top: 5px; border-top: 1px solid #fcd34d; font-weight: 700; }
+.sep-l { display: flex; justify-content: space-between; font-size: 12px; padding: 1px 0; color: #78350f; }
+.sep-l b { font-variant-numeric: tabular-nums; }
+.sep-soma { margin-top: 4px; padding-top: 4px; border-top: 1px solid #fcd34d; font-weight: 700; }
+.fp-nova { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: 4px 0 12px; font-size: 12.5px; }
+.pag-sep { margin: 0 0 22px; }
+.pag-vinc { display: block; font-size: 10.5px; color: var(--muted); }
+.pag-soma { background: var(--bg, #f6f7fb); }
+.pag-tot td { font-weight: 700; border-top: 2px solid var(--border,#e2e8f0); }
+@media (max-width: 700px) { .fp-grid { grid-template-columns: 1fr 1fr; } .fp-vale .fp-vd, .fp-vale .fp-vv { width: auto; flex: 1; } }
+@media (max-width: 440px) { .fp-grid { grid-template-columns: 1fr; } }
 .desp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
 .desp-full { grid-column: 1 / -1; }
 .desp-in { width: 100%; box-sizing: border-box; }
@@ -1048,6 +1084,13 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 @keyframes toastIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
 
 /* ─── PESSOAL / FOLHA ─── */
+.pessoal-bloco { margin: 0 0 26px; }
+.pessoal-bloco-hdr { align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.pessoal-bloco-tot { display: flex; gap: 18px; flex-wrap: wrap; }
+.pessoal-bloco-tot span { display: flex; flex-direction: column; align-items: flex-end; }
+.pessoal-bloco-tot i { font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.pessoal-bloco-tot b { font-size: 15px; color: var(--navy,#1a1a2e); }
+.pessoal-bloco-tot b.pg { color: var(--entrada,#16a34a); }
 .func-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -1433,6 +1476,49 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
       <span style="flex:1"></span>
       <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharDespesa()">Cancelar</button>
       <button class="topbar-btn" id="despSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="salvarDespesaPainel()">Salvar despesa</button>
+    </div>
+  </div>
+</div>
+
+<div id="folhaModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="folhaTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:940px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="folhaTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Lançar a folha</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.5">Digite o <b>salário líquido do contador</b> de cada pessoa. A alimentação e o transporte são calculados sozinhos (valor por dia × dias trabalhados), e você pode corrigir qualquer número.</p>
+    <div class="fp-benef">
+      <p id="folhaBenefTit" class="fp-benef-tit"></p>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><input id="folhaDias" type="number" min="0" max="31" step="1" inputmode="numeric" class="ent-sel" style="width:90px" oninput="folhaAutoTudo()" aria-label="Dias trabalhados"><span id="folhaDiasSug" class="fp-hint" style="margin:0"></span></div>
+      <p id="folhaParamInfo" class="fp-hint" style="margin:8px 0 0"></p>
+    </div>
+    <div id="folhaCards"></div>
+    <div class="fp-nova"><b>Nova pessoa</b>
+      <input id="folhaNovoNome" class="ent-sel" maxlength="40" autocomplete="off" placeholder="Nome (ex.: Maria)" aria-label="Nome da nova pessoa">
+      <select id="folhaNovoVinc" class="ent-sel" aria-label="Vínculo"><option value="clt">Funcionário — CNPJ da Igreja</option><option value="cpf_pastor">No CPF do Pastor</option><option value="honorario">Honorário</option></select>
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="folhaNovaPessoa(this)">＋ Adicionar</button>
+    </div>
+    <div id="folhaTotais" class="ent-resumo"></div>
+    <p id="folhaMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <button class="topbar-btn" id="folhaExcluir" style="display:none;color:var(--saida)" onmousedown="event.preventDefault()" onclick="excluirFolhaPainel(this)">Excluir folha do mês</button>
+      <span style="flex:1"></span>
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharFolha()">Cancelar</button>
+      <button class="topbar-btn" id="folhaSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="salvarFolhaPainel()">Salvar folha</button>
+    </div>
+  </div>
+</div>
+
+<div id="folhaParamModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="fpmTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:440px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="fpmTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Valores por dia</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.5">Valor <b>por dia trabalhado</b>. Muda todo ano. Alimentação e transporte do mês = esse valor × dias trabalhados.</p>
+    <input id="fpmAno" type="hidden">
+    <div class="desp-grid">
+      <div><label class="ia-form-label" for="fpmAl">Alimentação por dia (R$)</label><input id="fpmAl" inputmode="decimal" autocomplete="off" placeholder="Ex.: 32,00" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="fpmTr">Transporte por dia (R$)</label><input id="fpmTr" inputmode="decimal" autocomplete="off" placeholder="Ex.: 14,70" class="ent-sel desp-in"></div>
+    </div>
+    <p id="fpmMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharParamFolha()">Cancelar</button>
+      <button class="topbar-btn" id="fpmSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="salvarParamFolha()">Salvar valores</button>
     </div>
   </div>
 </div>
@@ -2015,7 +2101,8 @@ function montarDE(entradas, semanas){
 
 function montarDF(folha, funcionarios, vales, resumo){
   const nomePorId = {};
-  (funcionarios||[]).forEach(f=>{ nomePorId[f.id] = f.nome; });
+  FUNC_VINCULO = {};
+  (funcionarios||[]).forEach(f=>{ nomePorId[f.id] = f.nome; if(f.vinculo) FUNC_VINCULO[f.nome] = f.vinculo; });
   const valesPor = {};       // mes|nome -> [{data,valor}]
   (vales||[]).forEach(v=>{
     const k = v.mes+"|"+nomePorId[v.funcionario_id];
@@ -2030,9 +2117,9 @@ function montarDF(folha, funcionarios, vales, resumo){
   Object.keys(porMes).map(Number).sort((a,b)=>a-b).forEach(m=>{
     const md = { funcionarios:{}, totalGeral:0, totalVales:0, totalSaldo:0 };
     porMes[m].map(f=>({f, nome:nomePorId[f.funcionario_id]})).filter(x=>x.nome)
-      .sort((a,b)=>ordem(a.nome)-ordem(b.nome) || a.nome.localeCompare(b.nome))
+      .sort((a,b)=>ordemVinculo(a.nome)-ordemVinculo(b.nome) || ordem(a.nome)-ordem(b.nome) || a.nome.localeCompare(b.nome))
       .forEach(({f,nome})=>{
-        md.funcionarios[nome] = { salario:+f.salario, auxAlim:+f.aux_alimentacao, transporte:+f.transporte, total:+f.total,
+        md.funcionarios[nome] = { vinculo:vinculoDe(nome), salario:+f.salario, auxAlim:+f.aux_alimentacao, transporte:+f.transporte, total:+f.total,
           vales:+f.vales, saldo:+f.saldo, parte13:+f.parte_13, ferias:+f.ferias, ajuda:+f.ajuda,
           valesHist: valesPor[m+"|"+nome] || [] };
         md.totalGeral += +f.total; md.totalVales += +f.vales; md.totalSaldo += +f.saldo;
@@ -2203,17 +2290,17 @@ async function montarExcel(){
     const ws = xlAba(wb, "Folha", [
       {t:"Mês",k:"mes",w:12},{t:"Funcionário",k:"fun",w:16},{t:"Salário",k:"sal",w:14,f:XL_MOEDA},{t:"Aux. alimentação",k:"alim",w:15,f:XL_MOEDA},
       {t:"Transporte",k:"tra",w:14,f:XL_MOEDA},{t:"Total",k:"tot",w:14,f:XL_MOEDA},{t:"Vales",k:"val",w:14,f:XL_MOEDA},{t:"Saldo a pagar",k:"sld",w:15,f:XL_MOEDA},
-      {t:"13º",k:"p13",w:13,f:XL_MOEDA},{t:"Férias",k:"fer",w:13,f:XL_MOEDA},{t:"Ajuda",k:"aju",w:13,f:XL_MOEDA}]);
+      {t:"13º",k:"p13",w:13,f:XL_MOEDA},{t:"Férias",k:"fer",w:13,f:XL_MOEDA},{t:"Ajuda",k:"aju",w:13,f:XL_MOEDA},{t:"Vínculo",k:"vin",w:22}]);
     const wsV = xlAba(wb, "Vales", [{t:"Mês",k:"mes",w:12},{t:"Funcionário",k:"fun",w:16},{t:"Data",k:"data",w:12,f:"dd/mm/yyyy"},{t:"Valor",k:"valor",w:14,f:XL_MOEDA}]);
     Object.entries(DF).sort((a,b)=>MESES_NOME.findIndex(m=>m.toUpperCase()===a[0])-MESES_NOME.findIndex(m=>m.toUpperCase()===b[0])).forEach(([k,mes])=>{
       const nm = MESES_NOME.find(m=>m.toUpperCase()===k) || k;
       Object.entries(mes.funcionarios).forEach(([nome,f])=>{
-        ws.addRow({ mes:nm, fun:nome, sal:f.salario, alim:f.auxAlim, tra:f.transporte, tot:f.total, val:f.vales, sld:f.saldo, p13:f.parte13, fer:f.ferias, aju:f.ajuda });
+        ws.addRow({ mes:nm, fun:nome, sal:f.salario, alim:f.auxAlim, tra:f.transporte, tot:f.total, val:f.vales, sld:f.saldo, p13:f.parte13, fer:f.ferias, aju:f.ajuda, vin:rotuloVinculo(nome) });
         (f.valesHist||[]).forEach(v=>wsV.addRow({ mes:nm, fun:nome, data:xlData(v.data), valor:v.valor }));
       });
     });
     xlTotal(ws, ws.rowCount, [3,4,5,6,7,8,9,10,11], 2);
-    ws.autoFilter = { from:"A1", to:"K1" };
+    ws.autoFilter = { from:"A1", to:"L1" };
     xlTotal(wsV, wsV.rowCount, [4], 3);
     wsV.autoFilter = { from:"A1", to:"D1" };
   }
@@ -2597,17 +2684,19 @@ async function carregarTudo(){
       if(!ANOS.length) ANOS=[ANO];
     }
     const a = "ano=eq."+ANO;
-    const [saidas, cats, entradas, semanas, folha, funcs, vales, resumo, saldos] = await Promise.all([
+    const [saidas, cats, entradas, semanas, folha, funcs, vales, resumo, saldos, _paramsDias] = await Promise.all([
       dbGetTudo("saidas?select="+SAIDAS_CAMPOS+"&"+a+"&excluido_em=is.null&"+SAIDAS_ORDEM),
       dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
       dbGetTudo("entradas?select=mes,semana,culto,tipo,valor&"+a+"&order=mes,semana,culto,tipo"),
       dbGetTudo("semanas?select=mes,semana,periodo,catedral_planilha,extra_planilha&"+a+"&order=mes,semana"),
       dbGetTudo("folha_mensal?select=funcionario_id,mes,salario,aux_alimentacao,transporte,total,vales,saldo,parte_13,ferias,ajuda&"+a+"&order=mes,funcionario_id"),
-      dbGetTudo("funcionarios?select=id,nome&order=nome"),
+      buscarFuncionarios(),   // se o SQL novo ainda não rodou, cai para as colunas que existirem (e usa o padrão por nome)
       dbGetTudo("vales?select=funcionario_id,mes,data,valor&"+a+"&order=mes,data,id"),
       dbGetTudo("folha_resumo?select=mes,total_geral_planilha&"+a+"&order=mes"),
       carregarSaldos(),
+      buscarParamsDias(),
     ]);
+    FUNCS = montarFuncs(funcs);
     RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
     DE = montarDE(entradas, semanas);
     DF = montarDF(folha, funcs, vales, resumo);
@@ -3914,15 +4003,17 @@ const FUNC_CORES = {
   "Adv.Douglas": {bg:"#92400e", light:"#fffbeb", ft:"#92400e"},
 };
 
-const FUNC_TIPO = {
-  "Alexandre":   "CLT — CNPJ da Igreja",
-  "Carmen":      "CLT — CNPJ da Igreja",
-  "Luis":        "CLT — CNPJ da Igreja",
-  "Rodrigo":     "CLT — CNPJ da Igreja",
-  "Vinicius":    "CLT — CNPJ da Igreja",
-  "Edilaine":    "CPF do Presidente",
-  "Adv.Douglas": "Honorários",
-};
+// Vínculo: define em qual bloco da aba Pessoal a pessoa aparece (vem do banco; se faltar, vale o padrão abaixo)
+const VINCULOS = [
+  { id:"clt",        titulo:"Funcionários — CNPJ da Igreja", rotulo:"CLT — CNPJ da Igreja", nota:"Salário líquido do contador + auxílio alimentação + transporte − vales" },
+  { id:"cpf_pastor", titulo:"No CPF do Pastor",              rotulo:"CPF do Pastor",        nota:"Registrada no CPF do Pastor, com os mesmos benefícios" },
+  { id:"honorario",  titulo:"Honorários",                    rotulo:"Honorário",            nota:"Valor único do mês, sem benefícios" },
+];
+const VINCULO_PADRAO = { "Edilaine":"cpf_pastor", "Adv.Douglas":"honorario" };
+let FUNC_VINCULO = {};
+const vinculoDe = nome => FUNC_VINCULO[nome] || VINCULO_PADRAO[nome] || "clt";
+const rotuloVinculo = nome => (VINCULOS.find(v=>v.id===vinculoDe(nome))||VINCULOS[0]).rotulo;
+const ordemVinculo = nome => Math.max(0, VINCULOS.findIndex(v=>v.id===vinculoDe(nome)));
 
 let PESSOAL_VIEW = "visao"; // "visao" | "comparativo" | "evolucao"
 
@@ -3947,6 +4038,7 @@ function renderFolha(el){
     tabs.appendChild(t);
   });
   el.appendChild(tabs);
+  barraFolha(el);
 
   if(PESSOAL_VIEW==="visao") renderFolhaVisao(el,mesNome,mesDados);
   else if(PESSOAL_VIEW==="comparativo") renderFolhaComparativo(el,mesNome);
@@ -3962,6 +4054,425 @@ function renderFolhaAtual(){
   },80);
 }
 
+// ═════════════════════════════════════════════════════════════════════════════
+// FOLHA PELO PAINEL — lançar a folha do mês, valores por dia, dias trabalhados
+// ═════════════════════════════════════════════════════════════════════════════
+let FUNCS = [];            // [{id, nome, vinculo, al, tr, ativo}]  (al/tr = recebe alimentação / transporte)
+let PARAM_FOLHA = {};      // ano -> {al, tr}   (valor POR DIA)
+let DIAS_TRAB = {};        // "ano-mes" -> dias trabalhados naquele mês
+let FOLHA_SQL = true;      // false = o SQL migracao_folha_painel.sql ainda não foi rodado
+let FOLHA_EST = null;      // estado do formulário aberto
+// Valores de partida quando o banco ainda não tem as colunas novas
+const FLAGS_PADRAO = { "Alexandre":{al:true,tr:false}, "Edilaine":{al:false,tr:true}, "Adv.Douglas":{al:false,tr:false} };
+
+function montarFuncs(lista){
+  return (lista||[]).map(f=>{
+    const nome = f.nome, vinculo = f.vinculo || VINCULO_PADRAO[nome] || "clt", p = FLAGS_PADRAO[nome] || {al:true, tr:true};
+    const hon = vinculo==="honorario";
+    return { id:f.id, nome, vinculo,
+      al: hon ? false : (f.recebe_alimentacao===undefined ? p.al : !!f.recebe_alimentacao),
+      tr: hon ? false : (f.recebe_transporte===undefined  ? p.tr : !!f.recebe_transporte),
+      ativo: f.ativo!==false };
+  });
+}
+async function buscarFuncionarios(){
+  // tenta com todas as colunas; se alguma ainda não existe (SQL não rodado), cai para o que existir
+  const tentativas = ["id,nome,vinculo,recebe_alimentacao,recebe_transporte,ativo","id,nome,vinculo,ativo","id,nome,vinculo","id,nome"];
+  let ultimo;
+  for(const c of tentativas){
+    try{ return await dbGetTudo("funcionarios?select="+c+"&order=nome"); }
+    catch(e){ ultimo = e; if(e.status && e.status!==400) throw e; }
+  }
+  throw ultimo;
+}
+async function buscarParamsDias(){
+  const [pf, dt] = await Promise.all([
+    dbGetTudo("parametros_folha?select=ano,valor_dia_alimentacao,valor_dia_transporte&order=ano").then(r=>{ FOLHA_SQL = true; return r; }, ()=>{ FOLHA_SQL = false; return []; }),
+    dbGetTudo("dias_trabalhados?select=ano,mes,dias&order=ano,mes").catch(()=>[]),
+  ]);
+  PARAM_FOLHA = {}; pf.forEach(p=>{ PARAM_FOLHA[p.ano] = { al:Number(p.valor_dia_alimentacao)||0, tr:Number(p.valor_dia_transporte)||0 }; });
+  DIAS_TRAB = {};   dt.forEach(d=>{ DIAS_TRAB[d.ano+"-"+d.mes] = Number(d.dias); });
+}
+
+// ── Dias úteis (segunda a sexta, menos feriados nacionais) ──
+function pascoa(a){   // algoritmo de Meeus/Jones/Butcher
+  const A=a%19, B=Math.floor(a/100), C=a%100, D=Math.floor(B/4), E=B%4, F=Math.floor((B+8)/25), G=Math.floor((B-F+1)/3);
+  const H=(19*A+B-D-G+15)%30, I=Math.floor(C/4), K=C%4, L=(32+2*E+2*I-H-K)%7, M=Math.floor((A+11*H+22*L)/451);
+  const mes=Math.floor((H+L-7*M+114)/31), dia=((H+L-7*M+114)%31)+1;
+  return new Date(a, mes-1, dia);
+}
+function feriadosNacionais(a){   // "MM-DD" -> nome
+  const f = {};
+  [["01-01","Confraternização Universal"],["04-21","Tiradentes"],["05-01","Dia do Trabalho"],["09-07","Independência"],
+   ["10-12","Nossa Senhora Aparecida"],["11-02","Finados"],["11-15","Proclamação da República"],
+   ["11-20","Consciência Negra"],["12-25","Natal"]].forEach(([k,n])=>{ f[k]=n; });
+  const sx = pascoa(a); sx.setDate(sx.getDate()-2);
+  f[pad2(sx.getMonth()+1)+"-"+pad2(sx.getDate())] = "Sexta-feira Santa";
+  return f;
+}
+function diasUteisMes(a, m){
+  const fer = feriadosNacionais(a), n = new Date(a, m, 0).getDate();
+  let semana = 0; const feriados = [];
+  for(let d=1; d<=n; d++){
+    const w = new Date(a, m-1, d).getDay();
+    if(w===0 || w===6) continue;
+    semana++;
+    const k = pad2(m)+"-"+pad2(d);
+    if(fer[k]) feriados.push({dia:d, nome:fer[k]});
+  }
+  return { dias: semana-feriados.length, semana, feriados };
+}
+// Os benefícios da folha de um mês são do mês SEGUINTE (folha de dezembro → janeiro do ano seguinte)
+function mesDoBeneficio(ano, mes){ return mes===12 ? {ano:ano+1, mes:1} : {ano, mes:mes+1}; }
+const numBR = v => (Number(v)||0).toFixed(2).replace(".",",");
+const numBRouVazio = v => (Number(v)||0) ? numBR(v) : "";
+function folhaMesAtual(){ return MESES_NOME.findIndex(n=>n.toUpperCase()===getMesFolha())+1; }
+
+function folhaErroTexto(e){
+  return (e.status===403 || /Sem permissão/i.test(e.message)) ? "Você não tem permissão para lançar a folha." :
+         (e.status===404 || /Could not find the function|schema cache/i.test(e.message)) ? "O banco ainda não tem as funções da folha. Rode o arquivo migracao_folha_painel.sql no Supabase (SQL Editor)." :
+         e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
+         (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
+}
+
+// ── Barra de botões da aba Pessoal (só administrador) ──
+function barraFolha(el){
+  if(!SOU_ADMIN()) return;
+  const mes = folhaMesAtual(); if(!mes) return;
+  const tem = !!DF[getMesFolha()];
+  const bar = div("folha-barra fade-in");
+  if(!FOLHA_SQL){
+    bar.innerHTML = '<p class="folha-aviso">⚠️ Para lançar a folha pelo painel, falta rodar o arquivo <b>migracao_folha_painel.sql</b> no Supabase (SQL Editor). Enquanto isso, a folha continua sendo lida da planilha.</p>';
+    el.appendChild(bar); return;
+  }
+  bar.innerHTML = '<button class="topbar-btn ativo" id="btnFolhaMes" onclick="abrirFolha()">'+(tem?"✎ Editar folha de ":"＋ Lançar folha de ")+MESES_NOME[mes-1]+'</button>'
+    +'<button class="topbar-btn" id="btnFolhaParam" onclick="abrirParamFolha('+ANO+')">⚙ Valores por dia de '+ANO+'</button>';
+  el.appendChild(bar);
+}
+
+// ── Modal da folha do mês ──
+function folhaPessoasDoMes(mes){
+  const md = DF[MESES_NOME[mes-1].toUpperCase()], dados = md ? md.funcionarios : {};
+  const lista = FUNCS.filter(f=>f.ativo || dados[f.nome]);
+  const ordem = n => { const i = ORDEM_FUNC.indexOf(n); return i<0 ? 999 : i; };
+  lista.sort((a,b)=>Math.max(0,VINCULOS.findIndex(v=>v.id===a.vinculo))-Math.max(0,VINCULOS.findIndex(v=>v.id===b.vinculo)) || ordem(a.nome)-ordem(b.nome) || a.nome.localeCompare(b.nome));
+  return lista.map(f=>({ f, d: dados[f.nome]||null }));
+}
+function folhaCardHtml(f, d){
+  const hon = f.vinculo==="honorario", n = escHtml(f.nome);
+  const cor = FUNC_CORES[f.nome] || {bg:"#334155"};
+  const vales = (d && d.valesHist || []).map(v=>folhaValeHtml(v.data ? (dataBRparaISO(v.data)||"") : "", v.valor)).join("");
+  const campo = (cls, rotulo, valor, extra) => `<div><label class="ia-form-label">${rotulo}</label><input class="ent-sel desp-in ${cls}" inputmode="decimal" autocomplete="off" value="${valor}" ${extra||""}></div>`;
+  return `<div class="fp-card" data-fid="${escHtml(f.id)}" data-nome="${n}" data-vinc="${f.vinculo}" data-al0="${f.al?1:0}" data-tr0="${f.tr?1:0}" data-at0="${f.ativo?1:0}">
+    <div class="fp-card-hdr">
+      <span class="func-avatar" style="background:${cor.bg};width:30px;height:30px;font-size:14px">${n.charAt(0).toUpperCase()}</span>
+      <div><b>${n}</b><span class="fp-vinc">${rotuloVinculo(f.nome)}</span></div>
+      <div class="fp-res-top"><i>A pagar (saldo)</i><b class="fp-saldo">R$ 0,00</b></div>
+    </div>
+    <div class="fp-grid">
+      ${campo("fp-sal", hon ? "Honorário do mês (R$)" : "Salário líquido do contador (R$)", d ? numBRouVazio(d.salario) : "", 'oninput="folhaRecalc()"')}
+      ${hon ? "" : `
+      <div><label class="ia-form-label">Alimentação (R$)</label><input class="ent-sel desp-in fp-aux" inputmode="decimal" autocomplete="off" value="${d ? numBR(d.auxAlim) : ""}" oninput="folhaManual(this)"><span class="fp-hint fp-aux-hint"></span></div>
+      <div><label class="ia-form-label">Transporte (R$)</label><input class="ent-sel desp-in fp-tra" inputmode="decimal" autocomplete="off" value="${d ? numBR(d.transporte) : ""}" oninput="folhaManual(this)"><span class="fp-hint fp-tra-hint"></span></div>`}
+      ${campo("fp-13", "Parte do 13º (R$)", d ? numBRouVazio(d.parte13) : "", 'oninput="folhaRecalc()"')}
+      ${campo("fp-fer", "Férias (R$)", d ? numBRouVazio(d.ferias) : "", 'oninput="folhaRecalc()"')}
+      ${campo("fp-aju", "Ajuda / extra (R$)", d ? numBRouVazio(d.ajuda) : "", 'oninput="folhaRecalc()"')}
+    </div>
+    ${hon ? "" : `<div class="fp-flags">
+      <label><input type="checkbox" class="fp-chk-al" ${f.al?"":"checked"} onchange="folhaFlag(this,'aux')"> Almoço no local (sem alimentação)</label>
+      <label><input type="checkbox" class="fp-chk-tr" ${f.tr?"":"checked"} onchange="folhaFlag(this,'tra')"> Cartão de transporte (sem transporte)</label>
+    </div>`}
+    <div class="fp-vales"><div class="fp-vales-hdr"><span>Vales do mês</span><button type="button" class="topbar-btn fp-mini" onmousedown="event.preventDefault()" onclick="folhaAddVale(this)">＋ vale</button></div><div class="fp-vales-lista">${vales}</div></div>
+    <div class="fp-sep">
+      <p class="fp-sep-tit">💳 Pagar separado</p>
+      <div class="fp-sep-l"><span>Salário a pagar${hon?"":" (líquido + benefícios − vales)"}</span><b class="fp-r-saldo">R$ 0,00</b></div>
+      <div class="fp-sep-l"><span>🏖 Férias</span><b class="fp-r-fer">R$ 0,00</b></div>
+      <div class="fp-sep-l"><span>🎄 13º</span><b class="fp-r-13">R$ 0,00</b></div>
+      <div class="fp-sep-l"><span>➕ Ajuda</span><b class="fp-r-aju">R$ 0,00</b></div>
+      <div class="fp-sep-l fp-soma"><span>Soma de tudo (só para conferir)</span><b class="fp-r-soma">R$ 0,00</b></div>
+    </div>
+  </div>`;
+}
+function folhaValeHtml(dataISO, valor){
+  return `<div class="fp-vale"><input type="date" class="ent-sel fp-vd" min="2000-01-01" max="2100-12-31" value="${dataISO||""}" aria-label="Data do vale"><input class="ent-sel fp-vv" inputmode="decimal" autocomplete="off" placeholder="Valor" value="${valor?numBR(valor):""}" oninput="folhaRecalc()" aria-label="Valor do vale"><button type="button" class="topbar-btn fp-mini" title="Tirar este vale" onmousedown="event.preventDefault()" onclick="this.parentNode.remove();folhaRecalc()">✕</button></div>`;
+}
+function folhaAddVale(btn){
+  const card = btn.closest(".fp-card"), lista = card.querySelector(".fp-vales-lista");
+  lista.insertAdjacentHTML("beforeend", folhaValeHtml("", 0));
+  const ult = lista.lastElementChild; if(ult) ult.querySelector(".fp-vv").focus();
+}
+function folhaDiasAtual(){
+  const s = ($("folhaDias").value||"").trim();
+  return /^\d{1,2}$/.test(s) && +s<=31 ? +s : null;
+}
+function folhaBeneficios(card, dias, pa){   // {aux, tra} ou null onde não dá para calcular
+  const hon = card.dataset.vinc==="honorario"; if(hon) return {aux:0, tra:0};
+  const noAl = card.querySelector(".fp-chk-al").checked, noTr = card.querySelector(".fp-chk-tr").checked;
+  return {
+    aux: noAl ? 0 : (pa && dias!==null ? r2(dias*pa.al) : null),
+    tra: noTr ? 0 : (pa && dias!==null ? r2(dias*pa.tr) : null),
+  };
+}
+// Preenche alimentação/transporte (menos os que você digitou à mão)
+function folhaAutoCard(card, forcar){
+  if(card.dataset.vinc==="honorario") return;
+  const E = FOLHA_EST, dias = folhaDiasAtual(), pa = PARAM_FOLHA[E.bano], b = folhaBeneficios(card, dias, pa);
+  [["aux","fp-aux","fp-aux-hint","fp-chk-al",pa&&pa.al,"almoço no local — sem auxílio alimentação"],
+   ["tra","fp-tra","fp-tra-hint","fp-chk-tr",pa&&pa.tr,"cartão de transporte — sem vale transporte"]].forEach(([k,cin,chint,cchk,vd,txtSem])=>{
+    const inp = card.querySelector("."+cin), hint = card.querySelector("."+chint), sem = card.querySelector("."+cchk).checked;
+    if(forcar) inp.dataset.manual = "";
+    if(inp.dataset.manual!=="1" && b[k]!==null) inp.value = numBR(b[k]);
+    hint.innerHTML = sem ? txtSem :
+      inp.dataset.manual==="1" ? 'valor digitado à mão <button type="button" class="desp-usar" onmousedown="event.preventDefault()" onclick="folhaRecalcular(this)">↺ calcular de novo</button>' :
+      (b[k]!==null ? dias+" dias × "+fBRL(vd) : (!pa ? "defina o valor por dia do ano" : "informe os dias trabalhados"));
+  });
+}
+function folhaManual(inp){ inp.dataset.manual = "1"; folhaAutoCard(inp.closest(".fp-card"), false); folhaRecalc(); }
+function folhaRecalcular(btn){   // volta ao cálculo automático
+  const card = btn.closest(".fp-card"), inp = btn.closest("div").querySelector("input");
+  inp.dataset.manual = ""; folhaAutoCard(card, false); folhaRecalc();
+}
+function folhaFlag(chk, qual){   // marcou/desmarcou "almoço no local" / "cartão de transporte"
+  const card = chk.closest(".fp-card"); card.querySelector(qual==="aux"?".fp-aux":".fp-tra").dataset.manual = "";
+  folhaAutoCard(card, false); folhaRecalc();
+}
+function folhaAutoTudo(){
+  document.querySelectorAll("#folhaCards .fp-card").forEach(c=>folhaAutoCard(c, false));
+  folhaDiasHint(); folhaRecalc();
+}
+function folhaDiasHint(){
+  const E = FOLHA_EST; if(!E) return;
+  const sug = diasUteisMes(E.bano, E.bmes), pa = PARAM_FOLHA[E.bano], dias = folhaDiasAtual();
+  const fer = sug.feriados.map(f=>pad2(f.dia)+"/"+pad2(E.bmes)+" "+f.nome).join(", ");
+  $("folhaDiasSug").innerHTML = `Sugestão: <b>${sug.dias}</b> dias úteis (${sug.semana} dias de segunda a sexta${sug.feriados.length?" − "+sug.feriados.length+" feriado(s) nacional(is): "+escHtml(fer):", sem feriado nacional"}).`
+    +(dias!==sug.dias ? ' <button type="button" class="desp-usar" onmousedown="event.preventDefault()" onclick="folhaUsarDias('+sug.dias+')">usar '+sug.dias+'</button>' : "")
+    +'<br><span style="color:var(--muted)">Carnaval, Corpus Christi e feriados do Rio não são descontados — ajuste o número se precisar.</span>';
+  $("folhaParamInfo").innerHTML = pa
+    ? `Valor por dia em ${E.bano}: alimentação <b>${fBRL(pa.al)}</b> · transporte <b>${fBRL(pa.tr)}</b> <button type="button" class="desp-usar" onmousedown="event.preventDefault()" onclick="abrirParamFolha(${E.bano})">⚙ alterar</button>`
+    : `<span style="color:var(--saida)">Ainda não há valor por dia para ${E.bano}.</span> <button type="button" class="desp-usar" onmousedown="event.preventDefault()" onclick="abrirParamFolha(${E.bano})">⚙ definir valores de ${E.bano}</button>`;
+}
+function folhaUsarDias(n){ $("folhaDias").value = n; folhaAutoTudo(); }
+
+function folhaLerCard(card){
+  const num = cls => { const el = card.querySelector("."+cls); if(!el) return 0; const s = (el.value||"").trim(); if(!s) return 0; const v = parseValorBR(s); return isNaN(v) ? NaN : v; };
+  const vales = [...card.querySelectorAll(".fp-vale")].map(r=>{
+    const s = r.querySelector(".fp-vv").value.trim(), d = r.querySelector(".fp-vd").value;
+    return { el:r.querySelector(".fp-vv"), data:d, valor: s ? parseValorBR(s) : (d ? NaN : null) };
+  }).filter(v=>v.valor!==null);
+  return { sal:num("fp-sal"), aux:num("fp-aux"), tra:num("fp-tra"), p13:num("fp-13"), fer:num("fp-fer"), aju:num("fp-aju"), vales };
+}
+function folhaCalcCard(card){
+  const x = folhaLerCard(card), z = v => isNaN(v) ? 0 : v;
+  const total = r2(z(x.sal)+z(x.aux)+z(x.tra)), vales = r2(x.vales.reduce((s,v)=>s+z(v.valor),0)), saldo = r2(total-vales);
+  const fer = r2(z(x.fer)), p13 = r2(z(x.p13)), aju = r2(z(x.aju));
+  return { total, vales, saldo, fer, p13, aju, soma: r2(saldo+fer+p13+aju) };
+}
+function folhaRecalc(){
+  const T = {saldo:0, fer:0, p13:0, aju:0, soma:0, vales:0, total:0};
+  document.querySelectorAll("#folhaCards .fp-card").forEach(card=>{
+    const c = folhaCalcCard(card), set = (cls,v)=>{ card.querySelector("."+cls).textContent = fBRL(v); };
+    set("fp-saldo",c.saldo); set("fp-r-saldo",c.saldo); set("fp-r-fer",c.fer); set("fp-r-13",c.p13); set("fp-r-aju",c.aju); set("fp-r-soma",c.soma);
+    card.querySelector(".fp-saldo").style.color = c.saldo<0 ? "var(--saida)" : "";
+    card.classList.toggle("fp-neg", c.saldo<0);
+    Object.keys(T).forEach(k=>{ T[k] += c[k]||0; });
+  });
+  Object.keys(T).forEach(k=>{ T[k] = r2(T[k]); });
+  $("folhaTotais").innerHTML = `<span>Salários a pagar: <b>${fBRL(T.saldo)}</b></span><span>🏖 Férias: <b>${fBRL(T.fer)}</b></span><span>🎄 13º: <b>${fBRL(T.p13)}</b></span><span>➕ Ajuda: <b>${fBRL(T.aju)}</b></span><span class="geral">Soma de tudo: <b>${fBRL(T.soma)}</b></span>`;
+}
+
+function abrirFolha(){
+  if(!SOU_ADMIN()) return;
+  const mes = folhaMesAtual(); if(!mes) return;
+  const ben = mesDoBeneficio(ANO, mes), md = DF[MESES_NOME[mes-1].toUpperCase()];
+  FOLHA_EST = { mes, ano:ANO, bano:ben.ano, bmes:ben.mes, existia:!!md };
+  $("folhaTitulo").textContent = (md ? "Editar a folha de " : "Lançar a folha de ")+MESES_NOME[mes-1]+" / "+ANO;
+  $("folhaBenefTit").innerHTML = `Dias trabalhados em <b>${MESES_NOME[ben.mes-1]}${ben.ano!==ANO?" de "+ben.ano:""}</b> <span style="color:var(--muted);font-weight:400">(base dos benefícios — a folha de ${MESES_NOME[mes-1]} paga o auxílio de ${MESES_NOME[ben.mes-1]})</span>`;
+  const salvo = DIAS_TRAB[ben.ano+"-"+ben.mes];
+  $("folhaDias").value = salvo!==undefined ? salvo : diasUteisMes(ben.ano, ben.mes).dias;
+  $("folhaCards").innerHTML = folhaPessoasDoMes(mes).map(({f,d})=>folhaCardHtml(f,d)).join("");
+  // valores que já estavam salvos e diferem do cálculo → ficam como "digitados à mão"
+  const dias = folhaDiasAtual(), pa = PARAM_FOLHA[ben.ano];
+  document.querySelectorAll("#folhaCards .fp-card").forEach(card=>{
+    if(card.dataset.vinc==="honorario") return;
+    const b = folhaBeneficios(card, dias, pa), d = (md||{funcionarios:{}}).funcionarios[card.dataset.nome];
+    if(d){
+      const aux = card.querySelector(".fp-aux"), tra = card.querySelector(".fp-tra");
+      aux.dataset.manual = (b.aux===null || Math.abs(b.aux-d.auxAlim)>0.005) ? "1" : "";
+      tra.dataset.manual = (b.tra===null || Math.abs(b.tra-d.transporte)>0.005) ? "1" : "";
+    }
+    folhaAutoCard(card, false);
+  });
+  folhaDiasHint(); folhaRecalc();
+  $("folhaExcluir").style.display = md ? "" : "none";
+  const msg = $("folhaMsg"); msg.style.color = "var(--muted)"; msg.textContent = "";
+  $("folhaNovoNome").value = ""; $("folhaNovoVinc").value = "clt";
+  $("folhaSalvar").disabled = false; $("folhaSalvar").textContent = "Salvar folha";
+  $("folhaModal").style.display = "flex"; $("folhaModal").scrollTop = 0;
+}
+function fecharFolha(){ $("folhaModal").style.display = "none"; FOLHA_EST = null; }
+
+async function folhaNovaPessoa(btn){
+  const msg = $("folhaMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  const nome = limpaEspacos($("folhaNovoNome").value), vinculo = $("folhaNovoVinc").value;
+  if(!nome){ msg.textContent = "Informe o nome da pessoa."; $("folhaNovoNome").focus(); return; }
+  if(nome.length>40){ msg.textContent = "O nome pode ter até 40 letras."; return; }
+  if(FUNCS.some(f=>chaveTexto(f.nome).toLowerCase()===chaveTexto(nome).toLowerCase())){ msg.textContent = "Já existe uma pessoa com esse nome."; return; }
+  btn.disabled = true;
+  try{
+    const r = await dbEscrever("POST", "rpc/salvar_funcionario", {p:{nome, vinculo, recebe_alimentacao:vinculo!=="honorario", recebe_transporte:vinculo!=="honorario", ativo:true}}, "return=representation");
+    if(!r || !r.id) throw new Error("O banco não confirmou o cadastro.");
+    FUNCS.push({ id:r.id, nome:r.nome||nome, vinculo, al:vinculo!=="honorario", tr:vinculo!=="honorario", ativo:true });
+    // guarda o que já foi digitado nos cartões e acrescenta o novo
+    const f = FUNCS[FUNCS.length-1], lista = $("folhaCards");
+    lista.insertAdjacentHTML("beforeend", folhaCardHtml(f, null));
+    const card = lista.lastElementChild; folhaAutoCard(card, false); folhaRecalc();
+    $("folhaNovoNome").value = "";
+    msg.style.color = "var(--muted)"; msg.textContent = "✅ "+f.nome+" cadastrada. Preencha os valores dela abaixo.";
+    card.scrollIntoView({block:"center"});
+  }catch(e){ msg.textContent = folhaErroTexto(e); }
+  finally{ btn.disabled = false; }
+}
+
+function folhaLerFormulario(){
+  const marca = (el,m)=>{ el.classList.add("erro"); return {erro:m, el}; };
+  document.querySelectorAll("#folhaModal .erro").forEach(e=>e.classList.remove("erro"));
+  const diasTxt = ($("folhaDias").value||"").trim();
+  if(diasTxt && folhaDiasAtual()===null) return marca($("folhaDias"), "Dias trabalhados: informe um número de 0 a 31.");
+  const pessoas = [];
+  for(const card of document.querySelectorAll("#folhaCards .fp-card")){
+    const nome = card.dataset.nome, x = folhaLerCard(card);
+    const campos = [["fp-sal",x.sal,"valor do salário"],["fp-aux",x.aux,"alimentação"],["fp-tra",x.tra,"transporte"],["fp-13",x.p13,"13º"],["fp-fer",x.fer,"férias"],["fp-aju",x.aju,"ajuda"]];
+    for(const [cls,v,rot] of campos){
+      const el = card.querySelector("."+cls); if(!el) continue;
+      if(isNaN(v) || v<0 || v>=1e9) return marca(el, nome+": "+rot+" inválido(a). Use números como 1.234,50.");
+    }
+    for(const v of x.vales) if(isNaN(v.valor) || v.valor<=0 || v.valor>=1e9) return marca(v.el, nome+": informe o valor de cada vale (maior que zero).");
+    pessoas.push({ funcionario_id:card.dataset.fid, salario:x.sal, aux_alimentacao:x.aux, transporte:x.tra, parte_13:x.p13, ferias:x.fer, ajuda:x.aju,
+                   vales:x.vales.map(v=>({data:v.data||"", valor:v.valor})) });
+  }
+  return { corpo:{ ano:FOLHA_EST.ano, mes:FOLHA_EST.mes, dias_beneficio: diasTxt==="" ? "" : folhaDiasAtual(), pessoas } };
+}
+async function salvarFolhaPainel(){
+  const msg = $("folhaMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  const r = folhaLerFormulario();
+  if(r.erro){ msg.textContent = r.erro; r.el.focus(); return; }
+  const mes = FOLHA_EST.mes;
+  // saldo negativo: vales maiores que o total → confirma
+  const neg = [...document.querySelectorAll("#folhaCards .fp-card.fp-neg")].map(c=>c.dataset.nome);
+  if(neg.length && !confirm("Os vales de "+neg.join(", ")+" são maiores que o total do mês (saldo negativo).\n\nOK para salvar assim, Cancelar para corrigir.")) return;
+  const btn = $("folhaSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    // 1) quem mudou "almoço no local" / "cartão de transporte" / saiu: grava o cadastro
+    for(const card of document.querySelectorAll("#folhaCards .fp-card")){
+      if(card.dataset.vinc==="honorario") continue;
+      const al = !card.querySelector(".fp-chk-al").checked, tr = !card.querySelector(".fp-chk-tr").checked;
+      if((al?1:0)!==+card.dataset.al0 || (tr?1:0)!==+card.dataset.tr0){
+        const f = FUNCS.find(x=>x.id===card.dataset.fid);
+        await dbEscrever("POST", "rpc/salvar_funcionario", {p:{id:f.id, nome:f.nome, vinculo:f.vinculo, recebe_alimentacao:al, recebe_transporte:tr, ativo:f.ativo}}, "return=representation");
+        f.al = al; f.tr = tr; card.dataset.al0 = al?1:0; card.dataset.tr0 = tr?1:0;
+      }
+    }
+    // 2) a folha do mês
+    const res = await dbEscrever("POST", "rpc/salvar_folha_mes", {p:r.corpo}, "return=representation");
+    if(!res || res.pessoas===undefined) throw new Error("O banco não confirmou a folha.");
+    const antes = FOLHA_EST.existia;
+    fecharFolha();
+    await recarregarFolha(mes);
+    mostrarToast("✅ Folha de "+MESES_NOME[mes-1]+(antes?" alterada":" lançada")+" — "+res.pessoas+" pessoa(s).", false, 5000);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar folha";
+    msg.style.color = "var(--saida)"; msg.textContent = folhaErroTexto(e);
+  }
+}
+async function excluirFolhaPainel(btnEl){
+  if(!FOLHA_EST) return;
+  const mes = FOLHA_EST.mes;
+  if(!confirm("Excluir a folha inteira de "+MESES_NOME[mes-1]+"/"+FOLHA_EST.ano+"? Ela sai dos totais do painel. (Fica registrada no histórico.)")) return;
+  btnEl.disabled = true; btnEl.textContent = "Excluindo...";
+  try{
+    await dbEscrever("POST", "rpc/excluir_folha_mes", {p_ano:FOLHA_EST.ano, p_mes:mes}, "return=representation");
+    fecharFolha();
+    await recarregarFolha(mes);
+    mostrarToast("🗑 Folha de "+MESES_NOME[mes-1]+" excluída.", false, 4000);
+  }catch(e){
+    btnEl.disabled = false; btnEl.textContent = "Excluir folha do mês";
+    const msg = $("folhaMsg"); msg.style.color = "var(--saida)"; msg.textContent = folhaErroTexto(e);
+  }
+}
+// Recarrega a folha do ano e mostra o mês pedido
+async function recarregarFolha(mesParaMostrar){
+  const a = "ano=eq."+ANO;
+  const [folha, funcs, vales, resumo] = await Promise.all([
+    dbGetTudo("folha_mensal?select=funcionario_id,mes,salario,aux_alimentacao,transporte,total,vales,saldo,parte_13,ferias,ajuda&"+a+"&order=mes,funcionario_id"),
+    buscarFuncionarios(),
+    dbGetTudo("vales?select=funcionario_id,mes,data,valor&"+a+"&order=mes,data,id"),
+    dbGetTudo("folha_resumo?select=mes,total_geral_planilha&"+a+"&order=mes"),
+    buscarParamsDias(),
+  ]);
+  FUNCS = montarFuncs(funcs);
+  DF = montarDF(folha, funcs, vales, resumo);
+  DD = completarMeses(DD);
+  const sel = $("mesSelect"); sel.innerHTML = "";
+  Object.keys(DD).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
+  if(mesParaMostrar){ const k = "Despesas "+MESES_NOME[mesParaMostrar-1]; if(DD[k]) MES = k; }
+  if(!DD[MES]) MES = Object.keys(DD).pop()||"";
+  sel.value = MES;
+  if(ABA==="folha") render();
+}
+
+// ── Valores por dia do ano ──
+function abrirParamFolha(ano){
+  if(!SOU_ADMIN()) return;
+  const pa = PARAM_FOLHA[ano];
+  $("fpmAno").value = ano;
+  $("fpmTitulo").textContent = "Valores por dia de "+ano;
+  $("fpmAl").value = pa ? numBR(pa.al) : ""; $("fpmTr").value = pa ? numBR(pa.tr) : "";
+  ["fpmAl","fpmTr"].forEach(id=>$(id).classList.remove("erro"));
+  const msg = $("fpmMsg"); msg.style.color = "var(--muted)"; msg.textContent = pa ? "" : "Ainda não há valores para "+ano+".";
+  $("fpmSalvar").disabled = false; $("fpmSalvar").textContent = "Salvar valores";
+  $("folhaParamModal").style.display = "flex";
+  setTimeout(()=>$("fpmAl").focus(), 30);
+}
+function fecharParamFolha(){ $("folhaParamModal").style.display = "none"; }
+async function salvarParamFolha(){
+  const msg = $("fpmMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  ["fpmAl","fpmTr"].forEach(id=>$(id).classList.remove("erro"));
+  const ano = +$("fpmAno").value, al = parseValorBR($("fpmAl").value), tr = parseValorBR($("fpmTr").value);
+  if(isNaN(al) || al<0 || al>=1e6){ $("fpmAl").classList.add("erro"); msg.textContent = "Informe o valor por dia da alimentação (ex.: 32,00)."; return; }
+  if(isNaN(tr) || tr<0 || tr>=1e6){ $("fpmTr").classList.add("erro"); msg.textContent = "Informe o valor por dia do transporte (ex.: 14,70)."; return; }
+  const btn = $("fpmSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    await dbEscrever("POST", "rpc/salvar_parametros_folha", {p:{ano, valor_dia_alimentacao:al, valor_dia_transporte:tr}}, "return=representation");
+    PARAM_FOLHA[ano] = { al, tr };
+    fecharParamFolha();
+    if(FOLHA_EST){ folhaAutoTudo(); }   // folha aberta: recalcula os benefícios com o valor novo
+    mostrarToast("✅ Valores de "+ano+" salvos: alimentação "+fBRL(al)+" e transporte "+fBRL(tr)+" por dia.", false, 5000);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar valores";
+    msg.textContent = folhaErroTexto(e);
+  }
+}
+document.addEventListener("keydown", e=>{
+  if(e.key!=="Escape") return;
+  if($("folhaParamModal") && $("folhaParamModal").style.display==="flex") fecharParamFolha();
+  else if($("folhaModal") && $("folhaModal").style.display==="flex") fecharFolha();
+});
+
+// Tabela "Pagamentos do mês": cada tipo de pagamento em sua coluna, sem misturar; a soma é só conferência
+function tabelaPagamentos(funcs, mesNome){
+  const nomes = Object.keys(funcs);
+  const tot = k => r2(nomes.reduce((s,n)=>s+(funcs[n][k]||0),0));
+  const cols = [["saldo","Salário a pagar",true],["ferias","🏖 Férias",tot("ferias")>0],["parte13","🎄 13º",tot("parte13")>0],["ajuda","➕ Ajuda",tot("ajuda")>0]].filter(c=>c[2]);
+  const soma = f => r2((f.saldo||0)+(f.ferias||0)+(f.parte13||0)+(f.ajuda||0));
+  const sec = div("fade-in pag-sep");
+  sec.innerHTML = `<div class="section-hdr"><div><p class="section-title">Pagamentos de ${mesNome} — cada um é pago separado</p>
+    <p class="section-sub">Cada coluna é um pagamento diferente. A coluna <b>Soma</b> serve só para conferência.</p></div></div>
+    <div class="table-card"><table><thead><tr><th>Pessoa</th>${cols.map(c=>`<th class="td-right">${c[1]}</th>`).join("")}<th class="td-right pag-soma">Soma</th></tr></thead>
+    <tbody>${nomes.map(n=>{ const f=funcs[n]; return `<tr data-nome="${escHtml(n)}"><td>${escHtml(n)}<span class="pag-vinc">${rotuloVinculo(n)}</span></td>${cols.map(c=>`<td class="td-right">${(f[c[0]]||0)?fBRL(f[c[0]]):"—"}</td>`).join("")}<td class="td-right pag-soma"><b>${fBRL(soma(f))}</b></td></tr>`; }).join("")}</tbody>
+    <tfoot><tr class="pag-tot"><td>Total de cada pagamento</td>${cols.map(c=>`<td class="td-right"><b>${fBRL(tot(c[0]))}</b></td>`).join("")}<td class="td-right pag-soma"><b>${fBRL(r2(nomes.reduce((s,n)=>s+soma(funcs[n]),0)))}</b></td></tr></tfoot></table></div>`;
+  return sec;
+}
+
 // ── VISÃO GERAL DO MÊS ──
 function renderFolhaVisao(el, mesNome, mesDados){
   if(!mesDados || !mesDados.funcionarios || Object.keys(mesDados.funcionarios).length===0){
@@ -3975,7 +4486,8 @@ function renderFolhaVisao(el, mesNome, mesDados){
   const totalGeral = Object.values(funcs).reduce((s,f)=>s+(f.total||0),0);
   const totalVales = Object.values(funcs).reduce((s,f)=>s+(f.vales||0),0);
   const totalSaldo = Object.values(funcs).reduce((s,f)=>s+(f.saldo||0),0);
-  const totalSal   = Object.values(funcs).reduce((s,f)=>s+(f.salario||0),0);
+  const totalHonor = Object.values(funcs).filter(f=>f.vinculo==="honorario").reduce((s,f)=>s+(f.total||0),0);
+  const totalSal   = Object.values(funcs).filter(f=>f.vinculo!=="honorario").reduce((s,f)=>s+(f.salario||0),0);
   const totalBenef = Object.values(funcs).reduce((s,f)=>s+(f.auxAlim||0)+(f.transporte||0),0);
 
   // KPIs
@@ -4007,11 +4519,13 @@ function renderFolhaVisao(el, mesNome, mesDados){
       ${(totalFerias>0||totalP13>0||totalExtra>0)?`<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Saldo + Férias + 13° + Extra</p>`:`<p style="font-size:11px;color:rgba(255,255,255,.4);margin-top:4px">Apenas saldo deste mês</p>`}
     </div>`;
   el.appendChild(banner);
+  el.appendChild(tabelaPagamentos(funcs, mesNome));   // cada pagamento em sua coluna (sem somar), com a soma só para conferir
 
   [
     {label:"Total Folha",       val:totalGeral,   icon:"👥", cls:"kpi-saida",  sub:mesNome+" · "+ANO},
-    {label:"Total Salários",    val:totalSal,     icon:"💰", cls:"kpi-accent", sub:"bruto mensal"},
+    {label:"Salários Líquidos", val:totalSal,     icon:"💰", cls:"kpi-accent", sub:"valor do contador (sem honorários)"},
     {label:"Total Benefícios",  val:totalBenef,   icon:"🎁", cls:"kpi-accent", sub:"Alim. + Transp."},
+    ...(totalHonor>0 ? [{label:"Honorários", val:totalHonor, icon:"⚖️", cls:"kpi-accent", sub:"valor único, sem benefícios"}] : []),
     {label:"Saldo a Pagar",     val:totalSaldo,   icon:"✅", cls:"kpi-entrada",sub:"após descontar vales"},
     {label:"Férias Pendentes",  val:totalFerias,  icon:"🏖", cls:"kpi-gold",   sub:"a quitar"},
     {label:"Parte do 13°",      val:totalP13,     icon:"🎄", cls:"kpi-gold",   sub:"provisionado"},
@@ -4040,12 +4554,8 @@ function renderFolhaVisao(el, mesNome, mesDados){
   g.appendChild(cPiz); g.appendChild(cBar);
   el.appendChild(g);
 
-  // Cards por funcionário
-  const sec=div("fade-in");
-  sec.innerHTML="<div class=\"section-hdr\"><div><p class=\"section-title\">Detalhamento por Funcionario</p></div></div>";
-  const grid=div("func-grid");
-
-  Object.entries(funcs).forEach(([nome,f])=>{
+  // Cards por pessoa, em blocos: funcionários da igreja, no CPF do Pastor e honorários
+  const cardPessoa = (nome,f)=>{
     const cor = FUNC_CORES[nome] || {bg:"#334155",light:"#f8fafc",ft:"#334155"};
     const ini = nome.charAt(0).toUpperCase();
     const c=div("func-card");
@@ -4054,7 +4564,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
         <div class="func-avatar" style="background:${cor.bg}">${ini}</div>
         <div>
           <p class="func-nome">${nome}</p>
-          <p class="func-tipo">${FUNC_TIPO[nome]||"Funcionário"}</p>
+          <p class="func-tipo">${rotuloVinculo(nome)}</p>
         </div>
         <div class="func-total-hdr">
           <p class="func-total-val" style="color:${cor.ft}">${fBRL(f.total||0)}</p>
@@ -4062,32 +4572,47 @@ function renderFolhaVisao(el, mesNome, mesDados){
         </div>
       </div>
       <div class="func-card-body">
-        <div class="func-row"><span class="func-row-label">Salário</span><span class="func-row-val">${fBRL(f.salario||0)}</span></div>
+        ${f.vinculo==="honorario" ? `<div class="func-row"><span class="func-row-label">Honorário</span><span class="func-row-val">${fBRL(f.total||f.salario||0)}</span></div>` : `
+        <div class="func-row"><span class="func-row-label">Salário líquido</span><span class="func-row-val">${fBRL(f.salario||0)}</span></div>
         <div class="func-row"><span class="func-row-label">Aux. Alimentação</span><span class="func-row-val">${fBRL(f.auxAlim||0)}</span></div>
-        <div class="func-row"><span class="func-row-label">Transporte</span><span class="func-row-val">${fBRL(f.transporte||0)}</span></div>
+        <div class="func-row"><span class="func-row-label">Transporte</span><span class="func-row-val">${fBRL(f.transporte||0)}</span></div>`}
         ${f.parte13>0?`<div class="func-row"><span class="func-row-label">Parte 13°</span><span class="func-row-val">${fBRL(f.parte13)}</span></div>`:""}
         ${f.ferias>0?`<div class="func-row"><span class="func-row-label">Férias</span><span class="func-row-val">${fBRL(f.ferias)}</span></div>`:""}
         ${f.ajuda>0?`<div class="func-row"><span class="func-row-label">Ajuda</span><span class="func-row-val">${fBRL(f.ajuda)}</span></div>`:""}
-        <div class="func-row"><span class="func-row-label">Vales</span><span class="func-row-val func-row-vale">- ${fBRL(f.vales||0)}</span></div>
-        <div class="func-row"><span class="func-row-label" style="font-weight:700">Saldo a Pagar</span><span class="func-row-val func-row-saldo" style="font-size:14px">${fBRL(f.saldo||0)}</span></div>
+        ${(f.vinculo!=="honorario" || (f.vales||0)>0) ? `<div class="func-row"><span class="func-row-label">Vales</span><span class="func-row-val func-row-vale">- ${fBRL(f.vales||0)}</span></div>` : ""}
+        <div class="func-row"><span class="func-row-label" style="font-weight:700">${f.vinculo==="honorario"?"A pagar":"Saldo a Pagar"}</span><span class="func-row-val func-row-saldo" style="font-size:14px">${fBRL(f.saldo||0)}</span></div>
         ${((f.ferias||0)+(f.parte13||0)+(f.ajuda||0))>0?`
-        <div style="background:#fefce8;margin:8px -18px -14px;padding:10px 18px;border-top:1.5px dashed #fcd34d;border-radius:0 0 12px 12px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#92400e">⚡ Total Real a Pagar</span>
-            <span style="font-size:15px;font-weight:900;color:#92400e">${fBRL((f.saldo||0)+(f.ferias||0)+(f.parte13||0)+(f.ajuda||0))}</span>
-          </div>
-          <div style="display:flex;flex-wrap:wrap;gap:4px">
-            ${f.ferias>0?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:99px;font-weight:600">🏖 Férias: ${fBRL(f.ferias)}</span>`:""}
-            ${f.parte13>0?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:99px;font-weight:600">🎄 13°: ${fBRL(f.parte13)}</span>`:""}
-            ${f.ajuda>0?`<span style="font-size:10px;background:#fef3c7;color:#92400e;padding:2px 7px;border-radius:99px;font-weight:600">➕ Extra: ${fBRL(f.ajuda)}</span>`:""}
-          </div>
+        <div class="card-sep" style="background:#fefce8;margin:8px -18px -14px;padding:10px 18px;border-top:1.5px dashed #fcd34d;border-radius:0 0 12px 12px;">
+          <p style="margin:0 0 6px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:#92400e">💳 Pagar separado</p>
+          <div class="sep-l"><span>${f.vinculo==="honorario"?"Honorário":"Salário a pagar"}</span><b>${fBRL(f.saldo||0)}</b></div>
+          ${f.ferias>0?`<div class="sep-l"><span>🏖 Férias</span><b>${fBRL(f.ferias)}</b></div>`:""}
+          ${f.parte13>0?`<div class="sep-l"><span>🎄 13°</span><b>${fBRL(f.parte13)}</b></div>`:""}
+          ${f.ajuda>0?`<div class="sep-l"><span>➕ Ajuda</span><b>${fBRL(f.ajuda)}</b></div>`:""}
+          <div class="sep-l sep-soma"><span>Soma de tudo (conferência)</span><b>${fBRL((f.saldo||0)+(f.ferias||0)+(f.parte13||0)+(f.ajuda||0))}</b></div>
         </div>`:""}
         ${(f.valesHist||[]).length>0?`<div class="func-vales-badge">📋 ${(f.valesHist||[]).length} vale(s) no mês</div>`:""}
       </div>`;
-    grid.appendChild(c);
+    return c;
+  };
+  const blocos=div("fade-in");
+  VINCULOS.forEach(v=>{
+    const lista = Object.entries(funcs).filter(([n])=>vinculoDe(n)===v.id);
+    if(!lista.length) return;
+    const sub = lista.reduce((a,[,f])=>({total:a.total+(f.total||0), vales:a.vales+(f.vales||0), saldo:a.saldo+(f.saldo||0)}),{total:0,vales:0,saldo:0});
+    const sec=div("pessoal-bloco");
+    sec.dataset.vinculo=v.id;
+    sec.innerHTML=`<div class="section-hdr pessoal-bloco-hdr"><div><p class="section-title">${v.titulo}</p><p class="section-sub">${v.nota}</p></div>
+      <div class="pessoal-bloco-tot">
+        <span><i>Total do mês</i><b>${fBRL(sub.total)}</b></span>
+        ${v.id!=="honorario"?`<span><i>Vales</i><b>- ${fBRL(sub.vales)}</b></span>`:""}
+        <span><i>A pagar</i><b class="pg">${fBRL(sub.saldo)}</b></span>
+      </div></div>`;
+    const grid=div("func-grid");
+    lista.forEach(([nome,f])=>grid.appendChild(cardPessoa(nome,f)));
+    sec.appendChild(grid);
+    blocos.appendChild(sec);
   });
-  sec.appendChild(grid);
-  el.appendChild(sec);
+  el.appendChild(blocos);
 
   setTimeout(()=>{
     // Pizza
@@ -4153,17 +4678,20 @@ function renderFolhaComparativo(el, mesNome){
 
   const tb=tbl.querySelector("#tblFuncComp");
   let totSal=0,totBen=0,totExt=0,totTot=0,totVal=0,totSal2=0;
-  funcNames.forEach(nome=>{
+  const gruposUsados = VINCULOS.filter(v=>funcNames.some(n=>vinculoDe(n)===v.id));
+  gruposUsados.forEach(v=>{
+    let sSal=0,sBen=0,sExt=0,sTot=0,sVal=0,sSld=0;
+    funcNames.filter(n=>vinculoDe(n)===v.id).forEach(nome=>{
     const f=funcs[nome]; const cor=(FUNC_CORES[nome]||{ft:"#334155"}).ft;
     const benef=(f.auxAlim||0)+(f.transporte||0);
     const extras=(f.parte13||0)+(f.ferias||0)+(f.ajuda||0);
-    totSal+=f.salario||0; totBen+=benef; totExt+=extras;
-    totTot+=f.total||0; totVal+=f.vales||0; totSal2+=f.saldo||0;
+    sSal+=f.salario||0; totSal+=f.salario||0; sBen+=benef; totBen+=benef; sExt+=extras; totExt+=extras;
+    sTot+=f.total||0; sVal+=f.vales||0; sSld+=f.saldo||0; totTot+=f.total||0; totVal+=f.vales||0; totSal2+=f.saldo||0;
     const tr=document.createElement("tr");
     tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
       <div style="width:10px;height:10px;border-radius:50%;background:${(FUNC_CORES[nome]||{bg:"#334155"}).bg};flex-shrink:0"></div>
       <span class="td-bold">${nome}</span></div></td>
-      <td style="font-size:11px;color:var(--muted)">${FUNC_TIPO[nome]||""}</td>
+      <td style="font-size:11px;color:var(--muted)">${rotuloVinculo(nome)}</td>
       <td class="td-right">${fBRL(f.salario||0)}</td>
       <td class="td-right">${fBRL(benef)}</td>
       <td class="td-right">${fBRL(extras)}</td>
@@ -4171,6 +4699,15 @@ function renderFolhaComparativo(el, mesNome){
       <td class="td-right" style="color:#92400e;font-weight:700">${fBRL(f.vales||0)}</td>
       <td class="td-right td-green">${fBRL(f.saldo||0)}</td>`;
     tb.appendChild(tr);
+    });
+    if(gruposUsados.length>1){
+      const trS=document.createElement("tr");
+      trS.className="comp-subtotal"; trS.dataset.vinculo=v.id; trS.style.background="var(--bg)";
+      trS.innerHTML=`<td class="td-bold" colspan="2" style="font-size:12px">Subtotal — ${v.titulo}</td>
+        <td class="td-right">${fBRL(sSal)}</td><td class="td-right">${fBRL(sBen)}</td><td class="td-right">${fBRL(sExt)}</td>
+        <td class="td-right td-bold">${fBRL(sTot)}</td><td class="td-right" style="color:#92400e">${fBRL(sVal)}</td><td class="td-right td-green">${fBRL(sSld)}</td>`;
+      tb.appendChild(trS);
+    }
   });
   const trTot=document.createElement("tr");
   trTot.style.background="var(--bg)";
