@@ -1023,8 +1023,11 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .desp-full { grid-column: 1 / -1; }
 .desp-in { width: 100%; box-sizing: border-box; }
 .desp-in.erro { border-color: var(--saida); background: #fff5f5; }
-.desp-hint { margin: -4px 0 0; font-size: 12px; color: var(--muted); min-height: 16px; }
+.desp-hint { margin: -4px 0 0; font-size: 12px; line-height: 18px; color: var(--muted); min-height: 18px; }
 .desp-hint.aviso { color: #a3620a; }
+.desp-hint b { color: var(--navy,#1a1a2e); }
+.desp-usar { font: inherit; font-size: 12px; margin-left: 4px; padding: 1px 8px; border: 1px solid var(--border,#d0d7e2); border-radius: 999px; background: #fff; color: var(--accent,#2563eb); cursor: pointer; }
+.desp-usar:hover { background: #eef2ff; }
 .lanc-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
 @media (max-width: 520px) { .desp-grid { grid-template-columns: 1fr; } }
 .comp-grupo-label {
@@ -1413,11 +1416,12 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
     <div class="desp-grid">
       <div><label class="ia-form-label" for="despData">Data</label><input id="despData" type="date" min="2000-01-01" max="2100-12-31" class="ent-sel desp-in"></div>
       <div><label class="ia-form-label" for="despValor">Valor (R$)</label><input id="despValor" inputmode="decimal" autocomplete="off" placeholder="Ex.: 1.234,50" class="ent-sel desp-in"></div>
-      <div class="desp-full"><label class="ia-form-label" for="despDescricao">Descrição</label><input id="despDescricao" list="despListaDescs" maxlength="200" autocomplete="off" placeholder="Ex.: Conta de luz" class="ent-sel desp-in"></div>
-      <div><label class="ia-form-label" for="despCategoria">Categoria</label><input id="despCategoria" list="despListaCats" maxlength="60" autocomplete="off" oninput="despCategoriaMudou()" placeholder="Escolha ou digite" class="ent-sel desp-in"></div>
-      <div><label class="ia-form-label" for="despForma">Forma de pagamento</label><input id="despForma" list="despListaFormas" maxlength="40" autocomplete="off" placeholder="Ex.: PIX" class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despDescricao">Descrição</label><input id="despDescricao" list="despListaDescs" maxlength="200" autocomplete="off" oninput="despDescMudou()" onchange="despAjustarCampo('descricao','despDescricao');despDescMudou()" placeholder="Ex.: Conta de luz" class="ent-sel desp-in"></div>
+      <p id="despDescHint" class="desp-full desp-hint"></p>
+      <div><label class="ia-form-label" for="despCategoria">Categoria</label><input id="despCategoria" list="despListaCats" maxlength="60" autocomplete="off" oninput="despCategoriaMudou()" onchange="despAjustarCampo('categoria','despCategoria');despCategoriaMudou()" placeholder="Escolha ou digite" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="despForma">Forma de pagamento</label><input id="despForma" list="despListaFormas" maxlength="40" autocomplete="off" onchange="despAjustarCampo('forma_pagamento','despForma')" placeholder="Ex.: PIX" class="ent-sel desp-in"></div>
       <p id="despHint" class="desp-full desp-hint"></p>
-      <div class="desp-full"><label class="ia-form-label" for="despResp">Responsável (quem pagou)</label><input id="despResp" list="despListaResps" maxlength="60" autocomplete="off" class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despResp">Responsável (quem pagou)</label><input id="despResp" list="despListaResps" maxlength="60" autocomplete="off" onchange="despAjustarCampo('responsavel','despResp')" class="ent-sel desp-in"></div>
       <div class="desp-full"><label class="ia-form-label" for="despObs">Observação (opcional)</label><input id="despObs" maxlength="300" autocomplete="off" class="ent-sel desp-in"></div>
       <div class="desp-full"><label class="ia-form-label" for="despLink">Comprovante — link do Google Drive (opcional)</label><input id="despLink" maxlength="500" autocomplete="off" placeholder="https://drive.google.com/file/d/..." class="ent-sel desp-in"></div>
       <div class="desp-full"><label class="ia-form-label" for="despArquivo">…ou anexe a foto / PDF do comprovante</label><input id="despArquivo" type="file" accept="image/*,application/pdf" class="desp-in" style="font-size:13px"><span style="display:block;font-size:11.5px;color:var(--muted);margin-top:3px">Se anexar, o arquivo vai para a pasta do mês no Drive e o link acima é substituído.</span></div>
@@ -1425,10 +1429,10 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
     <datalist id="despListaDescs"></datalist><datalist id="despListaCats"></datalist><datalist id="despListaFormas"></datalist><datalist id="despListaResps"></datalist>
     <p id="despMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px"></p>
     <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
-      <button class="topbar-btn" id="despExcluir" style="display:none;color:var(--saida)" onclick="excluirDespesa(DESP_EDIT, this)">Excluir</button>
+      <button class="topbar-btn" id="despExcluir" style="display:none;color:var(--saida)" onmousedown="event.preventDefault()" onclick="excluirDespesa(DESP_EDIT, this)">Excluir</button>
       <span style="flex:1"></span>
-      <button class="topbar-btn" onclick="fecharDespesa()">Cancelar</button>
-      <button class="topbar-btn" id="despSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarDespesaPainel()">Salvar despesa</button>
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharDespesa()">Cancelar</button>
+      <button class="topbar-btn" id="despSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="salvarDespesaPainel()">Salvar despesa</button>
     </div>
   </div>
 </div>
@@ -1890,23 +1894,74 @@ const r2 = v => Math.round((Number(v)||0)*100)/100;
 const dataBR = iso => { const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(iso||""); return m ? m[3]+"/"+m[2]+"/"+m[1] : "—"; };
 const textoOuTraco = t => { const s = (t==null) ? "" : String(t).trim(); return s || "—"; };
 
+// ── Padronização de textos: "Pr.Isaias", "pr.isaias" e "Pr. Isaías" são a MESMA coisa ──
+// A chave ignora maiúsculas, acentos, espaços e pontuação (o banco usa a mesma regra: chave_texto_min).
+function chaveTexto(s){
+  const t = String(s==null ? "" : s);
+  const k = t.normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  return k || t.trim().toLowerCase();
+}
+const limpaEspacos = s => String(s==null ? "" : s).replace(/\s+/g," ").trim();
+let CANON = { categoria:{}, descricao:{}, forma_pagamento:{}, responsavel:{} };   // chave -> escrita que vale
+let CANON_LISTA = { categoria:[], descricao:[], forma_pagamento:[], responsavel:[] };   // sugestões (uma por coisa)
+let GRUPO_POR_CHAVE = {};                                                         // chave da categoria -> grupo no painel
+// Entre as escritas da mesma coisa vence: a oficial, a mais usada, a mais "bem escrita", a mais recente.
+function montarCanon(saidas, categorias){
+  const acum = { categoria:{}, descricao:{}, forma_pagamento:{}, responsavel:{} };
+  const add = (campo, txt, nivel, n, ult)=>{
+    const t = limpaEspacos(txt); if(!t) return;
+    const k = chaveTexto(t), g = (acum[campo][k] = acum[campo][k] || {});
+    const o = (g[t] = g[t] || {txt:t, nivel:0, n:0, ult:""});
+    o.nivel = Math.max(o.nivel, nivel); o.n += n; if(ult && ult>o.ult) o.ult = ult;
+  };
+  (categorias||[]).forEach(c=>{ add("categoria", c.nome_bruto, 2, 0, ""); add("categoria", c.grupo, 1, 0, ""); });
+  FORMAS_PADRAO.forEach(f=>add("forma_pagamento", f, 2, 0, ""));
+  (saidas||[]).forEach(x=>{
+    add("categoria", x.categoria, 0, 1, x.data); add("descricao", x.descricao, 0, 1, x.data);
+    add("forma_pagamento", x.forma_pagamento, 0, 1, x.data); add("responsavel", x.responsavel, 0, 1, x.data);
+  });
+  const bonita = t => (/^[A-ZÀ-ÖØ-Ý0-9]/.test(t) && t!==t.toUpperCase()) ? 1 : 0;
+  const acento = t => /[^ -~]/.test(t) ? 1 : 0;
+  const melhor = (a,b)=> (b.nivel-a.nivel) || (b.n-a.n) || (bonita(b.txt)-bonita(a.txt)) || (acento(b.txt)-acento(a.txt))
+                         || (a.ult<b.ult?1:a.ult>b.ult?-1:0) || (a.txt<b.txt?-1:a.txt>b.txt?1:0);
+  const canon = {}, lista = {};
+  Object.keys(acum).forEach(campo=>{
+    canon[campo] = {}; lista[campo] = [];
+    Object.entries(acum[campo]).forEach(([k,g])=>{
+      const cand = Object.values(g).sort(melhor), v = cand[0];
+      canon[campo][k] = v.txt;
+      if(cand.some(o=>o.n>0 || o.nivel===2)) lista[campo].push(v.txt);   // grupos sem uso não entram nas sugestões
+    });
+  });
+  CANON = canon; CANON_LISTA = lista;
+  GRUPO_POR_CHAVE = {};
+  (categorias||[]).forEach(c=>{ GRUPO_POR_CHAVE[chaveTexto(c.grupo)] = c.grupo; });
+  (categorias||[]).forEach(c=>{ GRUPO_POR_CHAVE[chaveTexto(c.nome_bruto)] = c.grupo; });
+  return canon;
+}
+function canonDe(campo, txt){
+  const t = limpaEspacos(txt); if(!t) return "";
+  return (CANON[campo]||{})[chaveTexto(t)] || t;
+}
+
 function montarDD(saidas, categorias){
-  const grupo = {};
-  (categorias||[]).forEach(c=>{ grupo[c.nome_bruto] = c.grupo; });
+  const C = montarCanon(saidas, categorias);
   const porMes = {};
   (saidas||[]).forEach(s=>{ (porMes[s.mes] = porMes[s.mes] || []).push(s); });
   const DDn = {};
   Object.keys(porMes).map(Number).sort((a,b)=>a-b).forEach(m=>{
     const est = {}; let total = 0;
     porMes[m].forEach(s=>{
-      const cat = grupo[s.categoria] || s.categoria;
-      const desc = textoOuTraco(s.descricao);
+      const catRaw = canonDe("categoria", s.categoria) || s.categoria;
+      const cat = GRUPO_POR_CHAVE[chaveTexto(s.categoria)] || catRaw;
+      const dRaw = canonDe("descricao", s.descricao), fRaw = canonDe("forma_pagamento", s.forma_pagamento), rRaw = canonDe("responsavel", s.responsavel);
+      const desc = textoOuTraco(dRaw);
       (est[cat] = est[cat] || {});
       (est[cat][desc] = est[cat][desc] || []).push({
-        obs: textoOuTraco(s.observacao), resp: textoOuTraco(s.responsavel), data: dataBR(s.data),
-        forma: textoOuTraco(s.forma_pagamento), valor: Number(s.valor)||0, comp: s.comprovante_url||"",
+        obs: textoOuTraco(s.observacao), resp: textoOuTraco(rRaw), data: dataBR(s.data),
+        forma: textoOuTraco(fRaw), valor: Number(s.valor)||0, comp: s.comprovante_url||"",
         codigo: s.codigo, linha: s.origem_linha, aba: s.origem_aba,
-        raw: { data: s.data||"", categoria: s.categoria||"", descricao: s.descricao||"", forma: s.forma_pagamento||"", resp: s.responsavel||"", obs: s.observacao||"" }
+        raw: { data: s.data||"", categoria: catRaw||"", descricao: dRaw||"", forma: fRaw||"", resp: rRaw||"", obs: s.observacao||"" }
       });
       total += Number(s.valor)||0;
     });
@@ -2556,7 +2611,6 @@ async function carregarTudo(){
     RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
     DE = montarDE(entradas, semanas);
     DF = montarDF(folha, funcs, vales, resumo);
-    guardarCategorias(cats);
     DD = completarMeses(montarDD(saidas, cats));
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
@@ -3576,12 +3630,8 @@ function renderSaidasAtual(){
 }
 
 // ─── DESPESAS: lançar / editar / excluir (só administrador; o banco confere de novo) ───
-let CATEGORIAS_LISTA = [], CATEGORIAS_GRUPO = {}, DESP_EDIT = null;
+let DESP_EDIT = null;
 const FORMAS_PADRAO = ["PIX","Dinheiro","Cartão","Boleto","Transferência"];
-function guardarCategorias(cats){
-  CATEGORIAS_LISTA = (cats||[]).map(c=>c.nome_bruto); CATEGORIAS_GRUPO = {};
-  (cats||[]).forEach(c=>{ CATEGORIAS_GRUPO[c.nome_bruto] = c.grupo; });
-}
 function despFind(codigo){
   for(const mes of Object.values(DD)) for(const ds of Object.values(mes.categorias||{})) for(const ls of Object.values(ds)){
     const l = ls.find(x=>x.codigo===codigo); if(l) return l;
@@ -3607,22 +3657,107 @@ function despErroTexto(e){
          (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
 }
 function despPreencherListas(){
-  const desc = new Set(), forma = new Set(FORMAS_PADRAO), resp = new Set();
-  Object.values(DD).forEach(m=>Object.values(m.categorias||{}).forEach(ds=>Object.entries(ds).forEach(([d,ls])=>{
-    if(d && d!=="—") desc.add(d);
-    ls.forEach(l=>{ if(l.raw&&l.raw.forma) forma.add(l.raw.forma); if(l.raw&&l.raw.resp) resp.add(l.raw.resp); });
-  })));
-  const opts = (it,max)=>[...it].sort((a,b)=>a.localeCompare(b,"pt-BR")).slice(0,max).map(v=>`<option value="${escHtml(v)}">`).join("");
-  $("despListaCats").innerHTML = opts(CATEGORIAS_LISTA,200);
-  $("despListaDescs").innerHTML = opts(desc,400);
-  $("despListaFormas").innerHTML = opts(forma,60);
-  $("despListaResps").innerHTML = opts(resp,60);
+  // uma sugestão por coisa (sem repetir só por maiúscula/acento), na escrita que vale
+  const opts = (lista,max)=>[...lista].sort((a,b)=>a.localeCompare(b,"pt-BR")).slice(0,max).map(v=>`<option value="${escHtml(v)}">`).join("");
+  $("despListaCats").innerHTML = opts(CANON_LISTA.categoria,200);
+  $("despListaDescs").innerHTML = opts(CANON_LISTA.descricao,600);
+  $("despListaFormas").innerHTML = opts(CANON_LISTA.forma_pagamento,60);
+  $("despListaResps").innerHTML = opts(CANON_LISTA.responsavel,60);
 }
+// ── Parecidas: pega erro de digitação ("Pr.Isais" → "Pr.Isaias") ──
+function distEdicao(a,b,max){
+  if(Math.abs(a.length-b.length)>max) return max+1;
+  let prev = Array.from({length:b.length+1},(_,i)=>i);
+  for(let i=1;i<=a.length;i++){
+    const cur=[i]; let menor=i;
+    for(let j=1;j<=b.length;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1]+(a[i-1]===b[j-1]?0:1));
+      if(cur[j]<menor) menor=cur[j];
+    }
+    if(menor>max) return max+1;
+    prev = cur;
+  }
+  return prev[b.length];
+}
+function acharParecida(campo, txt){
+  const t = limpaEspacos(txt), k = chaveTexto(t);
+  if(k.length<4 || (CANON[campo]||{})[k]) return null;      // curto demais, ou já é igual a uma que existe
+  const max = k.length>=9 ? 2 : 1;
+  let melhor = null, dm = max+1;
+  Object.keys(CANON[campo]||{}).forEach(k2=>{
+    const d = distEdicao(k,k2,max);
+    if(d<dm){ dm=d; melhor=CANON[campo][k2]; }
+  });
+  return melhor;
+}
+// Mostra, abaixo do campo, "Já existe como X" ou "Parecida com X"
+function despDica(campo, inputId, hintEl, extraHtml){
+  const t = limpaEspacos($(inputId).value), box = hintEl;
+  let html = "", aviso = false;
+  if(t){
+    const igual = canonDe(campo, t);
+    if(igual && igual!==t){
+      html = `Já existe como <b>${escHtml(igual)}</b> — vou usar essa escrita. <button type="button" class="desp-usar" data-alvo="${inputId}" data-valor="${escHtml(igual)}">Usar agora</button>`;
+    } else {
+      const par = acharParecida(campo, t);
+      if(par){ aviso = true; html = `Parecida com <b>${escHtml(par)}</b>. Era essa? <button type="button" class="desp-usar" data-alvo="${inputId}" data-valor="${escHtml(par)}">Usar «${escHtml(par)}»</button>`; }
+    }
+  }
+  box.innerHTML = html + (extraHtml||"");
+  box.className = "desp-full desp-hint" + (aviso ? " aviso" : "");
+}
+function despDescMudou(){ despDica("descricao","despDescricao",$("despDescHint")); }
 function despCategoriaMudou(){
-  const c = $("despCategoria").value.trim(), h = $("despHint");
+  const c = limpaEspacos($("despCategoria").value), h = $("despHint");
   if(!c){ h.textContent=""; h.className="desp-full desp-hint"; return; }
-  if(CATEGORIAS_GRUPO[c]!==undefined){ h.textContent = "Aparece no painel em: "+CATEGORIAS_GRUPO[c]; h.className="desp-full desp-hint"; }
-  else { h.textContent = "Categoria nova: ela vai aparecer como um grupo próprio. Se foi erro de digitação, corrija."; h.className="desp-full desp-hint aviso"; }
+  const k = chaveTexto(c), grupo = GRUPO_POR_CHAVE[k];
+  let extra = "";
+  if(grupo!==undefined) extra = ` <span>Aparece no painel em: ${escHtml(grupo)}.</span>`;
+  else if(CANON.categoria[k]!==undefined) extra = ` <span>Já usada antes: aparece como grupo próprio.</span>`;
+  else if(!acharParecida("categoria", c)) extra = " <span>Categoria nova: vira um grupo próprio. Foi erro de digitação?</span>";
+  despDica("categoria","despCategoria",h,extra);
+  if(grupo===undefined && CANON.categoria[k]===undefined && !acharParecida("categoria", c)) h.className = "desp-full desp-hint aviso";
+}
+// Ao sair do campo: se já existe com outra escrita (maiúscula, acento, espaço), troca pela que vale
+function despAjustarCampo(campo, inputId){
+  const el = $(inputId), t = limpaEspacos(el.value); if(!t) { el.value = ""; return; }
+  const c = canonDe(campo, t);
+  el.value = (c && c!==t) ? c : t;
+}
+function despAjustarTudo(){
+  despAjustarCampo("descricao","despDescricao"); despAjustarCampo("categoria","despCategoria");
+  despAjustarCampo("forma_pagamento","despForma"); despAjustarCampo("responsavel","despResp");
+  despDescMudou(); despCategoriaMudou();
+}
+// "mousedown" (e não só "click"): o campo perde o foco e a dica é redesenhada antes do clique terminar
+function despUsarSugestao(e){
+  const b = e.target.closest && e.target.closest(".desp-usar"); if(!b) return;
+  e.preventDefault();
+  const el = $(b.dataset.alvo); if(el){ el.value = b.dataset.valor; el.dispatchEvent(new Event("input",{bubbles:true})); }
+}
+document.addEventListener("mousedown", despUsarSugestao);
+document.addEventListener("click", despUsarSugestao);
+// Padroniza os textos de uma despesa antes de enviar (o banco confere de novo)
+function despPadronizar(d){
+  const out = Object.assign({}, d);
+  out.descricao = canonDe("descricao", d.descricao) || limpaEspacos(d.descricao);
+  out.categoria = canonDe("categoria", d.categoria) || limpaEspacos(d.categoria);
+  if(d.forma_pagamento) out.forma_pagamento = canonDe("forma_pagamento", d.forma_pagamento);
+  if(d.responsavel)     out.responsavel     = canonDe("responsavel", d.responsavel);
+  return out;
+}
+// Já existe uma despesa igual (mesma data, valor e descrição)? Evita lançar duas vezes sem querer.
+function despDuplicada(d, ignorarCodigo){
+  const k = chaveTexto(d.descricao);
+  for(const mes of Object.values(DD)) for(const ds of Object.values(mes.categorias||{})) for(const ls of Object.values(ds)){
+    const l = ls.find(x=>x.codigo!==ignorarCodigo && x.raw && x.raw.data===d.data && Math.abs(Number(x.valor)-d.valor)<0.005 && chaveTexto(x.raw.descricao)===k);
+    if(l) return l;
+  }
+  return null;
+}
+function despConfirmaDuplicada(d, ignorarCodigo){
+  const l = despDuplicada(d, ignorarCodigo);
+  return !l || confirm("Já existe uma despesa igual: "+l.data+" — "+l.raw.descricao+" — "+fBRL(l.valor)+".\n\nOK para lançar mesmo assim (ex.: duas compras iguais no mesmo dia), Cancelar para conferir.");
 }
 function abrirDespesa(codigo, preset){
   if(!SOU_ADMIN()) return;
@@ -3651,7 +3786,7 @@ function abrirDespesa(codigo, preset){
   ["despData","despValor","despDescricao","despCategoria","despLink"].forEach(id=>$(id).classList.remove("erro"));
   const msg = $("despMsg"); msg.style.color = "var(--muted)"; msg.textContent = aviso;
   $("despSalvar").disabled = false; $("despSalvar").textContent = "Salvar despesa";
-  despCategoriaMudou();
+  despCategoriaMudou(); despDescMudou();
   $("despModal").style.display = "flex"; $("despModal").scrollTop = 0;
   setTimeout(()=>{ $(it?"despValor":"despDescricao").focus(); }, 30);
 }
@@ -3664,8 +3799,9 @@ function despLer(){
   const g = id=>$(id).value.trim();
   ["despData","despValor","despDescricao","despCategoria","despLink"].forEach(id=>$(id).classList.remove("erro"));
   const marca = (id,m)=>{ $(id).classList.add("erro"); return {erro:m}; };
-  const d = { data:g("despData"), descricao:g("despDescricao"), categoria:g("despCategoria"), forma_pagamento:g("despForma"),
-              responsavel:g("despResp"), observacao:g("despObs"), comprovante_url:g("despLink") };
+  despAjustarTudo();   // espaços e escrita padrão (o que você vê no formulário é o que será salvo)
+  const d = { data:g("despData"), descricao:limpaEspacos(g("despDescricao")), categoria:limpaEspacos(g("despCategoria")), forma_pagamento:limpaEspacos(g("despForma")),
+              responsavel:limpaEspacos(g("despResp")), observacao:g("despObs"), comprovante_url:g("despLink") };
   if(!dataISOvalida(d.data)) return marca("despData","Informe uma data válida.");
   const v = parseValorBR($("despValor").value);
   if(isNaN(v) || v<=0 || v>=1e9) return marca("despValor","Informe um valor maior que zero (ex.: 1.234,50).");
@@ -3690,7 +3826,8 @@ async function despEnviarArquivo(arq, dataISO){
   return j.linkComprovante;
 }
 function categoriaConfere(cat){
-  return CATEGORIAS_GRUPO[cat]!==undefined ||
+  const k = chaveTexto(cat);
+  return GRUPO_POR_CHAVE[k]!==undefined || CANON.categoria[k]!==undefined ||
     confirm('A categoria "'+cat+'" ainda não existe no painel. Ela vai aparecer como um grupo novo.\n\nOK para criar assim, Cancelar para corrigir.');
 }
 // Recarrega as despesas do ano (e os saldos). Mostra o mês pedido e mantém você no mesmo detalhe (categoria/descrição).
@@ -3702,7 +3839,6 @@ async function recarregarDespesas(mesParaMostrar, renderizar){
     carregarSaldos(),
   ]);
   RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
-  guardarCategorias(cats);
   const drill = Object.assign({}, DRILL), mesAntes = MES;
   DD = completarMeses(montarDD(saidas, cats));
   const sel = $("mesSelect"); sel.innerHTML = "";
@@ -3727,6 +3863,9 @@ async function salvarDespesaPainel(){
   const r = despLer(); if(r.erro){ msg.textContent = r.erro; return; }
   const d = r.dados;
   if(!categoriaConfere(d.categoria)) { $("despCategoria").classList.add("erro"); return; }
+  const orig = DESP_EDIT ? despFind(DESP_EDIT) : null;
+  const mudouChave = !orig || orig.raw.data!==d.data || Math.abs(Number(orig.valor)-d.valor)>=0.005 || chaveTexto(orig.raw.descricao)!==chaveTexto(d.descricao);
+  if(mudouChave && !despConfirmaDuplicada(d, DESP_EDIT)) return;   // editar só a observação não pergunta nada
   const btn = $("despSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
   try{
     const arq = $("despArquivo").files[0];
@@ -4322,10 +4461,10 @@ function renderListaPendentes(){
       <div class="ia-form-grid">
         <div class="ia-form-group"><label class="ia-form-label">Data (DD/MM/AAAA — define o mês)</label><input class="ia-form-input" data-campo="data" value="${esc(p.data)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Valor (R$)</label><input class="ia-form-input" data-campo="valor" type="number" step="0.01" value="${Number(p.valor)||0}"></div>
-        <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Descrição</label><input class="ia-form-input" data-campo="descricao" value="${esc(p.descricao)}"></div>
+        <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Descrição</label><input class="ia-form-input" data-campo="descricao" list="despListaDescs" autocomplete="off" value="${esc(p.descricao)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" list="despListaCats" value="${esc(p.categoria)}"></div>
-        <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" value="${esc(p.forma)}"></div>
-        <div class="ia-form-group"><label class="ia-form-label">Responsável</label><input class="ia-form-input" data-campo="responsavel" placeholder="Quem efetuou o pagamento?"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" list="despListaFormas" autocomplete="off" value="${esc(p.forma)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Responsável</label><input class="ia-form-input" data-campo="responsavel" list="despListaResps" autocomplete="off" placeholder="Quem efetuou o pagamento?"></div>
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
@@ -4351,15 +4490,17 @@ async function aprovarPendenteUI(id, comp, btnEl){
   const v = parseValorBR(c.valor);
   if(isNaN(v) || v<=0 || v>=1e9) return erro("Confira o valor (maior que zero).");
   if(!String(c.descricao||"").trim()) return erro("Informe a descrição.");
-  const cat = String(c.categoria||"").trim();
-  if(!cat) return erro("Informe a categoria.");
-  if(!categoriaConfere(cat)) return;
+  if(!limpaEspacos(c.categoria)) return erro("Informe a categoria.");
   const restoId = String(id).replace(/[^A-Za-z0-9]/g,"").slice(0,8).toUpperCase();
+  const pad = despPadronizar({ data:iso, descricao:limpaEspacos(c.descricao), categoria:limpaEspacos(c.categoria), forma_pagamento:limpaEspacos(c.forma), responsavel:limpaEspacos(c.responsavel), valor:Math.round(v*100)/100 });
+  const cat = pad.categoria;
+  if(!categoriaConfere(cat)) return;
+  if(!despConfirmaDuplicada(pad, "P-"+restoId)) return;
   btnEl.disabled = true; btnEl.textContent = "Salvando...";
   try{
     // 1) grava no banco (o código vem do próprio comprovante: se repetir, não duplica)
-    const corpo = { data:iso, descricao:String(c.descricao).trim(), categoria:cat, forma_pagamento:String(c.forma||"").trim()||null, valor:Math.round(v*100)/100,
-                    responsavel:String(c.responsavel||"").trim()||null, observacao:String(c.observacao||"").trim()||null, comprovante_url:comp||null };
+    const corpo = { data:iso, descricao:pad.descricao, categoria:cat, forma_pagamento:pad.forma_pagamento||null, valor:pad.valor,
+                    responsavel:pad.responsavel||null, observacao:String(c.observacao||"").trim()||null, comprovante_url:comp||null };
     if(restoId.length>=3) corpo.codigo = "P-"+restoId;
     const res = await dbEscrever("POST", "rpc/salvar_despesa", {p:corpo}, "return=representation");
     if(!res || !res.codigo) throw new Error("O banco não confirmou o lançamento.");
@@ -5028,7 +5169,7 @@ function renderFormExtraidoIA(dados){
         </div>
         <div class="ia-form-group" style="grid-column:1/-1">
           <label class="ia-form-label">Descrição / Fornecedor</label>
-          <input class="ia-form-input" id="iaDescricao" value="${esc(dados.descricao)}">
+          <input class="ia-form-input" id="iaDescricao" list="despListaDescs" autocomplete="off" value="${esc(dados.descricao)}">
         </div>
         <div class="ia-form-group">
           <label class="ia-form-label">Categoria</label>
@@ -5036,11 +5177,11 @@ function renderFormExtraidoIA(dados){
         </div>
         <div class="ia-form-group">
           <label class="ia-form-label">Forma de Pagamento</label>
-          <input class="ia-form-input" id="iaForma" value="${esc(dados.forma_pagamento)}">
+          <input class="ia-form-input" id="iaForma" list="despListaFormas" autocomplete="off" value="${esc(dados.forma_pagamento)}">
         </div>
         <div class="ia-form-group">
           <label class="ia-form-label">Responsável</label>
-          <input class="ia-form-input" id="iaResponsavel" value="${esc(dados.responsavel)}" placeholder="Quem efetuou o pagamento?">
+          <input class="ia-form-input" id="iaResponsavel" list="despListaResps" autocomplete="off" value="${esc(dados.responsavel)}" placeholder="Quem efetuou o pagamento?">
         </div>
         <div class="ia-form-group" style="grid-column:1/-1">
           <label class="ia-form-label">Observação</label>
@@ -5065,11 +5206,14 @@ async function salvarViaIA(){
   if(!iso) return erro("Confira o campo Data (use DD/MM/AAAA): é por ela que o sistema escolhe o mês.");
   const v = parseValorBR(document.getElementById("iaValor").value);
   if(isNaN(v) || v<=0 || v>=1e9) return erro("Confira o valor (maior que zero).");
-  const descricao = document.getElementById("iaDescricao").value.trim();
-  const categoria = document.getElementById("iaCategoria").value.trim();
-  if(!descricao) return erro("Informe a descrição.");
-  if(!categoria) return erro("Informe a categoria.");
+  if(!limpaEspacos(document.getElementById("iaDescricao").value)) return erro("Informe a descrição.");
+  if(!limpaEspacos(document.getElementById("iaCategoria").value)) return erro("Informe a categoria.");
+  const pad = despPadronizar({ data:iso, valor:Math.round(v*100)/100,
+    descricao:limpaEspacos(document.getElementById("iaDescricao").value), categoria:limpaEspacos(document.getElementById("iaCategoria").value),
+    forma_pagamento:limpaEspacos(document.getElementById("iaForma").value), responsavel:limpaEspacos(document.getElementById("iaResponsavel").value) });
+  const descricao = pad.descricao, categoria = pad.categoria;
   if(!categoriaConfere(categoria)){ volta(); return; }
+  if(!despConfirmaDuplicada(pad, null)){ volta(); return; }
 
   try{
     // 1) arquivo no Drive (pasta do mês)
@@ -5084,8 +5228,8 @@ async function salvarViaIA(){
     // 2) despesa no banco
     const res = await dbEscrever("POST", "rpc/salvar_despesa", {p:{
       data:iso, descricao:descricao, categoria:categoria, valor:Math.round(v*100)/100,
-      forma_pagamento:document.getElementById("iaForma").value.trim()||null,
-      responsavel:document.getElementById("iaResponsavel").value.trim()||null,
+      forma_pagamento:pad.forma_pagamento||null,
+      responsavel:pad.responsavel||null,
       observacao:document.getElementById("iaObs").value.trim()||null,
       comprovante_url:j.linkComprovante||null }}, "return=representation");
     if(!res || !res.codigo) throw new Error("O banco não confirmou o lançamento.");
