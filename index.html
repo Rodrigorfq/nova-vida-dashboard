@@ -1019,6 +1019,14 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .semana-edit { margin-left: 10px; padding: 3px 9px; font-size: 11.5px; background: rgba(255,255,255,.18); border-color: rgba(255,255,255,.45); color: #fff; }
 .semana-edit:hover { background: rgba(255,255,255,.3); }
 .fech-acao { padding: 4px 10px; font-size: 12px; white-space: nowrap; }
+.desp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; }
+.desp-full { grid-column: 1 / -1; }
+.desp-in { width: 100%; box-sizing: border-box; }
+.desp-in.erro { border-color: var(--saida); background: #fff5f5; }
+.desp-hint { margin: -4px 0 0; font-size: 12px; color: var(--muted); min-height: 16px; }
+.desp-hint.aviso { color: #a3620a; }
+.lanc-acoes { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 520px) { .desp-grid { grid-template-columns: 1fr; } }
 .comp-grupo-label {
   font-size: 10px; font-weight: 700; text-transform: uppercase;
   letter-spacing: .08em; color: var(--muted);
@@ -1394,6 +1402,33 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
       <span style="flex:1"></span>
       <button class="topbar-btn" onclick="fecharEntradaSemana()">Cancelar</button>
       <button class="topbar-btn" id="entSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarSemanaEntradas()">Salvar semana</button>
+    </div>
+  </div>
+</div>
+
+<div id="despModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="despTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:580px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="despTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Nova despesa</h3>
+    <p style="margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.5">O mês e o ano vêm da <b>data</b>. A despesa entra nos totais assim que você salvar.</p>
+    <div class="desp-grid">
+      <div><label class="ia-form-label" for="despData">Data</label><input id="despData" type="date" min="2000-01-01" max="2100-12-31" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="despValor">Valor (R$)</label><input id="despValor" inputmode="decimal" autocomplete="off" placeholder="Ex.: 1.234,50" class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despDescricao">Descrição</label><input id="despDescricao" list="despListaDescs" maxlength="200" autocomplete="off" placeholder="Ex.: Conta de luz" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="despCategoria">Categoria</label><input id="despCategoria" list="despListaCats" maxlength="60" autocomplete="off" oninput="despCategoriaMudou()" placeholder="Escolha ou digite" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="despForma">Forma de pagamento</label><input id="despForma" list="despListaFormas" maxlength="40" autocomplete="off" placeholder="Ex.: PIX" class="ent-sel desp-in"></div>
+      <p id="despHint" class="desp-full desp-hint"></p>
+      <div class="desp-full"><label class="ia-form-label" for="despResp">Responsável (quem pagou)</label><input id="despResp" list="despListaResps" maxlength="60" autocomplete="off" class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despObs">Observação (opcional)</label><input id="despObs" maxlength="300" autocomplete="off" class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despLink">Comprovante — link do Google Drive (opcional)</label><input id="despLink" maxlength="500" autocomplete="off" placeholder="https://drive.google.com/file/d/..." class="ent-sel desp-in"></div>
+      <div class="desp-full"><label class="ia-form-label" for="despArquivo">…ou anexe a foto / PDF do comprovante</label><input id="despArquivo" type="file" accept="image/*,application/pdf" class="desp-in" style="font-size:13px"><span style="display:block;font-size:11.5px;color:var(--muted);margin-top:3px">Se anexar, o arquivo vai para a pasta do mês no Drive e o link acima é substituído.</span></div>
+    </div>
+    <datalist id="despListaDescs"></datalist><datalist id="despListaCats"></datalist><datalist id="despListaFormas"></datalist><datalist id="despListaResps"></datalist>
+    <p id="despMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:space-between;flex-wrap:wrap">
+      <button class="topbar-btn" id="despExcluir" style="display:none;color:var(--saida)" onclick="excluirDespesa(DESP_EDIT, this)">Excluir</button>
+      <span style="flex:1"></span>
+      <button class="topbar-btn" onclick="fecharDespesa()">Cancelar</button>
+      <button class="topbar-btn" id="despSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onclick="salvarDespesaPainel()">Salvar despesa</button>
     </div>
   </div>
 </div>
@@ -1870,7 +1905,8 @@ function montarDD(saidas, categorias){
       (est[cat][desc] = est[cat][desc] || []).push({
         obs: textoOuTraco(s.observacao), resp: textoOuTraco(s.responsavel), data: dataBR(s.data),
         forma: textoOuTraco(s.forma_pagamento), valor: Number(s.valor)||0, comp: s.comprovante_url||"",
-        codigo: s.codigo, linha: s.origem_linha, aba: s.origem_aba
+        codigo: s.codigo, linha: s.origem_linha, aba: s.origem_aba,
+        raw: { data: s.data||"", categoria: s.categoria||"", descricao: s.descricao||"", forma: s.forma_pagamento||"", resp: s.responsavel||"", obs: s.observacao||"" }
       });
       total += Number(s.valor)||0;
     });
@@ -2172,29 +2208,8 @@ function completarMeses(dd){
   return Object.fromEntries(Object.entries(dd).sort((x,y)=>MESES_NOME.indexOf(x[0].replace("Despesas ",""))-MESES_NOME.indexOf(y[0].replace("Despesas ",""))));
 }
 
-// Lançamentos que você acabou de excluir. Ficam escondidos até o banco confirmar
-// (a planilha muda na hora; o banco só depois da sincronização).
-const OCULTOS = new Set();
-function filtrarOcultos(saidas){
-  if(!OCULTOS.size) return saidas;
-  const noBanco = new Set(saidas.map(s=>s.codigo));
-  OCULTOS.forEach(c=>{ if(!noBanco.has(c)) OCULTOS.delete(c); });   // banco já confirmou a exclusão
-  return saidas.filter(s=>!OCULTOS.has(s.codigo));
-}
-function removerDoDD(codigo){
-  Object.values(DD).forEach(mes=>{
-    let total=0;
-    Object.keys(mes.categorias).forEach(cat=>{
-      Object.keys(mes.categorias[cat]).forEach(desc=>{
-        mes.categorias[cat][desc] = mes.categorias[cat][desc].filter(l=>l.codigo!==codigo);
-        if(!mes.categorias[cat][desc].length) delete mes.categorias[cat][desc];
-      });
-      if(!Object.keys(mes.categorias[cat]).length) delete mes.categorias[cat];
-    });
-    total = sumCat(mes.categorias);
-    mes.total = r2(total);
-  });
-}
+const SAIDAS_CAMPOS = "codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha";
+const SAIDAS_ORDEM = "order=mes,origem_linha,data,codigo";
 
 // Pede ao sincronizador para ler as planilhas agora (em vez de esperar o ciclo de 30 min).
 async function sincronizarAgora(){
@@ -2528,7 +2543,7 @@ async function carregarTudo(){
     }
     const a = "ano=eq."+ANO;
     const [saidas, cats, entradas, semanas, folha, funcs, vales, resumo, saldos] = await Promise.all([
-      dbGetTudo("saidas?select=codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha&"+a+"&excluido_em=is.null&order=mes,origem_linha,codigo"),
+      dbGetTudo("saidas?select="+SAIDAS_CAMPOS+"&"+a+"&excluido_em=is.null&"+SAIDAS_ORDEM),
       dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
       dbGetTudo("entradas?select=mes,semana,culto,tipo,valor&"+a+"&order=mes,semana,culto,tipo"),
       dbGetTudo("semanas?select=mes,semana,periodo,catedral_planilha,extra_planilha&"+a+"&order=mes,semana"),
@@ -2541,7 +2556,8 @@ async function carregarTudo(){
     RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
     DE = montarDE(entradas, semanas);
     DF = montarDF(folha, funcs, vales, resumo);
-    DD = completarMeses(montarDD(filtrarOcultos(saidas), cats));
+    guardarCategorias(cats);
+    DD = completarMeses(montarDD(saidas, cats));
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
@@ -2567,7 +2583,7 @@ async function atualizarStatusSync(){
   if(!ULTIMA_SYNC || !ULTIMA_SYNC.ultima_execucao){ el.textContent=""; el.title=""; lado.textContent=""; return; }
   const min = Math.max(0, Math.round((Date.now()-new Date(ULTIMA_SYNC.ultima_execucao).getTime())/60000));
   const ok = ["ok","sem_mudancas"].includes(ULTIMA_SYNC.resultado);
-  el.textContent = (ok?"":"⚠️ ")+"Planilhas lidas há "+(min<1?"menos de 1 min":min<60?min+" min":Math.round(min/60)+" h");
+  el.textContent = (ok?"":"⚠️ ")+"Folha lida há "+(min<1?"menos de 1 min":min<60?min+" min":Math.round(min/60)+" h");
   el.title = ok ? "" : ("Última sincronização: "+ULTIMA_SYNC.resultado+(ULTIMA_SYNC.mensagem?" — "+ULTIMA_SYNC.mensagem:""));
   el.style.color = ok ? "" : "var(--saida)";
   lado.textContent = el.textContent; lado.title = el.title;
@@ -3324,7 +3340,15 @@ function renderSaidas(el){
   renderSaidasNivel0(el);
 }
 
+function acoesSaidas(el, aqui){
+  if(!SOU_ADMIN()) return;
+  const ac=div("geral-acoes");
+  ac.innerHTML = aqui ? '<button class="topbar-btn ativo" id="btnNovaDespesa" onclick="novaDespesaAqui()">＋ Nova despesa nesta descrição</button>'
+                      : '<button class="topbar-btn ativo" id="btnNovaDespesa" onclick="abrirDespesa()">＋ Nova despesa</button>';
+  el.appendChild(ac);
+}
 function renderSaidasNivel0(el){
+  acoesSaidas(el, false);
   const nm=getMesNome();
   const desp=DD[MES]||{}; const cat=desp.categorias||desp; const tD=desp.total||0;
   const CRSAI=["#c0272d","#d64550","#e07178","#e8949a","#a3222a","#8a1e24","#6f181d","#9d2d3d","#c85a68","#b73347","#993047","#9d2d3d"];
@@ -3402,6 +3426,7 @@ function renderSaidasNivel1(el){
   const bc=div("breadcrumb");
   bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item active">${catNome}</span>`;
   el.appendChild(bc);
+  acoesSaidas(el, false);
 
   // Header
   const hdr=div("drill-header fade-in");
@@ -3458,6 +3483,7 @@ function renderSaidasNivel2(el){
   const bc=div("breadcrumb");
   bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item" onclick="DRILL.level=1;renderSaidasAtual()">${DRILL.cat}</span><span class="bc-sep">›</span><span class="bc-item active">${DRILL.desc}</span>`;
   el.appendChild(bc);
+  acoesSaidas(el, true);
 
   // Header
   const hdr=div("drill-header fade-in");
@@ -3520,12 +3546,16 @@ function renderSaidasNivel2(el){
           Baixar
         </a>
       </div>` : ""}
-      <div style="margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}">
-        <button class="comp-btn" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirLancamento('${l.codigo}',this)">
-          <span class="comp-btn-icon">🗑</span>
-          Excluir lançamento
+      ${SOU_ADMIN() ? `<div class="lanc-acoes" style="margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}">
+        <button class="comp-btn btn-editar-desp" onclick="abrirDespesa('${escHtml(l.codigo)}')">
+          <span class="comp-btn-icon">✎</span>
+          Editar
         </button>
-      </div>`;
+        <button class="comp-btn btn-excluir-desp" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirDespesa('${escHtml(l.codigo)}',this)">
+          <span class="comp-btn-icon">🗑</span>
+          Excluir
+        </button>
+      </div>` : ""}`;
     grid.appendChild(c);
   });
   sec.appendChild(grid);
@@ -3545,52 +3575,192 @@ function renderSaidasAtual(){
   },80);
 }
 
-// Depois de lançar/excluir algo: pede a sincronização e recarrega SÓ as despesas do banco.
-// (As linhas excluídas continuam escondidas até o banco confirmar.)
-let avisouSemSync = false;
-async function recarregarApenasDespesas(){
-  try{
-    const r = await sincronizarAgora();
-    if(r.pulado && !avisouSemSync){ avisouSemSync=true; mostrarToast("ℹ️ Feito na planilha. Aparece aqui na próxima sincronização (até 30 min)."); }
-  }catch(e){
-    console.warn("Falha ao sincronizar:", e.message);
-    mostrarToast("⚠️ Feito na planilha, mas não consegui atualizar agora. Aparece na próxima sincronização.", true);
-  }
-  try{
-    const [saidas, cats] = await Promise.all([
-      dbGetTudo("saidas?select=codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha&ano=eq."+ANO+"&excluido_em=is.null&order=mes,origem_linha,codigo"),
-      dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
-    ]);
-    DD = completarMeses(montarDD(filtrarOcultos(saidas), cats));
-    const sd = await carregarSaldos(); RES = sd.res; CONF = sd.conf;
-    atualizarStatusSync();
-  }catch(e){ console.warn("Falha ao recarregar despesas:", e.message); }
+// ─── DESPESAS: lançar / editar / excluir (só administrador; o banco confere de novo) ───
+let CATEGORIAS_LISTA = [], CATEGORIAS_GRUPO = {}, DESP_EDIT = null;
+const FORMAS_PADRAO = ["PIX","Dinheiro","Cartão","Boleto","Transferência"];
+function guardarCategorias(cats){
+  CATEGORIAS_LISTA = (cats||[]).map(c=>c.nome_bruto); CATEGORIAS_GRUPO = {};
+  (cats||[]).forEach(c=>{ CATEGORIAS_GRUPO[c.nome_bruto] = c.grupo; });
 }
-
-async function excluirLancamento(codigo, btnEl){
-  if(!confirm("Excluir este lançamento? Ele será removido da planilha e não poderá ser desfeito por aqui.\n\nO arquivo do comprovante no Drive não será apagado.")) return;
-  btnEl.disabled = true;
-  btnEl.innerHTML = '<span class="comp-btn-icon">⏳</span> Excluindo...';
-  try{
-    // a planilha acha a linha pelo ID na hora de excluir (o número da linha pode ter mudado)
-    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"deletar_lancamento", codigo: codigo }) });
-    const json = await res.json();
-    if(json.ok){
-      mostrarToast("🗑 Lançamento excluído da planilha.");
-      OCULTOS.add(codigo); removerDoDD(codigo);
-      renderSaidasAtual();                       // some da tela na hora
-      recarregarApenasDespesas().then(()=>renderSaidasAtual());   // e o banco confirma em seguida
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha ao excluir"), true);
-      btnEl.disabled = false;
-      btnEl.innerHTML = '<span class="comp-btn-icon">🗑</span> Excluir lançamento';
+function despFind(codigo){
+  for(const mes of Object.values(DD)) for(const ds of Object.values(mes.categorias||{})) for(const ls of Object.values(ds)){
+    const l = ls.find(x=>x.codigo===codigo); if(l) return l;
+  }
+  return null;
+}
+const pad2 = n => String(n).padStart(2,"0");
+function dataISOvalida(s){
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s||""); if(!m) return false;
+  const y=+m[1], mo=+m[2], d=+m[3]; if(y<2000||y>2100) return false;
+  const dt = new Date(y,mo-1,d); return dt.getFullYear()===y && dt.getMonth()===mo-1 && dt.getDate()===d;
+}
+function dataBRparaISO(s){   // "12/11/2026" ou "12-11-26" → "2026-11-12" (ou null)
+  const m = /^\s*(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2}|\d{4})\s*$/.exec(s||""); if(!m) return null;
+  const y = m[3].length===2 ? 2000+Number(m[3]) : Number(m[3]);
+  const iso = y+"-"+pad2(m[2])+"-"+pad2(m[1]);
+  return dataISOvalida(iso) ? iso : null;
+}
+const isoParaBR = iso => iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4);
+function despErroTexto(e){
+  return (e.status===401||e.status===403||/Sem permissão/i.test(e.message)) ? "Você não tem permissão para lançar despesas." :
+         e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
+         (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
+}
+function despPreencherListas(){
+  const desc = new Set(), forma = new Set(FORMAS_PADRAO), resp = new Set();
+  Object.values(DD).forEach(m=>Object.values(m.categorias||{}).forEach(ds=>Object.entries(ds).forEach(([d,ls])=>{
+    if(d && d!=="—") desc.add(d);
+    ls.forEach(l=>{ if(l.raw&&l.raw.forma) forma.add(l.raw.forma); if(l.raw&&l.raw.resp) resp.add(l.raw.resp); });
+  })));
+  const opts = (it,max)=>[...it].sort((a,b)=>a.localeCompare(b,"pt-BR")).slice(0,max).map(v=>`<option value="${escHtml(v)}">`).join("");
+  $("despListaCats").innerHTML = opts(CATEGORIAS_LISTA,200);
+  $("despListaDescs").innerHTML = opts(desc,400);
+  $("despListaFormas").innerHTML = opts(forma,60);
+  $("despListaResps").innerHTML = opts(resp,60);
+}
+function despCategoriaMudou(){
+  const c = $("despCategoria").value.trim(), h = $("despHint");
+  if(!c){ h.textContent=""; h.className="desp-full desp-hint"; return; }
+  if(CATEGORIAS_GRUPO[c]!==undefined){ h.textContent = "Aparece no painel em: "+CATEGORIAS_GRUPO[c]; h.className="desp-full desp-hint"; }
+  else { h.textContent = "Categoria nova: ela vai aparecer como um grupo próprio. Se foi erro de digitação, corrija."; h.className="desp-full desp-hint aviso"; }
+}
+function abrirDespesa(codigo, preset){
+  if(!SOU_ADMIN()) return;
+  const it = codigo ? despFind(codigo) : null;
+  if(codigo && !it){ mostrarToast("Não encontrei esta despesa. Recarregue o painel (Ctrl+F5).", true); return; }
+  DESP_EDIT = it ? it.codigo : null;
+  despPreencherListas();
+  const raw = it ? it.raw : (preset||{});
+  const mesNum = Math.max(1, MESES_NOME.indexOf(getMesNome())+1), hoje = new Date();
+  let data = raw.data||"", aviso = "";
+  if(!data){
+    data = (!it && hoje.getFullYear()===ANO) ? hoje.getFullYear()+"-"+pad2(hoje.getMonth()+1)+"-"+pad2(hoje.getDate()) : ANO+"-"+pad2(mesNum)+"-01";
+    if(it) aviso = "Esta despesa não tinha data; coloquei o dia 1 do mês. Corrija se quiser.";
+  }
+  $("despTitulo").textContent = it ? "Alterar despesa" : "Nova despesa";
+  $("despExcluir").style.display = it ? "" : "none";
+  $("despData").value = data;
+  $("despValor").value = it ? String(Number(it.valor).toFixed(2)).replace(".",",") : "";
+  $("despDescricao").value = raw.descricao||"";
+  $("despCategoria").value = raw.categoria||"";
+  $("despForma").value = raw.forma||"";
+  $("despResp").value = raw.resp||"";
+  $("despObs").value = raw.obs||"";
+  $("despLink").value = it ? (it.comp||"") : "";
+  $("despArquivo").value = "";
+  ["despData","despValor","despDescricao","despCategoria","despLink"].forEach(id=>$(id).classList.remove("erro"));
+  const msg = $("despMsg"); msg.style.color = "var(--muted)"; msg.textContent = aviso;
+  $("despSalvar").disabled = false; $("despSalvar").textContent = "Salvar despesa";
+  despCategoriaMudou();
+  $("despModal").style.display = "flex"; $("despModal").scrollTop = 0;
+  setTimeout(()=>{ $(it?"despValor":"despDescricao").focus(); }, 30);
+}
+function novaDespesaAqui(){   // dentro de uma descrição: já sugere a mesma categoria e descrição
+  const l = (((DD[MES]||{}).categorias||{})[DRILL.cat]||{})[DRILL.desc]||[];
+  abrirDespesa(null, l.length ? {categoria:l[0].raw.categoria, descricao:l[0].raw.descricao, forma:l[0].raw.forma, resp:l[0].raw.resp} : null);
+}
+function fecharDespesa(){ $("despModal").style.display = "none"; DESP_EDIT = null; }
+function despLer(){
+  const g = id=>$(id).value.trim();
+  ["despData","despValor","despDescricao","despCategoria","despLink"].forEach(id=>$(id).classList.remove("erro"));
+  const marca = (id,m)=>{ $(id).classList.add("erro"); return {erro:m}; };
+  const d = { data:g("despData"), descricao:g("despDescricao"), categoria:g("despCategoria"), forma_pagamento:g("despForma"),
+              responsavel:g("despResp"), observacao:g("despObs"), comprovante_url:g("despLink") };
+  if(!dataISOvalida(d.data)) return marca("despData","Informe uma data válida.");
+  const v = parseValorBR($("despValor").value);
+  if(isNaN(v) || v<=0 || v>=1e9) return marca("despValor","Informe um valor maior que zero (ex.: 1.234,50).");
+  d.valor = Math.round(v*100)/100;
+  if(!d.descricao) return marca("despDescricao","Informe a descrição.");
+  if(!d.categoria) return marca("despCategoria","Informe a categoria.");
+  if(d.comprovante_url && !/^https:\/\/(drive|docs)\.google\.com\/\S+$/.test(d.comprovante_url))
+    return marca("despLink","O link do comprovante deve ser do Google Drive (começa com https://drive.google.com/).");
+  return {dados:d};
+}
+function lerArquivoBase64(f){
+  return new Promise((ok,err)=>{ const r=new FileReader(); r.onload=()=>ok(String(r.result).split(",")[1]); r.onerror=()=>err(new Error("Não consegui ler o arquivo.")); r.readAsDataURL(f); });
+}
+// Guarda o arquivo na pasta do mês no Drive (pelo Apps Script) e devolve o link. A despesa em si NÃO passa por lá.
+async function despEnviarArquivo(arq, dataISO){
+  if(arq.size > 10*1024*1024) throw new Error("O arquivo é grande demais (máximo 10 MB).");
+  const base64 = await lerArquivoBase64(arq);
+  const res = await comprovFetch(URL_COMPROV, {method:"POST", body:JSON.stringify({acao:"guardar_comprovante", data:isoParaBR(dataISO),
+    imagemBase64:base64, mimeType:arq.type||"application/octet-stream", nomeArquivo:arq.name})});
+  const j = await res.json();
+  if(!j.ok) throw new Error(j.erro||"Não consegui guardar o comprovante no Drive.");
+  return j.linkComprovante;
+}
+function categoriaConfere(cat){
+  return CATEGORIAS_GRUPO[cat]!==undefined ||
+    confirm('A categoria "'+cat+'" ainda não existe no painel. Ela vai aparecer como um grupo novo.\n\nOK para criar assim, Cancelar para corrigir.');
+}
+// Recarrega as despesas do ano (e os saldos). Mostra o mês pedido e mantém você no mesmo detalhe (categoria/descrição).
+async function recarregarDespesas(mesParaMostrar, renderizar){
+  if(renderizar===undefined) renderizar = (TELA==="ano");
+  const [saidas, cats, saldos] = await Promise.all([
+    dbGetTudo("saidas?select="+SAIDAS_CAMPOS+"&ano=eq."+ANO+"&excluido_em=is.null&"+SAIDAS_ORDEM),
+    dbGetTudo("categorias?select=nome_bruto,grupo&order=nome_bruto"),
+    carregarSaldos(),
+  ]);
+  RES = saldos.res; CONF = saldos.conf; INICIO_CONTROLE = saldos.inicio;
+  guardarCategorias(cats);
+  const drill = Object.assign({}, DRILL), mesAntes = MES;
+  DD = completarMeses(montarDD(saidas, cats));
+  const sel = $("mesSelect"); sel.innerHTML = "";
+  Object.keys(DD).forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
+  if(mesParaMostrar){ const k = "Despesas "+MESES_NOME[mesParaMostrar-1]; if(DD[k]) MES = k; }
+  if(!DD[MES]) MES = Object.keys(DD).pop()||"";
+  sel.value = MES;
+  atualizarStatusSync();
+  if(!renderizar) return;
+  render();
+  if(ABA==="saida" && MES===mesAntes){   // volta ao mesmo detalhe, se ele ainda existir
+    const cat = (DD[MES]||{}).categorias||{};
+    if(drill.level>=1 && cat[drill.cat]){
+      DRILL.level = 1; DRILL.cat = drill.cat;
+      if(drill.level===2 && cat[drill.cat][drill.desc]){ DRILL.level = 2; DRILL.desc = drill.desc; }
+      renderSaidasAtual();
     }
-  }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
-    btnEl.disabled = false;
-    btnEl.innerHTML = '<span class="comp-btn-icon">🗑</span> Excluir lançamento';
   }
 }
+async function salvarDespesaPainel(){
+  const msg = $("despMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  const r = despLer(); if(r.erro){ msg.textContent = r.erro; return; }
+  const d = r.dados;
+  if(!categoriaConfere(d.categoria)) { $("despCategoria").classList.add("erro"); return; }
+  const btn = $("despSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    const arq = $("despArquivo").files[0];
+    if(arq){ msg.style.color = "var(--muted)"; msg.textContent = "Enviando o comprovante para o Drive..."; d.comprovante_url = await despEnviarArquivo(arq, d.data); }
+    const corpo = { data:d.data, descricao:d.descricao, categoria:d.categoria, forma_pagamento:d.forma_pagamento||null, valor:d.valor,
+                    responsavel:d.responsavel||null, observacao:d.observacao||null, comprovante_url:d.comprovante_url||null };
+    if(DESP_EDIT) corpo.codigo = DESP_EDIT;
+    const res = await dbEscrever("POST", "rpc/salvar_despesa", {p:corpo}, "return=representation");
+    if(!res || !res.codigo) throw new Error("O banco não confirmou o lançamento.");
+    const novo = !DESP_EDIT;
+    fecharDespesa();
+    await recarregarDespesas(res.ano===ANO ? res.mes : null);
+    mostrarToast((novo?"✅ Despesa lançada em ":"✅ Despesa alterada em ")+MESES_NOME[res.mes-1]+(res.ano!==ANO?"/"+res.ano+" (outro ano: troque o ano no menu para vê-la)":"")+" — "+fBRL(res.valor)+".", false, 5000);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar despesa";
+    msg.style.color = "var(--saida)"; msg.textContent = despErroTexto(e);
+  }
+}
+async function excluirDespesa(codigo, btnEl){
+  if(!codigo) return;
+  if(!confirm("Excluir esta despesa? Ela sai dos totais do painel. (Fica registrada no histórico, e o arquivo do comprovante no Drive não é apagado.)")) return;
+  const rotulo = btnEl ? btnEl.innerHTML : "";
+  if(btnEl){ btnEl.disabled = true; btnEl.textContent = "Excluindo..."; }
+  try{
+    await dbEscrever("POST", "rpc/excluir_despesa", {p_codigo:codigo}, "return=representation");
+    fecharDespesa();
+    await recarregarDespesas(null);
+    mostrarToast("🗑 Despesa excluída.", false, 4000);
+  }catch(e){
+    mostrarToast("❌ "+despErroTexto(e), true);
+    if(btnEl){ btnEl.disabled = false; btnEl.innerHTML = rotulo; }
+  }
+}
+document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("despModal") && $("despModal").style.display==="flex") fecharDespesa(); });
 
 // prevComp removido — comprovantes via link do Drive
 
@@ -4134,31 +4304,28 @@ function renderListaPendentes(){
     return;
   }
   lista.innerHTML = "";
+  despPreencherListas();
   const esc = s => String(s||"").replace(/"/g,"&quot;");
   PENDENTES_CACHE.forEach(function(p){
     const item = div("comp-desp-item tem-comp");
     item.style.cursor = "default";
-    const MESES_OPCOES = ["JANEIRO","FEVEREIRO","MARÇO","ABRIL","MAIO","JUNHO","JULHO","AGOSTO","SETEMBRO","OUTUBRO","NOVEMBRO","DEZEMBRO"];
-    const opcoesMesHtml = MESES_OPCOES.map(function(m){ return `<option value="${m}" ${m===p.mes?"selected":""}>${m}</option>`; }).join("");
     item.innerHTML = `
       <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:10px;flex-wrap:wrap">
         <div>
           <p class="comp-desp-desc">${p.descricao || "(sem descrição)"}</p>
           <div class="comp-desp-meta">
             <span>📤 Enviado por ${p.enviadoPor||"—"} em ${p.dataEnvio||"—"}</span>
-            <span>🤖 Mês detectado: ${p.mes}</span>
           </div>
         </div>
         <a href="${p.comp}" target="_blank" style="font-size:11px;color:var(--saldo-pos);text-decoration:none;font-weight:600;flex-shrink:0">🔗 Ver foto</a>
       </div>
       <div class="ia-form-grid">
-        <div class="ia-form-group"><label class="ia-form-label">Data</label><input class="ia-form-input" data-campo="data" value="${esc(p.data)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Data (DD/MM/AAAA — define o mês)</label><input class="ia-form-input" data-campo="data" value="${esc(p.data)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Valor (R$)</label><input class="ia-form-input" data-campo="valor" type="number" step="0.01" value="${Number(p.valor)||0}"></div>
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Descrição</label><input class="ia-form-input" data-campo="descricao" value="${esc(p.descricao)}"></div>
-        <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" value="${esc(p.categoria)}"></div>
+        <div class="ia-form-group"><label class="ia-form-label">Categoria</label><input class="ia-form-input" data-campo="categoria" list="despListaCats" value="${esc(p.categoria)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Forma de Pagamento</label><input class="ia-form-input" data-campo="forma" value="${esc(p.forma)}"></div>
         <div class="ia-form-group"><label class="ia-form-label">Responsável</label><input class="ia-form-input" data-campo="responsavel" placeholder="Quem efetuou o pagamento?"></div>
-        <div class="ia-form-group"><label class="ia-form-label">Mês (corrija se detectou errado)</label><select class="ia-form-input" data-campo="mes">${opcoesMesHtml}</select></div>
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px">
@@ -4177,29 +4344,37 @@ function lerCamposPendente(container){
 
 async function aprovarPendenteUI(id, comp, btnEl){
   const item = btnEl.closest(".comp-desp-item");
-  const campos = lerCamposPendente(item);
+  const c = lerCamposPendente(item);
+  const erro = t=>{ mostrarToast("❌ "+t, true); };
+  const iso = dataBRparaISO(c.data);
+  if(!iso) return erro("Confira a Data (use DD/MM/AAAA): é por ela que o painel escolhe o mês.");
+  const v = parseValorBR(c.valor);
+  if(isNaN(v) || v<=0 || v>=1e9) return erro("Confira o valor (maior que zero).");
+  if(!String(c.descricao||"").trim()) return erro("Informe a descrição.");
+  const cat = String(c.categoria||"").trim();
+  if(!cat) return erro("Informe a categoria.");
+  if(!categoriaConfere(cat)) return;
+  const restoId = String(id).replace(/[^A-Za-z0-9]/g,"").slice(0,8).toUpperCase();
   btnEl.disabled = true; btnEl.textContent = "Salvando...";
   try{
-    const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({
-      acao:"aprovar_pendente", id: id, mes: campos.mes, comp: comp,
-      data: campos.data, descricao: campos.descricao, categoria: campos.categoria,
-      forma: campos.forma, valor: campos.valor, responsavel: campos.responsavel, observacao: campos.observacao,
-    })});
-    const json = await res.json();
-    if(json.ok){
-      mostrarToast("✅ Aprovado e lançado na planilha!");
-      // Atualiza só o necessário — os dados de Despesas (em segundo plano, sem
-      // recarregar a tela) e a lista de pendentes (removendo o já aprovado).
-      // Evita o recarregamento completo do dashboard, que ficava lento com
-      // muitos comprovantes na fila.
-      recarregarApenasDespesas();
-      carregarPendentes();
-    } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha"), true);
-      btnEl.disabled=false; btnEl.textContent="✅ Aprovar e Lançar";
-    }
+    // 1) grava no banco (o código vem do próprio comprovante: se repetir, não duplica)
+    const corpo = { data:iso, descricao:String(c.descricao).trim(), categoria:cat, forma_pagamento:String(c.forma||"").trim()||null, valor:Math.round(v*100)/100,
+                    responsavel:String(c.responsavel||"").trim()||null, observacao:String(c.observacao||"").trim()||null, comprovante_url:comp||null };
+    if(restoId.length>=3) corpo.codigo = "P-"+restoId;
+    const res = await dbEscrever("POST", "rpc/salvar_despesa", {p:corpo}, "return=representation");
+    if(!res || !res.codigo) throw new Error("O banco não confirmou o lançamento.");
+    // 2) tira da fila e move o arquivo para a pasta do mês (Drive)
+    let fila = false;
+    try{
+      const r2 = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"finalizar_pendente", id:id, mes:MESES_NOME[res.mes-1].toUpperCase() }) });
+      fila = !!(await r2.json()).ok;
+    }catch(e){ fila = false; }
+    if(fila) mostrarToast("✅ Aprovado e lançado em "+MESES_NOME[res.mes-1]+".");
+    else mostrarToast("⚠️ A despesa foi lançada, mas não consegui tirar o comprovante da fila. Clique em Aprovar de novo (não duplica).", true, 7000);
+    recarregarDespesas(res.ano===ANO ? res.mes : null, false).catch(e=>console.warn("Falha ao recarregar despesas:", e.message));
+    carregarPendentes();
   }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
+    mostrarToast("❌ "+despErroTexto(e), true);
     btnEl.disabled=false; btnEl.textContent="✅ Aprovar e Lançar";
   }
 }
@@ -4837,6 +5012,7 @@ async function analisarViaIA(){
 function renderFormExtraidoIA(dados){
   const resultado = document.getElementById("iaResultado");
   if(!resultado) return;
+  despPreencherListas();
   const esc = s => String(s||"").replace(/"/g,"&quot;");
   resultado.innerHTML = `
     <div style="background:var(--accent2);border:1px solid #c7d2fe;border-radius:var(--r);padding:16px;margin-top:12px">
@@ -4856,7 +5032,7 @@ function renderFormExtraidoIA(dados){
         </div>
         <div class="ia-form-group">
           <label class="ia-form-label">Categoria</label>
-          <input class="ia-form-input" id="iaCategoria" value="${esc(dados.categoria_sugerida)}">
+          <input class="ia-form-input" id="iaCategoria" list="despListaCats" value="${esc(dados.categoria_sugerida)}">
         </div>
         <div class="ia-form-group">
           <label class="ia-form-label">Forma de Pagamento</label>
@@ -4873,59 +5049,52 @@ function renderFormExtraidoIA(dados){
       </div>
       <div style="display:flex;gap:8px;margin-top:14px">
         <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--slate)" onclick="resetIAPanel()">Cancelar</button>
-        <button class="comp-btn-vincular" id="btnSalvarIA" onclick="salvarViaIA()">✅ Confirmar e Lançar na Planilha</button>
+        <button class="comp-btn-vincular" id="btnSalvarIA" onclick="salvarViaIA()">✅ Confirmar e Lançar</button>
       </div>
     </div>`;
 }
 
 async function salvarViaIA(){
   const btn = document.getElementById("btnSalvarIA");
+  const volta = ()=>{ if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar"; } };
   if(btn){ btn.disabled = true; btn.textContent = "Salvando..."; }
+  const erro = t=>{ mostrarToast("❌ "+t, true); volta(); };
 
-  // O mês (e o ano) vêm da data do comprovante: DD/MM/AAAA
-  const dataTxt = document.getElementById("iaData").value;
-  const mData = /^\s*(\d{1,2})\/(\d{1,2})\/(\d{4})\s*$/.exec(dataTxt);
-  const mesNum = mData ? Number(mData[2]) : 0;
-  if(!mData || mesNum < 1 || mesNum > 12 || Number(mData[1]) < 1 || Number(mData[1]) > 31){
-    mostrarToast("❌ Confira o campo Data (use DD/MM/AAAA): é por ela que o sistema escolhe o mês.", true);
-    if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
-    return;
-  }
-  const payload = {
-    acao: "salvar_despesa_ia",
-    mes: MESES_NOME[mesNum-1].toUpperCase(),
-    ano: Number(mData[3]),
-    data: dataTxt,
-    descricao: document.getElementById("iaDescricao").value,
-    categoria: document.getElementById("iaCategoria").value,
-    forma: document.getElementById("iaForma").value,
-    valor: document.getElementById("iaValor").value,
-    responsavel: document.getElementById("iaResponsavel").value,
-    observacao: document.getElementById("iaObs").value,
-  };
-  if(IA_STATE.linkComprovanteExistente){
-    // Arquivo já estava no Drive — só reaproveita o link, não envia base64 de novo
-    payload.linkComprovanteExistente = IA_STATE.linkComprovanteExistente;
-  } else {
-    payload.imagemBase64 = IA_STATE.base64;
-    payload.mimeType = IA_STATE.mimeType;
-    payload.nomeArquivo = IA_STATE.nomeArquivo;
-  }
+  // O mês e o ano vêm da data do comprovante: DD/MM/AAAA
+  const iso = dataBRparaISO(document.getElementById("iaData").value);
+  if(!iso) return erro("Confira o campo Data (use DD/MM/AAAA): é por ela que o sistema escolhe o mês.");
+  const v = parseValorBR(document.getElementById("iaValor").value);
+  if(isNaN(v) || v<=0 || v>=1e9) return erro("Confira o valor (maior que zero).");
+  const descricao = document.getElementById("iaDescricao").value.trim();
+  const categoria = document.getElementById("iaCategoria").value.trim();
+  if(!descricao) return erro("Informe a descrição.");
+  if(!categoria) return erro("Informe a categoria.");
+  if(!categoriaConfere(categoria)){ volta(); return; }
 
   try{
-    const res = await comprovFetch(URL_COMPROV, { method: "POST", body: JSON.stringify(payload) });
-    const json = await res.json();
-    if(json.ok){
-      mostrarToast("✅ Despesa lançada na planilha com sucesso!");
-      toggleIAPanel();
-      recarregarApenasDespesas(); // atualiza os dados em segundo plano, sem recarregar a tela
+    // 1) arquivo no Drive (pasta do mês)
+    const envio = { acao:"guardar_comprovante", data:isoParaBR(iso) };
+    if(IA_STATE.linkComprovanteExistente){
+      envio.linkComprovanteExistente = IA_STATE.linkComprovanteExistente;   // já estava no Drive: só move para a pasta do mês
     } else {
-      mostrarToast("❌ Erro: " + (json.erro||"Falha ao salvar"), true);
-      if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
+      envio.imagemBase64 = IA_STATE.base64; envio.mimeType = IA_STATE.mimeType; envio.nomeArquivo = IA_STATE.nomeArquivo;
     }
+    const j = await (await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify(envio) })).json();
+    if(!j.ok) throw new Error(j.erro||"Não consegui guardar o comprovante no Drive.");
+    // 2) despesa no banco
+    const res = await dbEscrever("POST", "rpc/salvar_despesa", {p:{
+      data:iso, descricao:descricao, categoria:categoria, valor:Math.round(v*100)/100,
+      forma_pagamento:document.getElementById("iaForma").value.trim()||null,
+      responsavel:document.getElementById("iaResponsavel").value.trim()||null,
+      observacao:document.getElementById("iaObs").value.trim()||null,
+      comprovante_url:j.linkComprovante||null }}, "return=representation");
+    if(!res || !res.codigo) throw new Error("O banco não confirmou o lançamento.");
+    mostrarToast("✅ Despesa lançada em "+MESES_NOME[res.mes-1]+" — "+fBRL(res.valor)+".");
+    toggleIAPanel();
+    recarregarDespesas(res.ano===ANO ? res.mes : null, false).catch(e=>console.warn("Falha ao recarregar despesas:", e.message));
   }catch(e){
-    mostrarToast("❌ Erro de conexão: " + e.message, true);
-    if(btn){ btn.disabled=false; btn.textContent="✅ Confirmar e Lançar na Planilha"; }
+    mostrarToast("❌ "+despErroTexto(e), true);
+    volta();
   }
 }
 
