@@ -1523,6 +1523,25 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   </div>
 </div>
 
+<div id="anoAbrirModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="aamTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="aamTitulo" style="margin:0 0 4px;font-size:17px;color:#1a1a2e">Abrir o ano</h3>
+    <p style="margin:0 0 12px;font-size:12.5px;color:#666;line-height:1.5">Prepara o ano novo em um clique: <b>cria as pastas dos comprovantes no Drive</b> (uma por mês) e <b>guarda os valores por dia da folha</b>. Você pode mudar os valores depois, em Pessoal.</p>
+    <input id="aamAno" type="hidden">
+    <div class="desp-grid">
+      <div><label class="ia-form-label" for="aamAl">Alimentação por dia (R$)</label><input id="aamAl" inputmode="decimal" autocomplete="off" placeholder="Ex.: 32,00" class="ent-sel desp-in"></div>
+      <div><label class="ia-form-label" for="aamTr">Transporte por dia (R$)</label><input id="aamTr" inputmode="decimal" autocomplete="off" placeholder="Ex.: 14,70" class="ent-sel desp-in"></div>
+    </div>
+    <p id="aamDica" style="margin:8px 0 0;font-size:12px;color:#666;line-height:1.5"></p>
+    <div id="aamAviso" style="margin:10px 0 0;font-size:12.5px;line-height:1.5"></div>
+    <p id="aamMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharAnoNovo()">Cancelar</button>
+      <button class="topbar-btn" id="aamAbrir" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="confirmarAbrirAno()">Abrir o ano</button>
+    </div>
+  </div>
+</div>
+
 <div id="loginWrap">
   <div class="login-grid">
     <div class="login-left">
@@ -2376,14 +2395,25 @@ async function atualizarAgora(){
 async function carregarAnos(){
   try{
     const a = await dbGet("anos_disponiveis?select=ano&order=ano.desc");
-    return [...new Set(a.map(x=>x.ano))];
+    return await somarAnosAbertos([...new Set(a.map(x=>x.ano))]);
   }catch(e){
     // visão ainda não criada: descobre pelos próprios lançamentos
     const anos = new Set();
     for(const t of ["saidas","entradas","folha_mensal"]){
       try{ (await dbGet(t+"?select=ano&order=ano.desc&limit=1")).forEach(x=>anos.add(x.ano)); }catch(e2){}
     }
-    return [...anos].sort((a,b)=>b-a);
+    return await somarAnosAbertos([...anos].sort((a,b)=>b-a));
+  }
+}
+// Um ano "aberto" pelo painel (valores por dia da folha guardados) aparece na lista mesmo antes do primeiro lançamento.
+async function somarAnosAbertos(lista){
+  try{
+    const pf = await dbGet("parametros_folha?select=ano&order=ano.desc");
+    const set = new Set(lista); pf.forEach(x=>{ if(x && x.ano) set.add(x.ano); });
+    return [...set].sort((a,b)=>b-a);
+  }catch(e){
+    if(e && e.message==="sessao_expirada") throw e;
+    return lista;
   }
 }
 
@@ -2557,6 +2587,84 @@ function cardComprovantesInicio(){
     <div class="ano-foot"><span>Independe do ano e do mês</span><span class="ano-abrir">Abrir →</span></div>`;
   return b;
 }
+// ── ABRIR UM ANO NOVO (só administrador) ──
+// Oferece "Abrir o ano 2027" a partir de setembro do ano anterior; a partir de janeiro o ano novo já aparece sozinho.
+function proximoAnoParaAbrir(){
+  if(!SOU_ADMIN()) return null;
+  const hoje = new Date(), prox = Math.max(...anosDoInicio())+1;
+  if(prox > hoje.getFullYear()+1) return null;
+  if(prox === hoje.getFullYear()+1 && hoje.getMonth() < 8) return null;
+  return prox;
+}
+function cardAbrirAno(a){
+  const b = document.createElement("button");
+  b.type="button"; b.className="ano-card fade-in"; b.id="cardAbrirAno"; b.dataset.ano=a; b.setAttribute("aria-label","Abrir o ano "+a);
+  b.style.borderStyle = "dashed";
+  b.onclick = ()=>abrirAnoNovo(a);
+  b.innerHTML = `<div class="ano-head"><span class="ano-num">＋ ${a}</span><span class="ano-badge">Ano novo</span></div>
+    <p class="ano-vazio">Cria as pastas dos comprovantes no Drive e deixa a folha pronta.</p>
+    <div class="ano-foot"><span></span><span class="ano-abrir">Abrir o ano →</span></div>`;
+  return b;
+}
+async function abrirAnoNovo(ano){
+  if(!SOU_ADMIN()) return;
+  $("aamAno").value = ano;
+  $("aamTitulo").textContent = "Abrir o ano "+ano;
+  ["aamAl","aamTr"].forEach(id=>{ $(id).classList.remove("erro"); $(id).value = ""; });
+  $("aamMsg").textContent = ""; $("aamAviso").innerHTML = ""; $("aamDica").textContent = "";
+  const bt = $("aamAbrir"); bt.disabled = false; bt.textContent = "Abrir o ano "+ano;
+  $("anoAbrirModal").style.display = "flex";
+  if(!Object.keys(PARAM_FOLHA).length){ try{ await buscarParamsDias(); }catch(e){} }
+  const ant = Object.keys(PARAM_FOLHA).map(Number).filter(y=>y<=ano).sort((x,y)=>y-x)[0];
+  if(PARAM_FOLHA[ano]){ $("aamAl").value = numBR(PARAM_FOLHA[ano].al); $("aamTr").value = numBR(PARAM_FOLHA[ano].tr); $("aamDica").textContent = "Estes são os valores já guardados para "+ano+"."; }
+  else if(ant){ $("aamAl").value = numBR(PARAM_FOLHA[ant].al); $("aamTr").value = numBR(PARAM_FOLHA[ant].tr); $("aamDica").textContent = "Começamos com os valores de "+ant+". Se mudaram, é só corrigir aqui."; }
+  else $("aamDica").textContent = "Informe quanto a igreja paga por dia trabalhado.";
+  if(!FOLHA_SQL) $("aamAviso").innerHTML = '<span style="color:#a3620a">⚠️ O banco ainda não tem as tabelas da folha (arquivo migracao_folha_painel.sql). Os valores não serão guardados agora; as pastas do Drive serão criadas normalmente.</span>';
+  // lembra o ponto de partida: o saldo de dezembro do ano anterior vira o saldo inicial de janeiro
+  try{
+    const dez = await dbGet(`conferencia_mensal?select=saldo_real&ano=eq.${ano-1}&mes=eq.12&limit=1`);
+    const h = dez && dez.length ? `<span style="color:#16803d">✓ O fechamento de dezembro de ${ano-1} já foi lançado: ele é o ponto de partida de janeiro de ${ano}.</span>`
+                                : `<span style="color:#a3620a">⚠️ Falta o <b>Fechamento de dezembro de ${ano-1}</b> (lance no fim do mês, em Conferência). É ele que passa o saldo para janeiro de ${ano}.</span>`;
+    $("aamAviso").insertAdjacentHTML("beforeend", (FOLHA_SQL?"":"<br>")+h);
+  }catch(e){}
+  setTimeout(()=>$("aamAl").focus(), 30);
+}
+function fecharAnoNovo(){ $("anoAbrirModal").style.display = "none"; }
+async function confirmarAbrirAno(){
+  const msg = $("aamMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  ["aamAl","aamTr"].forEach(id=>$(id).classList.remove("erro"));
+  const ano = +$("aamAno").value, al = parseValorBR($("aamAl").value), tr = parseValorBR($("aamTr").value);
+  if(isNaN(al) || al<0 || al>=1e6){ $("aamAl").classList.add("erro"); msg.textContent = "Informe o valor por dia da alimentação (ex.: 32,00)."; return; }
+  if(isNaN(tr) || tr<0 || tr>=1e6){ $("aamTr").classList.add("erro"); msg.textContent = "Informe o valor por dia do transporte (ex.: 14,70)."; return; }
+  const btn = $("aamAbrir"); btn.disabled = true; btn.textContent = "Abrindo...";
+  const avisos = [];
+  // 1) valores da folha (é também o que faz o ano continuar aparecendo na lista depois de recarregar)
+  if(FOLHA_SQL){
+    try{
+      await dbEscrever("POST", "rpc/salvar_parametros_folha", {p:{ano, valor_dia_alimentacao:al, valor_dia_transporte:tr}}, "return=representation");
+      PARAM_FOLHA[ano] = { al, tr };
+    }catch(e){
+      btn.disabled = false; btn.textContent = "Abrir o ano "+ano;
+      msg.textContent = folhaErroTexto(e); return;
+    }
+  }
+  // 2) pastas no Drive (se falhar, o ano abre mesmo assim: as pastas também são criadas sozinhas no primeiro comprovante)
+  let pastas = null;
+  try{
+    const r = await comprovFetch(URL_COMPROV, {method:"POST", body:JSON.stringify({acao:"preparar_ano", ano})});
+    const j = await r.json();
+    if(j && j.ok) pastas = j;
+    else avisos.push(/n[ãa]o reconhecida/i.test(j && j.erro || "") ? "o Apps Script de Comprovantes ainda não foi atualizado (Implantar → Gerenciar implantações → Nova versão)" : ((j && j.erro) || "o Drive não respondeu"));
+  }catch(e){ avisos.push("sem conexão com o Drive"); }
+  if(!ANOS.includes(ano)) ANOS = [ano, ...ANOS].sort((x,y)=>y-x);
+  fecharAnoNovo();
+  let t = "✅ Ano "+ano+" aberto.";
+  if(pastas) t += pastas.criadas.length ? " Pastas criadas no Drive." : " As pastas do Drive já existiam.";
+  if(avisos.length) t += " ⚠️ Não consegui criar as pastas no Drive agora ("+avisos[0]+"); elas serão criadas sozinhas no primeiro comprovante.";
+  mostrarToast(t, avisos.length>0, avisos.length?9000:5000);
+  abrirAno(ano);
+}
+
 // Quantos comprovantes enviados pelo celular esperam revisão (vem do Drive; se falhar, mostra "—").
 async function carregarPendentesInicio(){
   const el = document.getElementById("homeCompPend"); if(!el) return;
@@ -2586,6 +2694,8 @@ function renderInicio(el){
   el.appendChild(hdr);
   const grid = div("ano-grid");
   anosDoInicio().forEach(a=>grid.appendChild(cardAno(a)));
+  const proxAno = proximoAnoParaAbrir();
+  if(proxAno) grid.appendChild(cardAbrirAno(proxAno));
   el.appendChild(grid);
   const hdr2 = div("section-hdr fade-in");
   hdr2.innerHTML = '<div><p class="section-title">Acesso rápido</p><p class="section-sub">Atalhos que não dependem de ano</p></div>';
@@ -2599,7 +2709,10 @@ function renderInicio(el){
 // Visão do ano: o que você vê ao entrar num ano, antes de escolher um mês.
 function renderVisaoAno(el){
   if(!RES.length){
-    el.innerHTML=`<div class="error-state"><p class="error-title">Sem lançamentos em ${ANO}</p><p class="error-text">Quando houver entradas ou saídas neste ano, o resumo aparece aqui.</p></div>`;
+    const adm = SOU_ADMIN();
+    el.innerHTML=`<div class="error-state" id="anoVazio" style="border-color:var(--border,#e2e8f0)"><p class="error-title" style="color:var(--navy,#1a1a2e)">${ANO} ainda não tem lançamentos</p>
+      <p class="error-text">${adm ? "Comece lançando a primeira entrada ou despesa. O resumo do ano aparece aqui assim que houver movimento. O saldo de dezembro de "+(ANO-1)+" passa sozinho para janeiro, desde que o Fechamento de dezembro tenha sido lançado." : "Quando houver entradas ou saídas neste ano, o resumo aparece aqui."}</p>
+      ${adm ? '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px"><button class="topbar-btn ativo" id="btnVazioEntrada" onclick="abrirEntradaSemana()">＋ Lançar semana de entradas</button><button class="topbar-btn ativo" id="btnVazioDespesa" onclick="abrirDespesa()">＋ Nova despesa</button></div>' : ""}</div>`;
     return;
   }
   const tE = r2(RES.reduce((s,r)=>s+Number(r.entradas),0)), tS = r2(RES.reduce((s,r)=>s+Number(r.saidas),0)), res = r2(tE-tS);
@@ -2700,6 +2813,9 @@ async function carregarTudo(){
     DE = montarDE(entradas, semanas);
     DF = montarDF(folha, funcs, vales, resumo);
     DD = completarMeses(montarDD(saidas, cats));
+    if(!Object.keys(DD).length){      // ano aberto e ainda vazio: oferece um mês (o atual, ou janeiro) para o primeiro lançamento
+      const h = new Date(); DD["Despesas "+MESES_NOME[h.getFullYear()===ANO ? h.getMonth() : 0]] = {categorias:{},total:0};
+    }
     const meses=Object.keys(DD);
     const sel=$("mesSelect"); sel.innerHTML="";
     meses.forEach(m=>{ const o=document.createElement("option"); o.value=m; o.textContent=m.replace("Despesas ",""); sel.appendChild(o); });
@@ -4667,7 +4783,8 @@ async function salvarParamFolha(){
 }
 document.addEventListener("keydown", e=>{
   if(e.key!=="Escape") return;
-  if($("folhaParamModal") && $("folhaParamModal").style.display==="flex") fecharParamFolha();
+  if($("anoAbrirModal") && $("anoAbrirModal").style.display==="flex") fecharAnoNovo();
+  else if($("folhaParamModal") && $("folhaParamModal").style.display==="flex") fecharParamFolha();
   else if($("folhaModal") && $("folhaModal").style.display==="flex") fecharFolha();
 });
 
@@ -5257,7 +5374,7 @@ async function aprovarPendenteUI(id, comp, btnEl){
     // 2) tira da fila e move o arquivo para a pasta do mês (Drive)
     let fila = false;
     try{
-      const r2 = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"finalizar_pendente", id:id, mes:MESES_NOME[res.mes-1].toUpperCase() }) });
+      const r2 = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"finalizar_pendente", id:id, mes:MESES_NOME[res.mes-1].toUpperCase(), ano:+iso.slice(0,4) }) });
       fila = !!(await r2.json()).ok;
     }catch(e){ fila = false; }
     if(fila) mostrarToast("✅ Aprovado e lançado em "+MESES_NOME[res.mes-1]+".");
