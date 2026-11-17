@@ -1242,7 +1242,7 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   .kpi-grid { grid-template-columns: 1fr 1fr; }
   .page-body { padding: 16px; }
   .topbar { padding: 0 16px; }
-  #syncInfo, .topbar-sub { display: none; }
+  .topbar-sub { display: none; }
   #refreshBtn .btxt, #xlsxBtn .btxt { display: none; }
   .topbar-right { gap: 4px; }
   .topbar-right .mes-select { padding: 6px 4px; font-size: 12px; max-width: 92px; }
@@ -1305,7 +1305,6 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
 .welcome-kicker { font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.6); margin-bottom: 10px; }
 .welcome-title { font-size: 30px; font-weight: 800; letter-spacing: -.5px; line-height: 1.15; margin-bottom: 8px; }
 .welcome-sub { font-size: 15px; color: rgba(255,255,255,.82); }
-.welcome-sync { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 14px; }
 .welcome-logo { width: 190px; height: auto; position: relative; z-index: 1; flex-shrink: 0; opacity: .95; }
 
 .ano-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 18px; margin-bottom: 28px; }
@@ -1656,7 +1655,6 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
     </nav>
 
     <div class="sidebar-bottom">
-      <div id="syncInfoSide" style="font-size:11px;color:rgba(255,255,255,.45);padding:0 6px 8px"></div>
       <div class="sidebar-user">
         <div class="user-avatar" id="userAvatar">R</div>
         <div class="user-info">
@@ -1697,8 +1695,7 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
         </div>
       </div>
       <div class="topbar-right">
-        <span id="syncInfo" style="font-size:11.5px;color:var(--text3,#888);white-space:nowrap"></span>
-        <button class="topbar-btn" id="refreshBtn" onclick="atualizarAgora()" title="Ler as planilhas agora e atualizar o painel"><span>🔄</span><span class="btxt"> Atualizar</span></button>
+        <button class="topbar-btn" id="refreshBtn" onclick="atualizarAgora()" title="Recarregar os dados do banco"><span>🔄</span><span class="btxt"> Atualizar</span></button>
         <button class="topbar-btn" id="xlsxBtn" style="display:none" onclick="exportarExcel()" title="Baixar os dados do ano em Excel"><span>📥</span><span class="btxt"> Excel</span></button>
         <span class="ano-chip" id="anoChip" style="display:none"></span>
         <select class="mes-select" id="mesSelect" onchange="trocarMes()" style="display:none" aria-label="Mês">
@@ -1732,8 +1729,6 @@ const URL_COMPROV = "https://script.google.com/macros/s/AKfycbw4vb9wleU09tTSlzKN
 // Banco de dados (Supabase). A chave abaixo é a PÚBLICA (publishable): pode ficar no código.
 // Ela sozinha não abre nada: quem lê os dados é o usuário logado, e o banco só libera para e-mails autorizados.
 // NUNCA coloque aqui a chave secreta (secret / service_role).
-// Endereço do "Atualizar agora" (app da web do projeto Sincronizador). Vazio = só o ciclo automático de 30 min.
-const URL_SYNC = "https://script.google.com/macros/s/AKfycbyyYY5W8kSBwBMnaCLWMwP4HCu4Fn99AphudWaVzpyfdnbyCJDuMtdKKlgcNR6_degsQQ/exec";
 const SUPABASE_URL = "https://cmrnwtfvjoztwcbzdnmc.supabase.co";
 const SUPABASE_KEY = "sb_publishable_MyzC8wk_mwrpEoglHleTzw_gLerwTjY";
 const MAX_TENT = 3;
@@ -1801,7 +1796,6 @@ function pintarLogos(){
 let SESSAO = null;          // { access, refresh, exp, email, inicio }
 let USUARIO = null;         // { email, nome, papel, igreja_id }
 let ANO = null, ANOS = [];
-let ULTIMA_SYNC = null;
 let RES = [], CONF = [], INICIO_CONTROLE = null;   // saldos mensais e conferência (vêm de views do banco)
 let renovando = null;       // promessa compartilhada: evita renovar o token duas vezes ao mesmo tempo
 
@@ -2398,24 +2392,14 @@ function completarMeses(dd){
 const SAIDAS_CAMPOS = "codigo,mes,data,descricao,categoria,forma_pagamento,valor,responsavel,observacao,comprovante_url,origem_aba,origem_linha";
 const SAIDAS_ORDEM = "order=mes,origem_linha,data,codigo";
 
-// Pede ao sincronizador para ler as planilhas agora (em vez de esperar o ciclo de 30 min).
-async function sincronizarAgora(){
-  if(!URL_SYNC) return {pulado:true};
-  const tk = await tokenValido();
-  const res = await fetch(URL_SYNC, {method:"POST", body:JSON.stringify({acao:"sincronizar_agora", token:tk}), redirect:"follow"});
-  const j = await res.json();
-  if(j.erro) throw new Error(j.erro);
-  return j;
-}
+// Botão "Atualizar": o painel é a fonte dos dados, então só recarrega do banco.
 async function atualizarAgora(){
-  const b=$("refreshBtn"); b.disabled=true; b.innerHTML='<span>⏳</span><span class="btxt"> Sincronizando...</span>';
-  try{ await sincronizarAgora(); }
-  catch(e){
-    if(e.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
-    mostrarToast("⚠️ Não consegui ler as planilhas agora ("+e.message+"). Mostrando o que já está no banco.", true);
+  const b=$("refreshBtn"); b.disabled=true; b.innerHTML='<span>⏳</span><span class="btxt"> Atualizando...</span>';
+  try{
+    if(TELA==="home") await carregarInicio(); else await carregarTudo();
+  }finally{
+    b.disabled=false; b.innerHTML='<span>🔄</span><span class="btxt"> Atualizar</span>';
   }
-  if(TELA==="home") await carregarInicio(); else await carregarTudo();
-  b.disabled=false; b.innerHTML='<span>🔄</span><span class="btxt"> Atualizar</span>';
 }
 
 // ─── CARREGAR DADOS (agora direto do banco) ───
@@ -2564,7 +2548,6 @@ async function carregarInicio(){
         INICIO.comp = { ano, mes, total:linhas.length, com:linhas.filter(l=>String(l.comprovante_url||"").trim()).length };
       }
     }catch(e){ if(e.message==="sessao_expirada") throw e; }
-    await atualizarStatusSync();
     render();
   }catch(err){
     if(err.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
@@ -2807,7 +2790,6 @@ function renderInicio(el){
     <div class="welcome-text">
       <h1 class="welcome-title">Seja bem-vindo ao financeiro da Igreja</h1>
       <p class="welcome-sub">Escolha um ano para começar.</p>
-      <p class="welcome-sync">${escHtml($("syncInfo").textContent||"")}</p>
     </div>
     <img class="welcome-logo" src="${LOGOS["vertical-claro"]}" alt="ICNV-RM · Igreja Cristã Nova Vida · Rocha Miranda">`;
   el.appendChild(banner);
@@ -2944,29 +2926,11 @@ async function carregarTudo(){
     if(!meses.includes(MES)) MES=meses[meses.length-1]||"";
     sel.value=MES;
     ANO_CARREGADO = ANO;
-    atualizarStatusSync();
     render();
   }catch(err){
     if(err.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
     $("pageBody").innerHTML=`<div class="error-state"><p class="error-title">Erro ao carregar</p><p class="error-text">${err.message}</p><button class="topbar-btn" onclick="carregarTudo()">🔄 Tentar de novo</button></div>`;
   }
-}
-
-// "Atualizado há X min" (vem da tabela sincronizacao_status, escrita pelo sincronizador)
-async function atualizarStatusSync(){
-  const el=$("syncInfo");
-  try{
-    const s = await dbGet("sincronizacao_status?select=ultima_execucao,resultado,mensagem&limit=1");
-    ULTIMA_SYNC = s[0]||null;
-  }catch(e){ ULTIMA_SYNC=null; }
-  const lado=$("syncInfoSide");
-  if(!ULTIMA_SYNC || !ULTIMA_SYNC.ultima_execucao){ el.textContent=""; el.title=""; lado.textContent=""; return; }
-  const min = Math.max(0, Math.round((Date.now()-new Date(ULTIMA_SYNC.ultima_execucao).getTime())/60000));
-  const ok = ["ok","sem_mudancas"].includes(ULTIMA_SYNC.resultado);
-  el.textContent = (ok?"":"⚠️ ")+"Folha lida há "+(min<1?"menos de 1 min":min<60?min+" min":Math.round(min/60)+" h");
-  el.title = ok ? "" : ("Última sincronização: "+ULTIMA_SYNC.resultado+(ULTIMA_SYNC.mensagem?" — "+ULTIMA_SYNC.mensagem:""));
-  el.style.color = ok ? "" : "var(--saida)";
-  lado.textContent = el.textContent; lado.title = el.title;
 }
 
 function trocarMes(){ MES=$("mesSelect").value; render(); }
@@ -4193,7 +4157,6 @@ async function recarregarDespesas(mesParaMostrar, renderizar){
   if(mesParaMostrar){ const k = "Despesas "+MESES_NOME[mesParaMostrar-1]; if(DD[k]) MES = k; }
   if(!DD[MES]) MES = Object.keys(DD).pop()||"";
   sel.value = MES;
-  atualizarStatusSync();
   if(!renderizar) return;
   render();
   if(ABA==="saida" && MES===mesAntes){   // volta ao mesmo detalhe, se ele ainda existir
