@@ -1542,6 +1542,29 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   </div>
 </div>
 
+<div id="equipeModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:10000;align-items:flex-start;justify-content:center;padding:16px;overflow:auto" role="dialog" aria-modal="true" aria-labelledby="eqTitulo">
+  <div style="background:#fff;border-radius:14px;padding:22px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.35);margin:auto">
+    <h3 id="eqTitulo" style="margin:0 0 12px;font-size:17px;color:#1a1a2e">Adicionar pessoa</h3>
+    <div class="desp-grid">
+      <div style="grid-column:1/-1"><label class="ia-form-label" for="eqEmail">E-mail (o mesmo que a pessoa usa para entrar)</label><input id="eqEmail" type="text" inputmode="email" autocapitalize="none" spellcheck="false" autocomplete="off" placeholder="nome@gmail.com" class="ent-sel desp-in"></div>
+      <div style="grid-column:1/-1"><label class="ia-form-label" for="eqNome">Nome</label><input id="eqNome" autocomplete="off" maxlength="60" placeholder="Como aparece no painel" class="ent-sel desp-in"></div>
+      <div style="grid-column:1/-1"><label class="ia-form-label" for="eqPapel">O que a pessoa pode fazer</label>
+        <select id="eqPapel" class="ent-sel desp-in" onchange="equipePapelMudou()">
+          <option value="leitura">Liderança — só vê o painel</option>
+          <option value="lancador">Lançador — lança e corrige despesas e entradas</option>
+          <option value="admin">Administrador — tudo</option>
+        </select></div>
+    </div>
+    <p id="eqDescPapel" style="margin:8px 0 0;font-size:12px;color:#666;line-height:1.5"></p>
+    <label style="display:flex;gap:8px;align-items:center;margin:12px 0 0;font-size:13px"><input id="eqAtivo" type="checkbox" checked> Pode entrar no painel</label>
+    <p id="eqMsg" style="min-height:18px;margin:10px 0 12px;font-size:12.5px;color:var(--saida)"></p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="topbar-btn" onmousedown="event.preventDefault()" onclick="fecharEquipeModal()">Cancelar</button>
+      <button class="topbar-btn" id="eqSalvar" style="background:var(--accent,#2563eb);color:#fff;border-color:transparent" onmousedown="event.preventDefault()" onclick="salvarEquipePessoa()">Salvar</button>
+    </div>
+  </div>
+</div>
+
 <div id="loginWrap">
   <div class="login-grid">
     <div class="login-left">
@@ -1624,6 +1647,9 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
       </div>
       <div class="nav-item" id="navComprov" onclick="abrirComprov()">
         <span class="nav-icon">▤</span> Comprovantes
+      </div>
+      <div class="nav-item" id="navEquipe" onclick="abrirEquipe()" style="display:none">
+        <span class="nav-icon">☺</span> Equipe
       </div>
       <div class="sidebar-section-label" style="padding-left:12px;margin-top:6px">Anos</div>
       <div id="navAnos"></div>
@@ -1773,7 +1799,7 @@ function pintarLogos(){
   const f=document.getElementById("favicon"); if(f) f.href=LOGOS.favicon;
 }
 let SESSAO = null;          // { access, refresh, exp, email, inicio }
-let USUARIO = null;         // { nome, papel, igreja_id }
+let USUARIO = null;         // { email, nome, papel, igreja_id }
 let ANO = null, ANOS = [];
 let ULTIMA_SYNC = null;
 let RES = [], CONF = [], INICIO_CONTROLE = null;   // saldos mensais e conferência (vêm de views do banco)
@@ -1892,7 +1918,7 @@ function verificarSessao(){
 
 // Confirma que o e-mail está na lista de autorizados (tabela usuarios_autorizados) e abre o painel.
 async function identificarEEntrar(animar){
-  const u = await dbGet("usuarios_autorizados?select=nome,papel,igreja_id&limit=1");
+  const u = await dbGet("usuarios_autorizados?select=email,nome,papel,igreja_id&limit=1");
   if(!u.length){
     await sairDoSupabase();
     throw new Error("Este e-mail não tem permissão para ver o painel.");
@@ -1948,7 +1974,8 @@ function entrarApp(nome,animar){
     $("appWrap").style.display="flex";
     $("userName").textContent=nome;
     $("userAvatar").textContent=nome.charAt(0).toUpperCase();
-    $("userRole").textContent=(USUARIO&&USUARIO.papel==="admin")?"Administrador":"Liderança";
+    $("userRole").textContent=ROTULO_PAPEL[USUARIO&&USUARIO.papel]||"Liderança";
+    $("navEquipe").style.display = SOU_ADMIN() ? "" : "none";
     irParaInicio();
   }, animar?500:0);
 }
@@ -2419,6 +2446,7 @@ async function somarAnosAbertos(lista){
 
 // ─── NAVEGAÇÃO: Início → Ano → Mês ───
 const TITULOS = {
+  equipe:      ["Equipe","Quem acessa o painel e o que cada pessoa pode fazer"],
   inicio:      ["Início","Bem-vindo ao financeiro da Igreja"],
   ano:         ["Visão do Ano","Entradas e saídas, mês a mês"],
   geral:       ["Visão Geral","Resumo financeiro do mês"],
@@ -2462,17 +2490,18 @@ function alternarAnoMenu(a){
 
 // Mostra/esconde o que depende de onde você está (menu, botão Excel, seletor de mês...).
 function ajustarTela(){
-  const home = TELA==="home", noAno = TELA==="ano", comp = TELA==="comprov";
+  const home = TELA==="home", noAno = TELA==="ano", comp = TELA==="comprov", equipe = TELA==="equipe";
   document.body.dataset.tela = TELA;
   pintarMenuAnos();
   $("navInicio").className = "nav-item"+(home?" active":"");
   $("navComprov").className = "nav-item"+(comp?" active":"");
+  $("navEquipe").className = "nav-item"+(equipe?" active":"");
   $("voltarBtn").style.display = noAno ? "" : "none";
   $("anoChip").style.display = noAno ? "" : "none";
   $("anoChip").textContent = ANO; $("voltarAno").textContent = ANO;
   $("xlsxBtn").style.display = noAno ? "" : "none";
   $("mesSelect").style.display = (noAno && ABAS_COM_MES.includes(ABA)) ? "" : "none";
-  const t = TITULOS[home ? "inicio" : comp ? "comprov" : ABA] || TITULOS.inicio;
+  const t = TITULOS[home ? "inicio" : comp ? "comprov" : equipe ? "equipe" : ABA] || TITULOS.inicio;
   $("topbarTitle").textContent = t[0]; $("topbarSub").textContent = t[1];
 }
 
@@ -2502,6 +2531,12 @@ function abrirComprov(){
   TELA="comprov"; ABA="comprov";
   if(ANO===null || ANO===undefined) ANO = anoPadrao();
   if(ANO_CARREGADO!==ANO){ carregarTudo(); } else { render(); }
+}
+function abrirEquipe(){
+  if(!SOU_ADMIN()) return;
+  toggleSidebar(false);
+  TELA="equipe"; ABA="equipe";
+  render();
 }
 function abrirMes(m){
   const chave="Despesas "+MESES_NOME[m-1];
@@ -2587,6 +2622,93 @@ function cardComprovantesInicio(){
     <div class="ano-foot"><span>Independe do ano e do mês</span><span class="ano-abrir">Abrir →</span></div>`;
   return b;
 }
+// ── EQUIPE (só administrador): quem entra no painel e com qual papel ──
+let EQUIPE = [], EQ_EDITANDO = null;
+const DESC_PAPEL = {
+  admin:    "Faz tudo: lança, corrige e exclui; fecha o mês; cuida da folha; abre o ano; cadastra a equipe.",
+  lancador: "Lança e corrige despesas e entradas. Não exclui nada, não mexe em mês já fechado, na folha, no fechamento nem na equipe. Tudo fica no histórico com o nome de quem mexeu.",
+  leitura:  "Só vê o painel (resumos, gráficos, relatórios e comprovantes)."
+};
+function renderEquipe(el){
+  const box = div("fade-in");
+  box.innerHTML = `
+    <div style="margin-bottom:14px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between">
+      <div>
+        <p style="font-size:18px;font-weight:800;color:var(--navy)">Equipe</p>
+        <p style="font-size:13px;color:var(--muted);margin-top:2px">Quem pode entrar no painel e o que cada pessoa pode fazer.</p>
+      </div>
+      <button class="topbar-btn ativo" id="btnEquipeNova" onclick="abrirEquipeModal()">＋ Adicionar pessoa</button>
+    </div>
+    <div id="equipeLista"><div class="loading-state"><div class="loader"></div><p class="loader-text">Carregando...</p></div></div>
+    <div class="section-hdr" style="margin-top:22px"><div><p class="section-title">Como dar acesso a uma pessoa nova</p></div></div>
+    <ol style="font-size:13px;color:var(--text);line-height:1.8;padding-left:20px;margin:0">
+      <li>No Supabase, abra <b>Authentication → Users → Add user</b>, digite o e-mail e uma senha e marque <b>Auto Confirm User</b>.</li>
+      <li>Aqui, clique em <b>＋ Adicionar pessoa</b> com o <b>mesmo e-mail</b> e escolha o que ela pode fazer.</li>
+      <li>Passe o e-mail e a senha para a pessoa. No primeiro acesso ela pode trocar a senha pelo cadeado, no canto do menu.</li>
+    </ol>
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">Para tirar o acesso de alguém, edite a pessoa e desmarque <b>Pode entrar no painel</b>: ninguém é apagado e o histórico continua.</p>`;
+  el.appendChild(box);
+  carregarEquipe();
+}
+async function carregarEquipe(){
+  const lista = $("equipeLista");
+  try{
+    EQUIPE = await dbEscrever("POST", "rpc/listar_equipe", {}, "return=representation");
+    if(!Array.isArray(EQUIPE)) EQUIPE = [];
+  }catch(e){
+    if(lista) lista.innerHTML = `<div class="error-state"><p class="error-title">Não consegui carregar a equipe</p><p class="error-text">${/does not exist|Could not find|404|PGRST202/i.test((e.message||"")+" "+e.status) ? "O banco ainda não tem a parte da equipe. Rode o arquivo <b>migracao_lancador.sql</b> no Supabase (SQL Editor)." : escHtml(e.message||"erro")}</p></div>`;
+    return;
+  }
+  if(!lista) return;
+  const eu = (USUARIO&&USUARIO.email||"").toLowerCase();
+  const linhas = EQUIPE.map(u=>{
+    const sou = u.email===eu;
+    const chip = u.ativo ? `<span class="kpi-badge ${u.papel==="admin"?"kpi-badge-blue":""}">${ROTULO_PAPEL[u.papel]||u.papel}</span>` : '<span class="kpi-badge" style="background:#eee;color:#777">Sem acesso</span>';
+    return `<tr data-email="${escHtml(u.email)}" style="${u.ativo?"":"opacity:.6"}">
+      <td><span class="td-bold">${escHtml(u.nome)}</span>${sou?' <span class="kpi-badge kpi-badge-blue" style="margin-left:6px">você</span>':""}<div style="font-size:12px;color:var(--muted)">${escHtml(u.email)}</div></td>
+      <td>${chip}</td>
+      <td class="td-right"><button class="topbar-btn eq-edit" onclick="abrirEquipeModal('${escHtml(u.email)}')">✎ Editar</button></td></tr>`;
+  }).join("");
+  lista.innerHTML = `<div class="table-card" style="overflow-x:auto"><table><thead><tr><th>Pessoa</th><th>O que pode fazer</th><th></th></tr></thead><tbody>${linhas}</tbody></table></div>`;
+}
+function equipePapelMudou(){ $("eqDescPapel").textContent = DESC_PAPEL[$("eqPapel").value]||""; }
+function abrirEquipeModal(email){
+  if(!SOU_ADMIN()) return;
+  const u = email ? EQUIPE.find(x=>x.email===email) : null;
+  EQ_EDITANDO = u ? u.email : null;
+  const sou = !!u && u.email===(USUARIO&&USUARIO.email||"").toLowerCase();
+  $("eqTitulo").textContent = u ? "Alterar pessoa" : "Adicionar pessoa";
+  $("eqEmail").value = u ? u.email : ""; $("eqEmail").readOnly = !!u;
+  $("eqNome").value = u ? u.nome : ""; $("eqPapel").value = u ? u.papel : "lancador";
+  $("eqAtivo").checked = u ? u.ativo : true;
+  $("eqPapel").disabled = sou; $("eqAtivo").disabled = sou;
+  ["eqEmail","eqNome"].forEach(id=>$(id).classList.remove("erro"));
+  $("eqMsg").style.color = "var(--saida)"; $("eqMsg").textContent = sou ? "Este é o seu acesso: você não pode tirar o seu próprio papel de administrador." : "";
+  $("eqSalvar").disabled = false; $("eqSalvar").textContent = "Salvar";
+  equipePapelMudou();
+  $("equipeModal").style.display = "flex"; $("equipeModal").scrollTop = 0;
+  setTimeout(()=>$(u?"eqNome":"eqEmail").focus(), 30);
+}
+function fecharEquipeModal(){ $("equipeModal").style.display = "none"; EQ_EDITANDO = null; }
+async function salvarEquipePessoa(){
+  const msg = $("eqMsg"); msg.style.color = "var(--saida)"; msg.textContent = "";
+  ["eqEmail","eqNome"].forEach(id=>$(id).classList.remove("erro"));
+  const email = $("eqEmail").value.trim().toLowerCase(), nome = $("eqNome").value.trim().replace(/\s+/g," ");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length>120){ $("eqEmail").classList.add("erro"); msg.textContent = "Informe um e-mail válido."; return; }
+  if(!nome || nome.length>60){ $("eqNome").classList.add("erro"); msg.textContent = "Informe o nome (até 60 letras)."; return; }
+  const btn = $("eqSalvar"); btn.disabled = true; btn.textContent = "Salvando...";
+  try{
+    const r = await dbEscrever("POST", "rpc/salvar_usuario", {p:{email, nome, papel:$("eqPapel").value, ativo:$("eqAtivo").checked}}, "return=representation");
+    if(!r || !r.email) throw new Error("O banco não confirmou o cadastro.");
+    fecharEquipeModal();
+    await carregarEquipe();
+    mostrarToast(r.novo ? "✅ "+r.nome+" cadastrada. Agora crie o usuário e a senha dela no Supabase (Authentication → Users), com este mesmo e-mail." : "✅ Alterações de "+r.nome+" salvas.", false, r.novo?9000:4500);
+  }catch(e){
+    btn.disabled = false; btn.textContent = "Salvar";
+    msg.textContent = e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." : (e instanceof TypeError ? "Sem conexão. Tente de novo." : (/does not exist|Could not find|PGRST202/i.test(e.message)?"O banco ainda não tem a parte da equipe. Rode o arquivo migracao_lancador.sql no Supabase.":e.message));
+  }
+}
+
 // ── ABRIR UM ANO NOVO (só administrador) ──
 // Oferece "Abrir o ano 2027" a partir de setembro do ano anterior; a partir de janeiro o ano novo já aparece sozinho.
 function proximoAnoParaAbrir(){
@@ -2709,7 +2831,7 @@ function renderInicio(el){
 // Visão do ano: o que você vê ao entrar num ano, antes de escolher um mês.
 function renderVisaoAno(el){
   if(!RES.length){
-    const adm = SOU_ADMIN();
+    const adm = PODE_LANCAR();
     el.innerHTML=`<div class="error-state" id="anoVazio" style="border-color:var(--border,#e2e8f0)"><p class="error-title" style="color:var(--navy,#1a1a2e)">${ANO} ainda não tem lançamentos</p>
       <p class="error-text">${adm ? "Comece lançando a primeira entrada ou despesa. O resumo do ano aparece aqui assim que houver movimento. O saldo de dezembro de "+(ANO-1)+" passa sozinho para janeiro, desde que o Fechamento de dezembro tenha sido lançado." : "Quando houver entradas ou saídas neste ano, o resumo aparece aqui."}</p>
       ${adm ? '<div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px"><button class="topbar-btn ativo" id="btnVazioEntrada" onclick="abrirEntradaSemana()">＋ Lançar semana de entradas</button><button class="topbar-btn ativo" id="btnVazioDespesa" onclick="abrirDespesa()">＋ Nova despesa</button></div>' : ""}</div>`;
@@ -2875,6 +2997,7 @@ function render(){
   const el=$("pageBody"); el.innerHTML="";
   if(TELA==="home") renderInicio(el);
   else if(TELA==="comprov") renderComprovantes(el);
+  else if(TELA==="equipe") renderEquipe(el);
   else if(ABA==="ano") renderVisaoAno(el);
   else if(ABA==="geral") renderGeral(el);
   else if(ABA==="entrada") renderEntradas(el);
@@ -3159,6 +3282,13 @@ function situacaoConf(v){
 }
 // ── Lançar / editar / remover Fechamento (só administrador; o banco confere de novo) ──
 const SOU_ADMIN = () => !!(USUARIO && USUARIO.papel==="admin");
+// Lançador = quem cobre as férias: lança e corrige despesas e entradas (não exclui, não mexe em mês fechado, folha, fechamento...). O banco confere de novo.
+const PODE_LANCAR = () => !!(USUARIO && (USUARIO.papel==="admin" || USUARIO.papel==="lancador"));
+const ROTULO_PAPEL = {admin:"Administrador", lancador:"Lançador", leitura:"Liderança"};
+// Mês que já tem Fechamento lançado: só o administrador altera.
+function mesFechadoNoAno(mes){ return CONF.some(c=>c.mes===Number(mes) && c.saldo_real!=null); }
+function mesBloqueadoPraMim(mes, ano){ return !SOU_ADMIN() && (ano===undefined || ano===ANO) && mesFechadoNoAno(mes); }
+const AVISO_MES_FECHADO = "Este mês já foi fechado: só o administrador pode alterar.";
 function parseValorBR(s){
   let x = String(s==null?"":s).replace(/R\$|\s/g,"");
   if(!x) return NaN;
@@ -3372,7 +3502,7 @@ function entradaAddOutro(nome, vals){
   entradaTotais();
 }
 function abrirEntradaSemana(mes, semana){
-  if(!SOU_ADMIN()) return;
+  if(!PODE_LANCAR()) return;
   const hoje = new Date();
   if(!mes){
     const m = getMesNome(); const i = MESES_NOME.indexOf(m);
@@ -3408,7 +3538,7 @@ function entradaPreencher(){
   const mes = Number($("entMes").value), n = Number($("entSemana").value);
   const sem = entradaSemanaDe(mes, n);
   $("entTitulo").textContent = sem ? "Alterar semana de entradas" : "Lançar semana de entradas";
-  $("entRemover").style.display = sem ? "" : "none";
+  $("entRemover").style.display = (sem && SOU_ADMIN()) ? "" : "none";
   $("entPeriodo").value = sem ? (sem.periodo||"") : "";
   $("entPeriodo").placeholder = "Ex.: "+String((n-1)*7+1).padStart(2,"0")+"/"+String(mes).padStart(2,"0")+" a "+String(Math.min(n*7,new Date(ANO,mes,0).getDate())).padStart(2,"0")+"/"+String(mes).padStart(2,"0");
   const det = sem ? (sem.detalhes||{}) : {};
@@ -3423,6 +3553,7 @@ function entradaPreencher(){
     i.value = v ? v.toFixed(2).replace(".",",") : "";
   });
   $("entMsg").textContent = ""; $("entSalvar").disabled = false; $("entSalvar").textContent = "Salvar semana";
+  if(mesBloqueadoPraMim(mes)){ $("entSalvar").disabled = true; $("entMsg").style.color = "var(--saida)"; $("entMsg").textContent = "🔒 "+AVISO_MES_FECHADO; }
   entradaTotais();
 }
 // Lê a grade: devolve {linhas, erro, totais}. Vazio = 0; número inválido ou negativo = erro naquele campo.
@@ -3471,6 +3602,7 @@ async function recarregarEntradas(mesParaMostrar){
   render();
 }
 function entradaErroTexto(e){
+  if(/já foi fechado/i.test(e.message||"")) return e.message;
   return (e.status===401||e.status===403||/Sem permissão/i.test(e.message)) ? "Você não tem permissão para lançar entradas." :
          e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
          (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
@@ -3510,11 +3642,11 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape" && $("entModal") &
 function renderEntradas(el){
   const ek=getEntKey(MES); const ent=ek?DE[ek]:null; const nm=getMesNome();
   if(!ent){
-    el.innerHTML=`<div class="error-state"><p class="error-title">Dados de entradas não disponíveis para ${nm}</p><p class="error-text">${SOU_ADMIN()?"Use o botão abaixo para lançar a primeira semana.":"Ainda não há entradas lançadas neste mês."}</p>${SOU_ADMIN()?'<button class="topbar-btn ativo" id="btnLancarSemana" onclick="abrirEntradaSemana()">＋ Lançar semana</button>':""}</div>`;
+    el.innerHTML=`<div class="error-state"><p class="error-title">Dados de entradas não disponíveis para ${nm}</p><p class="error-text">${PODE_LANCAR()?"Use o botão abaixo para lançar a primeira semana.":"Ainda não há entradas lançadas neste mês."}</p>${PODE_LANCAR()?'<button class="topbar-btn ativo" id="btnLancarSemana" onclick="abrirEntradaSemana()">＋ Lançar semana</button>':""}</div>`;
     return;
   }
   const t=ent.total;
-  if(SOU_ADMIN()){
+  if(PODE_LANCAR()){
     const ac=div("geral-acoes"); ac.innerHTML='<button class="topbar-btn ativo" id="btnLancarSemana" onclick="abrirEntradaSemana()">＋ Lançar semana</button>';
     el.appendChild(ac);
   }
@@ -3560,7 +3692,7 @@ function renderEntradas(el){
     const c=div("semana-card");
     c.innerHTML=`
       <div class="semana-card-hdr">
-        <div><p class="semana-card-title">${nome}${SOU_ADMIN()?`<button class="topbar-btn semana-edit" data-semana="${parseInt(nome.replace(/\D/g,""),10)}" onclick="abrirEntradaSemana(${MESES_NOME.indexOf(getMesNome())+1},${parseInt(nome.replace(/\D/g,""),10)})" title="Alterar ${nome}">✎ Editar</button>`:""}</p><p class="semana-card-period">${sem.periodo||""}</p></div>
+        <div><p class="semana-card-title">${nome}${(PODE_LANCAR() && !mesBloqueadoPraMim(MESES_NOME.indexOf(getMesNome())+1))?`<button class="topbar-btn semana-edit" data-semana="${parseInt(nome.replace(/\D/g,""),10)}" onclick="abrirEntradaSemana(${MESES_NOME.indexOf(getMesNome())+1},${parseInt(nome.replace(/\D/g,""),10)})" title="Alterar ${nome}">✎ Editar</button>`:""}</p><p class="semana-card-period">${sem.periodo||""}</p></div>
         <p class="semana-card-total">${fBRL(tot)}</p>
       </div>
       <div class="semana-card-body">
@@ -3599,7 +3731,7 @@ function renderSaidas(el){
 }
 
 function acoesSaidas(el, aqui){
-  if(!SOU_ADMIN()) return;
+  if(!PODE_LANCAR()) return;
   const ac=div("geral-acoes");
   ac.innerHTML = aqui ? '<button class="topbar-btn ativo" id="btnNovaDespesa" onclick="novaDespesaAqui()">＋ Nova despesa nesta descrição</button>'
                       : '<button class="topbar-btn ativo" id="btnNovaDespesa" onclick="abrirDespesa()">＋ Nova despesa</button>';
@@ -3804,16 +3936,7 @@ function renderSaidasNivel2(el){
           Baixar
         </a>
       </div>` : ""}
-      ${SOU_ADMIN() ? `<div class="lanc-acoes" style="margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}">
-        <button class="comp-btn btn-editar-desp" onclick="abrirDespesa('${escHtml(l.codigo)}')">
-          <span class="comp-btn-icon">✎</span>
-          Editar
-        </button>
-        <button class="comp-btn btn-excluir-desp" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirDespesa('${escHtml(l.codigo)}',this)">
-          <span class="comp-btn-icon">🗑</span>
-          Excluir
-        </button>
-      </div>` : ""}`;
+      ${acoesDespesaHtml(l, temComp)}`;
     grid.appendChild(c);
   });
   sec.appendChild(grid);
@@ -3855,7 +3978,25 @@ function dataBRparaISO(s){   // "12/11/2026" ou "12-11-26" → "2026-11-12" (ou 
   return dataISOvalida(iso) ? iso : null;
 }
 const isoParaBR = iso => iso.slice(8,10)+"/"+iso.slice(5,7)+"/"+iso.slice(0,4);
+// Botões de cada lançamento: lançador corrige (se o mês estiver aberto), só o administrador exclui.
+function acoesDespesaHtml(l, temComp){
+  if(!PODE_LANCAR()) return "";
+  const estilo = `margin-top:10px;${temComp?'':'border-top:1px solid var(--border);padding-top:10px;'}`;
+  if(mesBloqueadoPraMim(MESES_NOME.indexOf(getMesNome())+1))
+    return `<div class="lanc-acoes lanc-fechado" style="${estilo};font-size:12px;color:var(--muted)">🔒 Mês fechado: só o administrador altera.</div>`;
+  return `<div class="lanc-acoes" style="${estilo}">
+        <button class="comp-btn btn-editar-desp" onclick="abrirDespesa('${escHtml(l.codigo)}')">
+          <span class="comp-btn-icon">✎</span>
+          Editar
+        </button>
+        ${SOU_ADMIN() ? `<button class="comp-btn btn-excluir-desp" style="border-color:var(--saida2);color:var(--saida)" onclick="excluirDespesa('${escHtml(l.codigo)}',this)">
+          <span class="comp-btn-icon">🗑</span>
+          Excluir
+        </button>` : ""}
+      </div>`;
+}
 function despErroTexto(e){
+  if(/já foi fechado/i.test(e.message||"")) return e.message;
   return (e.status===401||e.status===403||/Sem permissão/i.test(e.message)) ? "Você não tem permissão para lançar despesas." :
          e.message==="sessao_expirada" ? "Sessão expirada. Entre de novo." :
          (e instanceof TypeError ? "Sem conexão. Tente de novo." : e.message);
@@ -3964,9 +4105,10 @@ function despConfirmaDuplicada(d, ignorarCodigo){
   return !l || confirm("Já existe uma despesa igual: "+l.data+" — "+l.raw.descricao+" — "+fBRL(l.valor)+".\n\nOK para lançar mesmo assim (ex.: duas compras iguais no mesmo dia), Cancelar para conferir.");
 }
 function abrirDespesa(codigo, preset){
-  if(!SOU_ADMIN()) return;
+  if(!PODE_LANCAR()) return;
   const it = codigo ? despFind(codigo) : null;
   if(codigo && !it){ mostrarToast("Não encontrei esta despesa. Recarregue o painel (Ctrl+F5).", true); return; }
+  if(it && it.raw && /^\d{4}-\d{2}/.test(it.raw.data||"") && mesBloqueadoPraMim(+it.raw.data.slice(5,7), +it.raw.data.slice(0,4))){ mostrarToast("🔒 "+AVISO_MES_FECHADO, true); return; }
   DESP_EDIT = it ? it.codigo : null;
   despPreencherListas();
   const raw = it ? it.raw : (preset||{});
@@ -3977,7 +4119,7 @@ function abrirDespesa(codigo, preset){
     if(it) aviso = "Esta despesa não tinha data; coloquei o dia 1 do mês. Corrija se quiser.";
   }
   $("despTitulo").textContent = it ? "Alterar despesa" : "Nova despesa";
-  $("despExcluir").style.display = it ? "" : "none";
+  $("despExcluir").style.display = (it && SOU_ADMIN()) ? "" : "none";
   $("despData").value = data;
   $("despValor").value = it ? String(Number(it.valor).toFixed(2)).replace(".",",") : "";
   $("despDescricao").value = raw.descricao||"";
@@ -4007,6 +4149,7 @@ function despLer(){
   const d = { data:g("despData"), descricao:limpaEspacos(g("despDescricao")), categoria:limpaEspacos(g("despCategoria")), forma_pagamento:limpaEspacos(g("despForma")),
               responsavel:limpaEspacos(g("despResp")), observacao:g("despObs"), comprovante_url:g("despLink") };
   if(!dataISOvalida(d.data)) return marca("despData","Informe uma data válida.");
+  if(mesBloqueadoPraMim(+d.data.slice(5,7), +d.data.slice(0,4))) return marca("despData","Este mês já foi fechado: só o administrador pode lançar nele. Escolha uma data em mês aberto.");
   const v = parseValorBR($("despValor").value);
   if(isNaN(v) || v<=0 || v>=1e9) return marca("despValor","Informe um valor maior que zero (ex.: 1.234,50).");
   d.valor = Math.round(v*100)/100;
@@ -4783,7 +4926,8 @@ async function salvarParamFolha(){
 }
 document.addEventListener("keydown", e=>{
   if(e.key!=="Escape") return;
-  if($("anoAbrirModal") && $("anoAbrirModal").style.display==="flex") fecharAnoNovo();
+  if($("equipeModal") && $("equipeModal").style.display==="flex") fecharEquipeModal();
+  else if($("anoAbrirModal") && $("anoAbrirModal").style.display==="flex") fecharAnoNovo();
   else if($("folhaParamModal") && $("folhaParamModal").style.display==="flex") fecharParamFolha();
   else if($("folhaModal") && $("folhaModal").style.display==="flex") fecharFolha();
 });
