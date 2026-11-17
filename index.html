@@ -3005,18 +3005,38 @@ function render(){
 function getMesNome(){ return MES.replace("Despesas(","").replace(")","").replace("Despesas ",""); }
 function getEntKey(m){ const nm=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); return Object.keys(DE).find(k=>k.toLowerCase().includes(nm.toLowerCase()))||null; }
 function notaSaldo(txt){ const n=document.createElement("p"); n.className="nota-saldo"; n.textContent=txt; return n; }
+// ÚNICA fonte dos totais de um mês (entradas, saídas, saldo): a view resumo_mensal do banco (RES),
+// a mesma que alimenta a Visão do Ano e a Conferência. O cálculo feito com os lançamentos na tela só é
+// usado para meses que não estão na view (antes do início do controle ou sem movimento) e como CONFERÊNCIA:
+// se os lançamentos detalhados não baterem com o total do banco, a tela avisa em vez de escolher em silêncio.
+function numeroDoMes(mesKeyDD){ return MESES_NOME.indexOf(String(mesKeyDD).replace("Despesas(","").replace(")","").replace("Despesas ","").trim())+1; }
+function totaisDoMes(mesKeyDD){
+  const desp=DD[mesKeyDD]||{}; const ek=getEntKey(mesKeyDD); const ent=ek?DE[ek]:null;
+  const tD=r2(desp.total||0), tE=r2(ent?(ent.total.totalGeral||0):0);
+  const r=RES.find(x=>x.mes===numeroDoMes(mesKeyDD));
+  if(!r) return {entradas:tE, saidas:tD, saldo:r2(tE-tD), fonte:"tela", diverge:false};
+  const e=r2(Number(r.entradas)), sd=r2(Number(r.saidas));
+  return {entradas:e, saidas:sd, saldo:r2(e-sd), fonte:"banco", diverge:Math.abs(e-tE)>0.01||Math.abs(sd-tD)>0.01, tela:{entradas:tE, saidas:tD}};
+}
+function avisoDivergencia(tot){
+  if(!tot || !tot.diverge) return null;
+  const d=document.createElement("div"); d.className="rel-banner"; d.id="avisoDivergencia"; d.style.cssText="border-color:#c0272d;background:#fff5f5;margin-bottom:14px";
+  d.innerHTML='<span>⚠️ <b>Atenção:</b> os lançamentos detalhados deste mês somam '+fBRL(tot.tela.entradas)+' de entradas e '+fBRL(tot.tela.saidas)+' de saídas, mas o total do banco é '+fBRL(tot.entradas)+' e '+fBRL(tot.saidas)+'. Os totais acima são os do banco. Clique em <b>Atualizar</b>; se continuar assim, avise o administrador.</span>';
+  return d;
+}
 function getDados(){
   const desp=DD[MES]||{}; const ek=getEntKey(MES); const ent=ek?DE[ek]:null;
-  const tD=desp.total||0; const tE=ent?(ent.total.totalGeral||0):0;
-  return {desp,ent,tD,tE,saldo:r2(tE-tD)};
+  const tot=totaisDoMes(MES);
+  return {desp,ent,tD:tot.saidas,tE:tot.entradas,saldo:tot.saldo,tot};
 }
 
 // ─── VISÃO GERAL ───
 function renderGeral(el){
-  const {desp,ent,tD,tE,saldo}=getDados();
+  const {desp,ent,tD,tE,saldo,tot}=getDados();
   const t=ent?ent.total:{};
   const cat=desp.categorias||desp;
   const nm=getMesNome();
+  { const av=avisoDivergencia(tot); if(av) el.appendChild(av); }
 
   // Ação do mês: o relatório agora é uma função daqui (não mais uma aba solta)
   const acoesMes=div("geral-acoes fade-in");
@@ -3132,9 +3152,9 @@ function renderCompMeses(el){
   setTimeout(()=>{
     const canvas=document.getElementById("cLinhas"); if(!canvas) return;
     const labels=meses.map(m=>m.replace("Despesas(","").replace(")","").replace("Despesas ",""));
-    const dataSai=meses.map(m=>DD[m].total||0);
-    const dataEnt=meses.map(m=>{ const ek=getEntKey(m); return ek?(DE[ek]?.total?.totalGeral||0):0; });
-    const dataSaldo=dataEnt.map((e,i)=>e-dataSai[i]);
+    const dataSai=meses.map(m=>totaisDoMes(m).saidas);
+    const dataEnt=meses.map(m=>totaisDoMes(m).entradas);
+    const dataSaldo=meses.map(m=>totaisDoMes(m).saldo);
 
     charts.linhas=novoChart(canvas,{
       type:"line",
@@ -3246,8 +3266,8 @@ function renderTabelaMeses(el){
   meses.forEach(m=>{
     const nm=m.replace("Despesas(","").replace(")","").replace("Despesas ","");
     const ek=getEntKey(m); const ent=ek?DE[ek]:null;
-    const tD=DD[m].total||0; const tE=ent?(ent.total.totalGeral||0):0;
-    const saldo=tE-tD; const cat=ent?(ent.total.catedral||0):0;
+    const tm=totaisDoMes(m); const tD=tm.saidas, tE=tm.entradas;
+    const saldo=tm.saldo; const cat=ent?(ent.total.catedral||0):0;
     const tr=document.createElement("tr");
     if(m===MES) tr.style.background="var(--bg)";
     tr.innerHTML=`
@@ -5579,11 +5599,12 @@ async function rejeitarPendenteUI(id, btnEl){
 function calcularMetricasParaMes(mesKeyDD){
   const desp = DD[mesKeyDD] || {};
   const cat  = desp.categorias || desp;
-  const tD   = desp.total || 0;
+  const tot  = totaisDoMes(mesKeyDD);          // totais do banco (mesma fonte das outras telas)
+  const tD   = tot.saidas;
   const ek   = getEntKey(mesKeyDD);
   const ent  = ek ? DE[ek] : null;
   const t    = ent ? (ent.total||{}) : {};
-  const tE   = t.totalGeral || 0;
+  const tE   = tot.entradas;
   const nomeMes = mesKeyDD.replace("Despesas(","").replace(")","").replace("Despesas ","").trim().toUpperCase();
   const folhaTotal = (DF[nomeMes] && DF[nomeMes].totalGeral) || 0;
   const catTots = Object.entries(cat||{}).map(([n,d])=>({nome:n, valor:sumCat({x:d})})).sort((a,b)=>b.valor-a.valor);
@@ -5593,7 +5614,8 @@ function calcularMetricasParaMes(mesKeyDD){
     mesKeyDD,
     entradas: { total:tE, dizimo:t.dizimo||0, oferta:t.oferta||0, campanha:t.campanha||0, pix:t.totalPix||0 },
     saidas:   { total:tD, catedral:t.catedral||0, extra:t.extra||0, folha:folhaTotal, topCategorias },
-    saldo: tE - tD,
+    saldo: tot.saldo,
+    diverge: tot.diverge, tot,
   };
 }
 
@@ -5719,6 +5741,7 @@ function renderRelatorioConteudo(el){
     </div>`;
   el.appendChild(hero);
   el.appendChild(notaSaldo("Saldo do mês = entradas − saídas. Salários e repasse à Catedral já estão nas saídas; a tabela “Valores calculados” é só para conferência."));
+  { const av=avisoDivergencia(a.tot); if(av) el.appendChild(av); }
 
   // Composição das entradas + Catedral/Extra/Folha
   const g2 = div("chart-grid-2 fade-in");
