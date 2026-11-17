@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard Financeiro | ICNV Rocha Miranda</title>
 <link rel="icon" type="image/png" id="favicon" href="data:,">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<!-- Chart.js 4.4.1 com verificação de integridade (SRI): se o arquivo da CDN for alterado, o navegador recusa. Se falhar, cai para a cópia do cdnjs. -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js" integrity="sha512-ZwR1/gSZM3ai6vCdI+LVF1zSq/5HznD3ZSTk7kajkaj4D292NLuduDCO1c/NT8Id+jE58KYLKT7hXnbtryGmMg==" crossorigin="anonymous" onerror="var s=document.createElement('script');s.src='https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js';document.head.appendChild(s)"></script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
@@ -2989,7 +2990,7 @@ async function carregarTudo(){
     render();
   }catch(err){
     if(err.message==="sessao_expirada"){ sessaoGravar(null); location.reload(); return; }
-    $("pageBody").innerHTML=`<div class="error-state"><p class="error-title">Erro ao carregar</p><p class="error-text">${err.message}</p><button class="topbar-btn" onclick="carregarTudo()">🔄 Tentar de novo</button></div>`;
+    $("pageBody").innerHTML=`<div class="error-state"><p class="error-title">Erro ao carregar</p><p class="error-text">${escHtml(err.message)}</p><button class="topbar-btn" onclick="carregarTudo()">🔄 Tentar de novo</button></div>`;
   }
 }
 
@@ -3138,12 +3139,12 @@ function renderGeral(el){
     c.innerHTML=`
       <div class="kpi-header">
         <div>
-          <p class="kpi-label">${k.label}</p>
-          <p class="kpi-value">${k.isMoney===false?k.val:fBRL(k.val)}</p>
+          <p class="kpi-label">${escHtml(k.label)}</p>
+          <p class="kpi-value">${k.isMoney===false?escHtml(k.val):fBRL(k.val)}</p>
         </div>
         <div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div>
       </div>
-      <p class="kpi-footer">${k.sub}</p>`;
+      <p class="kpi-footer">${escHtml(k.sub)}</p>`;
     kpis.appendChild(c);
   });
   el.appendChild(kpis);
@@ -3338,6 +3339,8 @@ function renderTabelaMeses(el){
 
 // Texto vindo das planilhas nunca entra no HTML sem escapar.
 function escHtml(t){ return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+// Endereço de link vindo do banco: só aceita http(s); qualquer outra coisa (ex.: javascript:) vira "#"
+function urlSegura(u){ const t=String(u==null?"":u).trim(); return /^https?:\/\//i.test(t) ? escHtml(t) : "#"; }
 
 // ─── CONFERÊNCIA: o que era esperado × o que realmente existe ───
 // Real = total em contas + espécie no último dia do mês (lançado no painel, sem reserva/ajuda controladas à mão).
@@ -3734,7 +3737,7 @@ function renderEntradas(el){
     {label:"Extra 5%",       val:t.extra||0,      icon:"➕", cls:"kpi-purple",  sub:"calculado · só separa se abrir no mês"},
   ].forEach(k=>{
     const c=div("kpi-card "+k.cls);
-    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
+    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${escHtml(k.label)}</p><p class="kpi-value">${fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${escHtml(k.sub)}</p>`;
     kpis.appendChild(c);
   });
   el.appendChild(kpis);
@@ -3824,7 +3827,7 @@ function renderSaidasNivel0(el){
     {label:"Maior Categoria", val:catTots[0]?.v||0,    icon:"📌", cls:"kpi-saida",  sub:catTots[0]?.n||"—"},
   ].forEach(k=>{
     const c=div("kpi-card "+k.cls);
-    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${k.isMoney===false?k.val:fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
+    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${escHtml(k.label)}</p><p class="kpi-value">${k.isMoney===false?escHtml(k.val):fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${escHtml(k.sub)}</p>`;
     kpis.appendChild(c);
   });
   el.appendChild(kpis);
@@ -3852,7 +3855,7 @@ function renderSaidasNivel0(el){
     const pct=(v/tD*100).toFixed(1);
     const tr=document.createElement("tr");
     tr.style.cursor="pointer";
-    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${n}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ clique para detalhar</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${escHtml(n)}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ clique para detalhar</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
     tr.onclick=()=>{ DRILL.level=1; DRILL.cat=n; renderSaidasAtual(); };
     tb.appendChild(tr);
   });
@@ -3865,7 +3868,7 @@ function renderSaidasNivel0(el){
     if(leg){ catTots.forEach(({n,v,c})=>{
       const pct=(v/tD*100).toFixed(1);
       const r=document.createElement("div"); r.className="legend-row"; r.style.cursor="pointer";
-      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${n}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
+      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${escHtml(n)}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
       r.onclick=()=>{ DRILL.level=1; DRILL.cat=n; renderSaidasAtual(); };
       leg.appendChild(r);
     });}
@@ -3884,19 +3887,19 @@ function renderSaidasNivel1(el){
 
   // Breadcrumb
   const bc=div("breadcrumb");
-  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item active">${catNome}</span>`;
+  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item active">${escHtml(catNome)}</span>`;
   el.appendChild(bc);
   acoesSaidas(el, false);
 
   // Header
   const hdr=div("drill-header fade-in");
-  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=0;renderSaidasAtual()">← Voltar</button><div><p class="drill-title">${catNome}</p><p class="drill-sub">Total: ${fBRL(total)} · ${descTots.length} descrições · clique para ver os lançamentos</p></div>`;
+  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=0;renderSaidasAtual()">← Voltar</button><div><p class="drill-title">${escHtml(catNome)}</p><p class="drill-sub">Total: ${fBRL(total)} · ${descTots.length} descrições · clique para ver os lançamentos</p></div>`;
   el.appendChild(hdr);
 
   // Pizza + Legenda
   const g=div("chart-grid-21 fade-in");
   const cPiz=div("chart-card");
-  cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Descrições — ${catNome}</p><p class="chart-card-sub">Clique para ver lançamentos</p></div><div class="chart-wrap" style="height:260px"><canvas id="cDescPizza"></canvas><div class="chart-center-label"><p class="ccl-val" id="ccDesc">${fK(total)}</p><p class="ccl-sub">total</p></div></div>`;
+  cPiz.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Descrições — ${escHtml(catNome)}</p><p class="chart-card-sub">Clique para ver lançamentos</p></div><div class="chart-wrap" style="height:260px"><canvas id="cDescPizza"></canvas><div class="chart-center-label"><p class="ccl-val" id="ccDesc">${fK(total)}</p><p class="ccl-sub">total</p></div></div>`;
   const cLeg=div("chart-card");
   cLeg.innerHTML=`<div class="chart-card-hdr"><p class="chart-card-title">Participação</p><p class="chart-card-sub">Clique para detalhar</p></div><div class="legend" id="legDesc" style="max-height:300px;overflow-y:auto"></div>`;
   g.appendChild(cPiz); g.appendChild(cLeg);
@@ -3913,7 +3916,7 @@ function renderSaidasNivel1(el){
   descTots.forEach(({n,v,c,lans})=>{
     const pct=(v/total*100).toFixed(1);
     const tr=document.createElement("tr"); tr.style.cursor="pointer";
-    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${n}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ ${lans.length} lançamento(s)</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
+    tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px"><span style="width:10px;height:10px;border-radius:3px;background:${c};flex-shrink:0;display:inline-block"></span><span class="td-bold">${escHtml(n)}</span></div><div style="font-size:10px;color:var(--accent);margin-top:2px">↳ ${lans.length} lançamento(s)</div></td><td class="td-right td-red">${fBRL(v)}</td><td class="td-right">${pct}%</td><td><div class="bar-bg"><div class="bar-fill" style="background:${c};width:0%" data-bar="${pct}"></div></div></td>`;
     tr.onclick=()=>{ DRILL.level=2; DRILL.desc=n; renderSaidasAtual(); };
     tb.appendChild(tr);
   });
@@ -3925,7 +3928,7 @@ function renderSaidasNivel1(el){
     if(leg){ descTots.forEach(({n,v,c})=>{
       const pct=(v/total*100).toFixed(1);
       const r=document.createElement("div"); r.className="legend-row"; r.style.cursor="pointer";
-      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${n}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
+      r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${escHtml(n)}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
       r.onclick=()=>{ DRILL.level=2; DRILL.desc=n; renderSaidasAtual(); };
       leg.appendChild(r);
     });}
@@ -3941,13 +3944,13 @@ function renderSaidasNivel2(el){
 
   // Breadcrumb
   const bc=div("breadcrumb");
-  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item" onclick="DRILL.level=1;renderSaidasAtual()">${DRILL.cat}</span><span class="bc-sep">›</span><span class="bc-item active">${DRILL.desc}</span>`;
+  bc.innerHTML=`<span class="bc-item" onclick="DRILL.level=0;renderSaidasAtual()">Saídas</span><span class="bc-sep">›</span><span class="bc-item" onclick="DRILL.level=1;renderSaidasAtual()">${escHtml(DRILL.cat)}</span><span class="bc-sep">›</span><span class="bc-item active">${escHtml(DRILL.desc)}</span>`;
   el.appendChild(bc);
   acoesSaidas(el, true);
 
   // Header
   const hdr=div("drill-header fade-in");
-  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=1;renderSaidasAtual()">← Voltar para ${DRILL.cat}</button><div><p class="drill-title">${DRILL.desc}</p><p class="drill-sub">Categoria: ${DRILL.cat} · Total: ${fBRL(total)} · ${lans.length} lançamento(s)</p></div>`;
+  hdr.innerHTML=`<button class="back-btn" onclick="DRILL.level=1;renderSaidasAtual()">← Voltar para ${escHtml(DRILL.cat)}</button><div><p class="drill-title">${escHtml(DRILL.desc)}</p><p class="drill-sub">Categoria: ${escHtml(DRILL.cat)} · Total: ${fBRL(total)} · ${lans.length} lançamento(s)</p></div>`;
   el.appendChild(hdr);
 
   // Pizza observações (se mais de 1)
@@ -3978,13 +3981,13 @@ function renderSaidasNivel2(el){
     const c=div("lanc-card");
     c.innerHTML=`
       <div class="lanc-hdr">
-        <span class="lanc-obs">${l.obs||"—"}</span>
+        <span class="lanc-obs">${escHtml(l.obs||"—")}</span>
         <span class="lanc-val">${fBRL(l.valor)}</span>
       </div>
       <div class="lanc-meta">
-        <div class="lanc-row"><span class="lanc-row-label">📅 Data</span><span class="lanc-row-val">${l.data||"—"}</span></div>
-        <div class="lanc-row"><span class="lanc-row-label">👤 Responsável</span><span class="lanc-row-val">${l.resp||"—"}</span></div>
-        <div class="lanc-row"><span class="lanc-row-label">💳 Pagamento</span><span class="lanc-row-val">${l.forma||"—"}</span></div>
+        <div class="lanc-row"><span class="lanc-row-label">📅 Data</span><span class="lanc-row-val">${escHtml(l.data||"—")}</span></div>
+        <div class="lanc-row"><span class="lanc-row-label">👤 Responsável</span><span class="lanc-row-val">${escHtml(l.resp||"—")}</span></div>
+        <div class="lanc-row"><span class="lanc-row-label">💳 Pagamento</span><span class="lanc-row-val">${escHtml(l.forma||"—")}</span></div>
         <div class="lanc-row">
           <span class="lanc-row-label">📎 Comprovante</span>
           <span class="lanc-row-val">
@@ -3997,11 +4000,11 @@ function renderSaidasNivel2(el){
       </div>
       ${temComp ? `
       <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px;">
-        <a href="${l.comp}" target="_blank" rel="noopener noreferrer" class="comp-btn">
+        <a href="${urlSegura(l.comp)}" target="_blank" rel="noopener noreferrer" class="comp-btn">
           <span class="comp-btn-icon">📄</span>
           Ver comprovante no Drive
         </a>
-        <a href="${l.comp.replace('/view','/export?format=pdf')}" target="_blank" rel="noopener noreferrer" class="comp-btn" style="margin-left:6px">
+        <a href="${urlSegura(String(l.comp).replace('/view','/export?format=pdf'))}" target="_blank" rel="noopener noreferrer" class="comp-btn" style="margin-left:6px">
           <span class="comp-btn-icon">⬇</span>
           Baixar
         </a>
@@ -4710,7 +4713,7 @@ function folhaCardHtml(f, d){
   const cor = FUNC_CORES[f.nome] || {bg:"#334155"};
   const vales = (d && d.valesHist || []).map(v=>folhaValeHtml(v.data ? (dataBRparaISO(v.data)||"") : "", v.valor)).join("");
   const campo = (cls, rotulo, valor, extra) => `<div><label class="ia-form-label">${rotulo}</label><input class="ent-sel desp-in ${cls}" inputmode="decimal" autocomplete="off" value="${valor}" ${extra||""}></div>`;
-  return `<div class="fp-card" data-fid="${escHtml(f.id)}" data-nome="${n}" data-vinc="${f.vinculo}" data-al0="${f.al?1:0}" data-tr0="${f.tr?1:0}" data-at0="${f.ativo?1:0}">
+  return `<div class="fp-card" data-fid="${escHtml(f.id)}" data-nome="${n}" data-vinc="${escHtml(f.vinculo)}" data-al0="${f.al?1:0}" data-tr0="${f.tr?1:0}" data-at0="${f.ativo?1:0}">
     <div class="fp-card-hdr">
       <span class="func-avatar" style="background:${cor.bg};width:30px;height:30px;font-size:14px">${n.charAt(0).toUpperCase()}</span>
       <div><b>${n}</b><span class="fp-vinc">${rotuloVinculo(f.nome)}</span></div>
@@ -5089,7 +5092,7 @@ function renderFolhaVisao(el, mesNome, mesDados){
     {label:"Vales Descontados", val:totalVales,   icon:"📋", cls:"kpi-gold",   sub:"já descontados"},
   ].forEach(k=>{
     const c=div("kpi-card "+k.cls);
-    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${k.isMoney===false?k.val:fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
+    c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${escHtml(k.label)}</p><p class="kpi-value">${k.isMoney===false?escHtml(k.val):fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${escHtml(k.sub)}</p>`;
     kpis.appendChild(c);
   });
   el.appendChild(kpis);
@@ -5117,9 +5120,9 @@ function renderFolhaVisao(el, mesNome, mesDados){
     const c=div("func-card");
     c.innerHTML=`
       <div class="func-card-hdr">
-        <div class="func-avatar" style="background:${cor.bg}">${ini}</div>
+        <div class="func-avatar" style="background:${cor.bg}">${escHtml(ini)}</div>
         <div>
-          <p class="func-nome">${nome}</p>
+          <p class="func-nome">${escHtml(nome)}</p>
           <p class="func-tipo">${rotuloVinculo(nome)}</p>
         </div>
         <div class="func-total-hdr">
@@ -5246,7 +5249,7 @@ function renderFolhaComparativo(el, mesNome){
     const tr=document.createElement("tr");
     tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
       <div style="width:10px;height:10px;border-radius:50%;background:${(FUNC_CORES[nome]||{bg:"#334155"}).bg};flex-shrink:0"></div>
-      <span class="td-bold">${nome}</span></div></td>
+      <span class="td-bold">${escHtml(nome)}</span></div></td>
       <td style="font-size:11px;color:var(--muted)">${rotuloVinculo(nome)}</td>
       <td class="td-right">${fBRL(f.salario||0)}</td>
       <td class="td-right">${fBRL(benef)}</td>
@@ -5357,7 +5360,7 @@ function renderFolhaEvolucao(el){
     }).join("");
     tr.innerHTML=`<td><div style="display:flex;align-items:center;gap:8px">
       <div style="width:10px;height:10px;border-radius:50%;background:${cor.bg};flex-shrink:0"></div>
-      <span class="td-bold">${nome}</span></div></td>${tds}
+      <span class="td-bold">${escHtml(nome)}</span></div></td>${tds}
       <td class="td-right td-bold" style="color:${cor.ft}">${fBRL(totalAnual)}</td>`;
     tb.appendChild(tr);
   });
@@ -5520,11 +5523,11 @@ async function carregarPendentes(){
   try{
     const res = await comprovFetch(URL_COMPROV + "?acao=listar_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
     const json = await res.json();
-    if(json.erro){ lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro: ${json.erro}</p>`; return; }
+    if(json.erro){ lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro: ${escHtml(json.erro)}</p>`; return; }
     PENDENTES_CACHE = json.pendentes || [];
     renderListaPendentes();
   }catch(e){
-    lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro de conexão: ${e.message}</p>`;
+    lista.innerHTML = `<p style="font-size:13px;color:var(--saida);padding:12px 0">Erro de conexão: ${escHtml(e.message)}</p>`;
   }
 }
 
@@ -5549,7 +5552,7 @@ function renderListaPendentes(){
             <span>📤 Enviado por ${escHtml(p.enviadoPor||"—")} em ${escHtml(p.dataEnvio||"—")}</span>
           </div>
         </div>
-        <a class="pend-foto" href="${esc(p.comp)}" target="_blank" rel="noopener">🔗 Ver foto do comprovante</a>
+        <a class="pend-foto" href="${urlSegura(p.comp)}" target="_blank" rel="noopener noreferrer">🔗 Ver foto do comprovante</a>
       </div>
       <div class="ia-form-grid">
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Data (DD/MM/AAAA — define o mês)</label>
@@ -5562,8 +5565,8 @@ function renderListaPendentes(){
         <div class="ia-form-group" style="grid-column:1/-1"><label class="ia-form-label">Observação</label><input class="ia-form-input" data-campo="observacao" value="${esc(p.observacao)}"></div>
       </div>
       <div class="pend-acoes">
-        <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--saida)" onclick="rejeitarPendenteUI('${p.id}', this)">✕ Rejeitar</button>
-        <button class="comp-btn-vincular" onclick="aprovarPendenteUI('${p.id}', '${p.comp}', this)">✅ Aprovar e Lançar</button>
+        <button class="comp-btn-cancel" style="background:var(--white);border:1px solid var(--border);color:var(--saida)" data-pid="${esc(p.id)}" onclick="rejeitarPendenteUI(this.dataset.pid, this)">✕ Rejeitar</button>
+        <button class="comp-btn-vincular" data-pid="${esc(p.id)}" data-comp="${esc(p.comp)}" onclick="aprovarPendenteUI(this.dataset.pid, this.dataset.comp, this)">✅ Aprovar e Lançar</button>
       </div>`;
     lista.appendChild(item);
   });
@@ -5828,7 +5831,7 @@ function renderRelatorioConteudo(el){
   const tbCat = tblCat.querySelector("#relTblCat");
   a.saidas.topCategorias.slice(0,8).forEach(c=>{
     const tr = document.createElement("tr");
-    tr.innerHTML = `<td class="td-bold">${c.nome}</td><td class="td-right td-red">${fBRL(c.valor)}</td><td class="td-right">${c.pct.toFixed(1)}%</td>`;
+    tr.innerHTML = `<td class="td-bold">${escHtml(c.nome)}</td><td class="td-right td-red">${fBRL(c.valor)}</td><td class="td-right">${c.pct.toFixed(1)}%</td>`;
     tbCat.appendChild(tr);
   });
 
@@ -5943,7 +5946,7 @@ function executarBuscaDespesas(){
       sep.setAttribute("data-mes-grupo", r.mesNome);
       const nomeBonito = r.mesNome.charAt(0) + r.mesNome.slice(1).toLowerCase();
       const n = contaMes[r.mesNome];
-      sep.innerHTML = `<span class="busca-mes-nome">${nomeBonito}${ANO ? " · " + ANO : ""}</span>
+      sep.innerHTML = `<span class="busca-mes-nome">${escHtml(nomeBonito)}${ANO ? " · " + escHtml(ANO) : ""}</span>
         <span class="busca-mes-info">${n} lançamento${n>1?"s":""} · <b>${fBRL(porMes[r.mesNome])}</b></span>`;
       lista.appendChild(sep);
     }
@@ -5952,17 +5955,17 @@ function executarBuscaDespesas(){
     const temComp = r.comp && r.comp.length > 5;
     item.innerHTML = `
       <div style="flex:1;min-width:0">
-        <p style="font-size:13px;font-weight:600;color:var(--navy)">${r.desc}</p>
+        <p style="font-size:13px;font-weight:600;color:var(--navy)">${escHtml(r.desc)}</p>
         <div class="busca-resultado-meta">
-          <span>📅 ${r.data||'—'}</span>
-          <span>📂 ${r.cat}</span>
-          ${r.obs && r.obs!=="—" ? `<span>💬 ${r.obs}</span>` : ""}
+          <span>📅 ${escHtml(r.data||'—')}</span>
+          <span>📂 ${escHtml(r.cat)}</span>
+          ${r.obs && r.obs!=="—" ? `<span>💬 ${escHtml(r.obs)}</span>` : ""}
         </div>
       </div>
       <div style="text-align:right;flex-shrink:0">
         <p style="font-size:13px;font-weight:700;color:var(--saida)">${fBRL(r.valor)}</p>
         ${temComp
-          ? `<a href="${r.comp}" target="_blank" style="font-size:11px;color:#0369a1;text-decoration:none;font-weight:600">🔗 Ver comprovante</a>`
+          ? `<a href="${urlSegura(r.comp)}" target="_blank" rel="noopener noreferrer" style="font-size:11px;color:#0369a1;text-decoration:none;font-weight:600">🔗 Ver comprovante</a>`
           : `<span style="font-size:11px;color:var(--muted)">Sem comprovante</span>`}
       </div>`;
     lista.appendChild(item);
@@ -6107,7 +6110,7 @@ async function listarArquivosPendentesParaIA(){
     const res = await comprovFetch(URL_COMPROV + "?acao=listar_arquivos_pendentes&t=" + Date.now(), {method:"GET", redirect:"follow"});
     const json = await res.json();
     if(json.erro){
-      lista.innerHTML = `<p style="font-size:12px;color:var(--saida);text-align:center;padding:12px 0">${json.erro}</p>`;
+      lista.innerHTML = `<p style="font-size:12px;color:var(--saida);text-align:center;padding:12px 0">${escHtml(json.erro)}</p>`;
       return;
     }
     const dados = json.arquivos || {};
@@ -6118,7 +6121,7 @@ async function listarArquivosPendentesParaIA(){
     }
     renderizarListaComCheckbox(lista, todos);
   }catch(e){
-    lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${e.message}</p>`;
+    lista.innerHTML = `<p style="font-size:12px;color:var(--saida);padding:8px 0">Erro: ${escHtml(e.message)}</p>`;
   }
 }
 
@@ -6134,11 +6137,11 @@ function renderizarListaComCheckbox(lista, todos){
     item.style.cursor = "default";
     const icone = arq.tipo.includes("pdf") ? "📄" : arq.tipo.includes("image") ? "🖼" : "📎";
     item.innerHTML = `
-      <input type="checkbox" class="arq-checkbox" data-id="${arq.id}" style="margin-right:8px;flex-shrink:0;width:17px;height:17px;cursor:pointer">
+      <input type="checkbox" class="arq-checkbox" data-id="${escHtml(arq.id)}" style="margin-right:8px;flex-shrink:0;width:17px;height:17px;cursor:pointer">
       <span class="comp-arq-icon">${icone}</span>
       <div style="flex:1;min-width:0">
-        <p class="comp-arq-nome" title="${arq.nome}">${arq.nome}</p>
-        <p class="comp-arq-meta">${arq.tamanho} · ${arq.data}</p>
+        <p class="comp-arq-nome" title="${escHtml(arq.nome)}">${escHtml(arq.nome)}</p>
+        <p class="comp-arq-meta">${escHtml(arq.tamanho)} · ${escHtml(arq.data)}</p>
       </div>`;
     box.appendChild(item);
   });
@@ -6206,7 +6209,7 @@ async function analisarArquivoDriveIA(fileId, nome){
     const res = await comprovFetch(URL_COMPROV, { method:"POST", body: JSON.stringify({ acao:"analisar_arquivo_drive", fileId: fileId }) });
     const json = await res.json();
     if(json.erro){
-      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${json.erro}</p></div>`;
+      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${escHtml(json.erro)}</p></div>`;
       return;
     }
     IA_STATE.linkComprovanteExistente = json.linkComprovante;
@@ -6215,7 +6218,7 @@ async function analisarArquivoDriveIA(fileId, nome){
     if(dz) dz.innerHTML = "📁 " + IA_STATE.nomeArquivo + "<br><span style='font-size:11px;color:var(--entrada)'>✅ Lido do Drive com sucesso — confira os dados abaixo</span>";
     renderFormExtraidoIA(json.dados);
   }catch(e){
-    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${e.message}</p></div>`;
+    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${escHtml(e.message)}</p></div>`;
   }
 }
 
@@ -6248,7 +6251,7 @@ async function analisarViaIA(){
     const json = await res.json();
 
     if(json.erro){
-      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${json.erro}</p></div>`;
+      if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Não consegui ler o comprovante</p><p class="error-text">${escHtml(json.erro)}</p></div>`;
       return;
     }
 
@@ -6257,7 +6260,7 @@ async function analisarViaIA(){
     if(dz) dz.innerHTML = "📄 " + IA_STATE.nomeArquivo + "<br><span style='font-size:11px;color:var(--entrada)'>✅ Lido com sucesso — confira os dados abaixo</span>";
     renderFormExtraidoIA(json.dados);
   }catch(e){
-    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${e.message}</p></div>`;
+    if(resultado) resultado.innerHTML = `<div class="error-state" style="margin:12px 0 0"><p class="error-title">Erro de conexão</p><p class="error-text">${escHtml(e.message)}</p></div>`;
   }
 }
 
@@ -6394,7 +6397,7 @@ function buildLegend(id,items,total){
   items.forEach(({l,v,c})=>{
     const pct=(v/total*100).toFixed(1);
     const r=document.createElement("div"); r.className="legend-row";
-    r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${l}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
+    r.innerHTML=`<span class="legend-dot" style="background:${c}"></span><span class="legend-name">${escHtml(l)}</span><span class="legend-val">${fBRL(v)}</span><span class="legend-pct">${pct}%</span>`;
     el.appendChild(r);
   });
 }
