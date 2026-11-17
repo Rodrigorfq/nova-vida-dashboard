@@ -584,6 +584,7 @@ body {
 .kpi-badge-blue  { background: var(--accent2);  color: var(--accent); }
 
 /* ─── HERO FINANCEIRO ─── */
+.nota-saldo { font-size: 12px; color: var(--muted, #64748b); margin: -6px 2px 18px; line-height: 1.5; }
 .hero-finance {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
@@ -2326,7 +2327,7 @@ async function montarExcel(){
       {t:"PIX",k:"pix",w:14,f:XL_MOEDA},{t:"Total",k:"tot",w:15,f:XL_MOEDA}]);
     const wsS = xlAba(wb, "Semanas", [
       {t:"Mês",k:"mes",w:12},{t:"Semana",k:"sem",w:10},{t:"Período",k:"per",w:22},{t:"Cultos",k:"cul",w:15,f:XL_MOEDA},
-      {t:"PIX",k:"pix",w:15,f:XL_MOEDA},{t:"Total da semana",k:"tot",w:16,f:XL_MOEDA},{t:"Catedral (10%)",k:"cat",w:15,f:XL_MOEDA},{t:"Extra (5%)",k:"ext",w:14,f:XL_MOEDA}]);
+      {t:"PIX",k:"pix",w:15,f:XL_MOEDA},{t:"Total da semana",k:"tot",w:16,f:XL_MOEDA},{t:"Catedral 10% (devido)",k:"cat",w:20,f:XL_MOEDA},{t:"Extra 5% (calculado)",k:"ext",w:20,f:XL_MOEDA}]);
     Object.entries(DE).sort((a,b)=>mesDe(a[0])-mesDe(b[0])).forEach(([k,mes])=>{
       Object.entries(mes.semanas).forEach(([sn,s])=>{
         const base = { mes:nomeMes(mesDe(k)), sem:sn.replace("Semana ",""), per:xlLimpo(s.periodo) };
@@ -2850,6 +2851,7 @@ function renderVisaoAno(el){
     <div class="hero-card hc-saida"><p class="hero-label">Saídas do ano</p><p class="hero-value">${fBRL(tS)}</p><p class="hero-sub">${nm}</p></div>
     <div class="hero-card ${res>=0?"hc-saldo-pos":"hc-saldo-neg"}"><p class="hero-label">Resultado do ano</p><p class="hero-value">${fBRL(res)}</p><p class="hero-sub">${res>=0?"Positivo ↑":"Negativo ↓"}</p></div>`;
   el.appendChild(hero);
+  el.appendChild(notaSaldo("Resultado = entradas − saídas do ano. Salários e repasse à Catedral já estão nas saídas."));
 
   const sec = div("fade-in");
   sec.innerHTML = '<div class="section-hdr"><div><p class="section-title">Mês a mês</p><p class="section-sub">Toque em um mês para ver os detalhes</p></div></div>';
@@ -3002,6 +3004,7 @@ function render(){
 // Helpers dados
 function getMesNome(){ return MES.replace("Despesas(","").replace(")","").replace("Despesas ",""); }
 function getEntKey(m){ const nm=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); return Object.keys(DE).find(k=>k.toLowerCase().includes(nm.toLowerCase()))||null; }
+function notaSaldo(txt){ const n=document.createElement("p"); n.className="nota-saldo"; n.textContent=txt; return n; }
 function getDados(){
   const desp=DD[MES]||{}; const ek=getEntKey(MES); const ent=ek?DE[ek]:null;
   const tD=desp.total||0; const tE=ent?(ent.total.totalGeral||0):0;
@@ -3040,20 +3043,21 @@ function renderGeral(el){
       <p class="hero-sub">${saldo>=0?"Positivo ↑":"Negativo ↓"}</p>
     </div>`;
   el.appendChild(hero);
+  el.appendChild(notaSaldo("Saldo do mês = entradas − saídas. Salários e repasse à Catedral já estão nas saídas (lançados pelo comprovante); os valores “devido” e “calculado” abaixo servem só para conferir."));
 
   // KPI cards linha
   const catTots=Object.entries(cat||{}).map(([n,d])=>({n,v:sumCat({x:d})}));
   const maiorCat=catTots.sort((a,b)=>b.v-a.v)[0]||{n:"—",v:0};
   const kpis=div("kpi-grid fade-in");
   const kpiData=[
-    {label:"Dízimo",      val:t.dizimo||0,     icon:"💰", cls:"kpi-entrada",  sub:"cultos + PIX"},
-    {label:"Oferta",      val:t.oferta||0,     icon:"🎁", cls:"kpi-entrada",  sub:"cultos + PIX"},
-    {label:"Campanha",    val:t.campanha||0,   icon:"🏆", cls:"kpi-entrada",  sub:"cultos + PIX"},
+    {label:"Dízimo",      val:t.dizimo||0,     icon:"💰", cls:"kpi-entrada",  sub:"só cultos (PIX à parte)"},
+    {label:"Oferta",      val:t.oferta||0,     icon:"🎁", cls:"kpi-entrada",  sub:"só cultos (PIX à parte)"},
+    {label:"Campanha",    val:t.campanha||0,   icon:"🏆", cls:"kpi-entrada",  sub:"só cultos (PIX à parte)"},
     {label:"Total PIX",   val:t.totalPix||0,   icon:"📱", cls:"kpi-accent",   sub:"Cora+Cx1+Cx2"},
-    {label:"Catedral 10%",val:t.catedral||0,   icon:"⛪", cls:"kpi-gold",     sub:"repasse mensal"},
-    {label:"Extra 5%",    val:t.extra||0,      icon:"➕", cls:"kpi-purple",   sub:"reserva"},
+    {label:"Catedral 10%",val:t.catedral||0,   icon:"⛪", cls:"kpi-gold",     sub:"devido · o pago está em Saídas"},
+    {label:"Extra 5%",    val:t.extra||0,      icon:"➕", cls:"kpi-purple",   sub:"calculado · só separa se abrir no mês"},
     {label:"Lançamentos", val:Object.values(cat||{}).flatMap(d=>Object.values(d).flat()).length, icon:"📋", cls:"kpi-accent", sub:"registros", isMoney:false},
-    {label:"Maior Despesa",val:maiorCat.v,     icon:"📌", cls:"kpi-saida",    sub:maiorCat.n},
+    {label:"Maior categoria",val:maiorCat.v,     icon:"📌", cls:"kpi-saida",    sub:maiorCat.n},
   ];
   kpiData.forEach(k=>{
     const c=div("kpi-card "+k.cls);
@@ -3103,8 +3107,11 @@ function renderGeral(el){
     buildLegend("legEnt",itEnt,tEnt);
     // Saídas pizza
     const CRSAI=["#c0272d","#d64550","#e07178","#e8949a","#a3222a","#8a1e24","#6f181d","#9d2d3d"];
-    const itSai=Object.entries(cat||{}).map(([n,d],i)=>({l:n,v:sumCat({x:d}),c:CRSAI[i%CRSAI.length]})).sort((a,b)=>b.v-a.v).slice(0,6);
-    const tSai=itSai.reduce((s,i)=>s+i.v,0)||1;
+    const todasSai=Object.entries(cat||{}).map(([n,d],i)=>({l:n,v:sumCat({x:d}),c:CRSAI[i%CRSAI.length]})).sort((a,b)=>b.v-a.v);
+    const itSai=todasSai.slice(0,6);
+    const resto=r2(todasSai.slice(6).reduce((s,i)=>s+i.v,0));
+    if(resto>0) itSai.push({l:"Outras ("+(todasSai.length-6)+" categorias)",v:resto,c:"#94a3b8"});   // o total e os % são sempre sobre TUDO
+    const tSai=todasSai.reduce((s,i)=>s+i.v,0)||1;
     charts.saiP=buildPizza("cSaiPizza",itSai.map(i=>i.l),itSai.map(i=>i.v),itSai.map(i=>i.c),"ccSai",tSai);
     buildLegend("legSai",itSai,tSai);
   },100);
@@ -3229,7 +3236,7 @@ function renderTabelaMeses(el){
   tbl.innerHTML=`<table>
     <thead><tr>
       <th>Mês</th><th class="td-right">Entradas</th><th class="td-right">Saídas</th>
-      <th class="td-right">Saldo</th><th class="td-right">Catedral 10%</th>
+      <th class="td-right">Saldo</th><th class="td-right">Catedral 10% (devido)</th>
     </tr></thead>
     <tbody id="tblMeses"></tbody>
   </table>`;
@@ -3647,8 +3654,8 @@ function renderEntradas(el){
     {label:"Campanha",       val:t.campanha||0,   icon:"🏆", cls:"kpi-entrada", sub:`${t.totalGeral?((t.campanha/t.totalGeral)*100).toFixed(1):0}% do total`},
     {label:"Total Cultos",   val:t.totalCultos||0,icon:"⛪", cls:"kpi-accent",  sub:"soma dos cultos"},
     {label:"Total PIX",      val:t.totalPix||0,   icon:"📱", cls:"kpi-accent",  sub:"Cora+Caixa 1+2"},
-    {label:"Catedral 10%",   val:t.catedral||0,   icon:"🔔", cls:"kpi-gold",    sub:"repasse à Catedral"},
-    {label:"Extra 5%",       val:t.extra||0,      icon:"➕", cls:"kpi-purple",  sub:"reserva mensal"},
+    {label:"Catedral 10%",   val:t.catedral||0,   icon:"🔔", cls:"kpi-gold",    sub:"devido · o pago está em Saídas"},
+    {label:"Extra 5%",       val:t.extra||0,      icon:"➕", cls:"kpi-purple",  sub:"calculado · só separa se abrir no mês"},
   ].forEach(k=>{
     const c=div("kpi-card "+k.cls);
     c.innerHTML=`<div class="kpi-header"><div><p class="kpi-label">${k.label}</p><p class="kpi-value">${fBRL(k.val)}</p></div><div class="kpi-icon" style="background:var(--bg);font-size:20px">${k.icon}</div></div><p class="kpi-footer">${k.sub}</p>`;
@@ -3691,8 +3698,8 @@ function renderEntradas(el){
         <div class="semana-row"><span class="semana-row-label">PIX Cora</span><span class="semana-row-val">${fBRL(sem.pix.cora)}</span></div>
         <div class="semana-row"><span class="semana-row-label">PIX Caixa 1</span><span class="semana-row-val">${fBRL(sem.pix.caixa1)}</span></div>
         <div class="semana-row"><span class="semana-row-label">PIX Caixa 2</span><span class="semana-row-val">${fBRL(sem.pix.caixa2)}</span></div>
-        <div class="semana-row"><span class="semana-row-label">Catedral 10%</span><span class="semana-row-val semana-row-red">${fBRL(sem.catedral10)}</span></div>
-        <div class="semana-row"><span class="semana-row-label">Extra 5%</span><span class="semana-row-val semana-row-purple">${fBRL(sem.extra5)}</span></div>
+        <div class="semana-row"><span class="semana-row-label">Catedral 10% (devido)</span><span class="semana-row-val semana-row-red">${fBRL(sem.catedral10)}</span></div>
+        <div class="semana-row"><span class="semana-row-label">Extra 5% (calculado)</span><span class="semana-row-val semana-row-purple">${fBRL(sem.extra5)}</span></div>
       </div>`;
     grid.appendChild(c);
   });
@@ -5711,6 +5718,7 @@ function renderRelatorioConteudo(el){
       <p class="hero-sub">${a.saldo>=0?"Positivo ↑":"Negativo ↓"}</p>
     </div>`;
   el.appendChild(hero);
+  el.appendChild(notaSaldo("Saldo do mês = entradas − saídas. Salários e repasse à Catedral já estão nas saídas; a tabela “Valores calculados” é só para conferência."));
 
   // Composição das entradas + Catedral/Extra/Folha
   const g2 = div("chart-grid-2 fade-in");
@@ -5722,10 +5730,11 @@ function renderRelatorioConteudo(el){
     <tr><td>PIX</td><td class="td-right">${fBRL(a.entradas.pix)}</td><td class="td-right">${a.entradas.total?(a.entradas.pix/a.entradas.total*100).toFixed(1):0}%</td></tr>
   </tbody></table>`;
   const cRep = div("table-card");
-  cRep.innerHTML = `<table><thead><tr><th colspan="2" style="font-size:12px">Repasses e Folha</th></tr></thead><tbody>
-    <tr><td>Catedral (10%)</td><td class="td-right">${fBRL(a.saidas.catedral)}</td></tr>
-    <tr><td>Extra (5%)</td><td class="td-right">${fBRL(a.saidas.extra)}</td></tr>
-    <tr><td>Folha de Pagamento</td><td class="td-right">${fBRL(a.saidas.folha)}</td></tr>
+  cRep.innerHTML = `<table><thead><tr><th colspan="2" style="font-size:12px">Valores calculados (não são saídas a mais)</th></tr></thead><tbody>
+    <tr><td>Catedral: 10% de cultos + PIX (devido)</td><td class="td-right">${fBRL(a.saidas.catedral)}</td></tr>
+    <tr><td>Extra: 5% (calculado; só separa se abrir no mês)</td><td class="td-right">${fBRL(a.saidas.extra)}</td></tr>
+    <tr><td>Folha de pagamento (calculada na aba Pessoal)</td><td class="td-right">${fBRL(a.saidas.folha)}</td></tr>
+    <tr><td colspan="2" style="font-size:11.5px;color:var(--muted);white-space:normal">O que foi realmente pago já está em Saídas (Dízimo Aliança e Funcionários).</td></tr>
   </tbody></table>`;
   g2.appendChild(cEnt); g2.appendChild(cRep);
   el.appendChild(g2);
