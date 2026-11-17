@@ -66,8 +66,16 @@ Decisões principais:
 - **Mês fechado:** `exigir_mes_aberto` bloqueia o lançador (mensagem clara, código 42501); só o admin altera.
 - **Chaves:** a chave secreta/`service_role` nunca vai para o navegador nem para o GitHub. Ela existe apenas nas propriedades do script do Apps Script, quando necessário.
 - **Sem confiança no front-end:** esconder um botão é só conveniência; a regra real está no banco.
-- **Texto externo escapado** antes de entrar no HTML (proteção contra XSS).
+- **Texto vindo do banco ou do Drive não vira HTML.** Categoria, descrição, observação, responsável, nomes de funcionário, mensagens de erro e nomes de arquivo passam por `escHtml()` antes de entrar na página; links de comprovante só são aceitos se começarem com `http://` ou `https://` (`urlSegura()`); os botões dos comprovantes pendentes não levam dados dentro do `onclick`. Há testes automáticos que gravam `<b>`/`<img onerror>` nesses campos e conferem que aparecem como texto.
+- **Bibliotecas de terceiros:** o Chart.js é carregado com verificação de integridade (SRI) e `crossorigin="anonymous"`; se o arquivo da CDN for alterado, o navegador recusa.
 - **Sessão:** renovação automática do token, uma única vez mesmo com várias chamadas simultâneas; sessão revogada volta ao login.
+
+### Limites conhecidos (documentados de propósito)
+
+- O token da sessão fica no `localStorage` do navegador (padrão de quem usa o Auth do Supabase direto de uma página estática). Mitigações: tokens de vida curta, renovação controlada, e a regra real de acesso ficar no banco (RLS + RPC), não na tela.
+- Ainda não há *Content-Security-Policy*: o GitHub Pages não permite cabeçalhos próprios, e o painel usa scripts e estilos embutidos. O escape de texto e o SRI reduzem o risco, mas não o substituem.
+- O ExcelJS (exportação) é carregado sob demanda do cdnjs, ainda sem SRI.
+- Esconder valores na tela é só conveniência visual (desfoque), não é proteção de dados.
 
 ---
 
@@ -113,7 +121,7 @@ Todas são idempotentes (podem ser repetidas sem estragar nada). Depois publique
 
 A suíte foi escrita junto com o sistema e roda sem tocar em dados reais:
 
-- **Interface (Playwright):** ~220 verificações com um Supabase simulado (login, sessão, anos, entradas, despesas, folha, papéis, Equipe, abrir ano, exportação).
+- **Interface (Playwright):** ~250 verificações com um Supabase simulado (login, sessão, anos, entradas, despesas, folha, papéis, Equipe, abrir ano, exportação, celular, escape de texto).
 - **Banco (PostgreSQL embutido):** ~44 verificações das regras reais — papéis, mês fechado, histórico, exclusão, RLS.
 - **Segurança:** verificações de que o front-end não contém chave secreta e de que nenhuma tabela aceita escrita direta.
 - **Google Drive:** simulação do Apps Script para pastas por ano/mês, PENDENTES e idempotência.
