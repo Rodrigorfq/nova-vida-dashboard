@@ -1275,8 +1275,42 @@ td.val-oculto { pointer-events: auto; }   /* valor borrado numa linha clicável 
   #eyeBtn { font-size: 0; gap: 0; }
 }
 
-@media (max-width: 480px) {
-  .kpi-grid { grid-template-columns: 1fr; }
+/* ─── CELULAR: resumo compacto e tabelas em "fichas" (passo 3 da auditoria) ─── */
+@media (max-width: 560px) {
+  .kpi-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; margin-bottom: 18px; }
+  .kpi-card { padding: 12px 12px 10px; }
+  .kpi-value { font-size: 17px; }
+  .kpi-label { font-size: 10px; letter-spacing: .04em; padding-right: 22px; }
+  .kpi-footer { font-size: 11px; margin-top: 6px; line-height: 1.3; }
+  .kpi-icon { width: 24px; height: 24px; font-size: 12px; top: 10px; right: 10px; }
+  /* 3 cartões grandes: os dois primeiros lado a lado, o terceiro (saldo/diferença) em largura total */
+  .hero-finance { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+  .hero-card { padding: 12px 14px; }
+  .hero-card:nth-child(odd):last-child { grid-column: 1 / -1; }
+  .hero-value { font-size: 19px; margin-bottom: 4px; }
+  .hero-label { font-size: 10px; margin-bottom: 6px; }
+  .hero-sub { font-size: 11px; }
+  /* tabela vira uma ficha por linha: o mês em cima e cada valor com o seu nome */
+  .tab-cards thead { display: none; }
+  .tab-cards, .tab-cards tbody, .tab-cards tr { display: block; width: 100%; }
+  .tab-cards tr { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .tab-cards tr:last-child { border-bottom: 0; }
+  .tab-cards td { display: flex !important; justify-content: space-between; align-items: baseline; gap: 12px;
+    padding: 3px 0 !important; border: 0 !important; white-space: normal !important; text-align: right; font-size: 13px; }
+  .tab-cards td::before { content: attr(data-label); font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: .05em; color: var(--muted); text-align: left; flex-shrink: 0; }
+  .tab-cards td.val-oculto { filter: none; }
+  .tab-cards td.val-oculto .tc-valor { filter: blur(8px); user-select: none; }
+  .tab-cards td:first-child { display: block !important; text-align: left; font-size: 14px; padding: 0 0 6px !important; }
+  .tab-cards td:first-child::before, .tab-cards td[data-label=""]::before { content: none; }
+  .tab-cards td[data-label=""] { justify-content: flex-start; }
+  .tab-cards td:last-child:has(button), .tab-cards td:last-child:has(.ir) { justify-content: flex-end; padding-top: 6px !important; }
+  /* tabelas de categorias/descrições: some só a barrinha (o % já mostra a mesma coisa) */
+  .tab-sem-barra th:nth-child(4), .tab-sem-barra td:nth-child(4) { display: none; }
+}
+@media (max-width: 380px) {
+  .kpi-grid { gap: 8px; }
+  .kpi-value { font-size: 15.5px; }
 }
 
 /* ─── RELATÓRIO MENSAL ─── */
@@ -2873,6 +2907,7 @@ function renderVisaoAno(el){
       <td class="td-right td-blue">${fBRL(r.saldo_acumulado)}</td><td class="td-right"><span class="ir">Abrir →</span></td>`;
     tb.appendChild(tr);
   });
+  rotularTabela(tbl.querySelector("table"));
 
   setTimeout(()=>{
     const canvas = document.getElementById("cAnoMeses"); if(!canvas) return;
@@ -3004,6 +3039,25 @@ function render(){
 // Helpers dados
 function getMesNome(){ return MES.replace("Despesas(","").replace(")","").replace("Despesas ",""); }
 function getEntKey(m){ const nm=m.replace("Despesas(","").replace(")","").replace("Despesas ",""); return Object.keys(DE).find(k=>k.toLowerCase().includes(nm.toLowerCase()))||null; }
+// Celular: dá a cada célula o nome da sua coluna (usado pelo CSS .tab-cards) e liga o layout em fichas
+function rotularTabela(tbl){
+  if(!tbl) return;
+  const ths=[...tbl.querySelectorAll("thead th")].map(t=>t.textContent.trim());
+  tbl.querySelectorAll("tbody tr").forEach(tr=>{
+    let i=0;
+    [...tr.children].forEach(td=>{
+      if(td.tagName!=="TD") return;
+      td.setAttribute("data-label", (td.colSpan>1 || !ths[i]) ? "" : ths[i]);
+      if(!td.querySelector(":scope > .tc-valor")){     // o valor vai num <span> próprio: no modo "ocultar" só ele borra, o nome da coluna continua legível
+        const w=document.createElement("span"); w.className="tc-valor";
+        while(td.firstChild) w.appendChild(td.firstChild);
+        td.appendChild(w);
+      }
+      i += td.colSpan||1;
+    });
+  });
+  tbl.classList.add("tab-cards");
+}
 function notaSaldo(txt){ const n=document.createElement("p"); n.className="nota-saldo"; n.textContent=txt; return n; }
 // ÚNICA fonte dos totais de um mês (entradas, saídas, saldo): a view resumo_mensal do banco (RES),
 // a mesma que alimenta a Visão do Ano e a Conferência. O cálculo feito com os lançamentos na tela só é
@@ -3279,6 +3333,7 @@ function renderTabelaMeses(el){
       <td class="td-right td-gold">${fBRL(cat)}</td>`;
     tb.appendChild(tr);
   });
+  rotularTabela(tbl.querySelector("table"));
 }
 
 // Texto vindo das planilhas nunca entra no HTML sem escapar.
@@ -3486,6 +3541,7 @@ function renderConferencia(el){
       <th class="td-right" title="Total em contas + espécie informado no fechamento do mês">Real</th>
       <th class="td-right" title="Real − Esperado">Diferença</th>${SOU_ADMIN()?"<th></th>":""}
     </tr></thead><tbody>${linhas}</tbody></table>`;
+  rotularTabela(card.querySelector("table"));
   sec.appendChild(card);
   const nota=document.createElement("p");
   nota.style.cssText="font-size:12px;color:var(--muted);margin:10px 2px 0;line-height:1.6";
@@ -3788,7 +3844,7 @@ function renderSaidasNivel0(el){
   const sec=div("fade-in");
   sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Detalhamento por Categoria</p><p class="section-sub">Clique em uma categoria para ver as descrições</p></div></div>';
   const tbl=div("table-card");
-  tbl.innerHTML=`<table><thead><tr><th>Categoria</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblCat"></tbody></table>`;
+  tbl.innerHTML=`<table class="tab-sem-barra"><thead><tr><th>Categoria</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblCat"></tbody></table>`;
   sec.appendChild(tbl); el.appendChild(sec);
 
   const tb=tbl.querySelector("#tblCat");
@@ -3850,7 +3906,7 @@ function renderSaidasNivel1(el){
   const sec=div("fade-in");
   sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Descrições</p><p class="section-sub">Clique para ver os lançamentos</p></div></div>';
   const tbl=div("table-card");
-  tbl.innerHTML=`<table><thead><tr><th>Descrição</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblDesc"></tbody></table>`;
+  tbl.innerHTML=`<table class="tab-sem-barra"><thead><tr><th>Descrição</th><th class="td-right">Valor</th><th class="td-right">%</th><th>Participação</th></tr></thead><tbody id="tblDesc"></tbody></table>`;
   sec.appendChild(tbl); el.appendChild(sec);
 
   const tb=tbl.querySelector("#tblDesc");
@@ -5684,6 +5740,7 @@ function renderRelatorioConteudo(el){
       tr.innerHTML = `<td class="td-bold">${m.mes}</td><td class="td-right td-green">${fBRL(m.entradas.total)}</td><td class="td-right td-red">${fBRL(m.saidas.total)}</td><td class="td-right" style="font-weight:700;color:${m.saldo>=0?"var(--saldo-pos)":"var(--saida)"}">${fBRL(m.saldo)}</td>`;
       tb.appendChild(tr);
     });
+    rotularTabela(tbl.querySelector("table"));
   }
 
   // Gráfico comparativo (até 6 meses, incluindo o atual)
