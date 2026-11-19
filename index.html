@@ -3865,6 +3865,155 @@ function renderEntradas(el){
 }
 
 // ─── SAÍDAS — NÍVEL 0 (categorias) ───
+// ─── ANÁLISE DE DESPESAS: este mês × mês anterior e gastos que se repetem (recorrentes) ───
+// Usa os lançamentos já carregados (DD). Só quando o mês anterior ou a sequência de meses cruza janeiro, busca as saídas do ano passado (uma vez).
+const ANA = { ano:null, linhas:null, carregando:false };
+function fDif(v){ const x=r2(v); return (x>0?"+":(x<0?"−":""))+fBRL(Math.abs(x)); }
+function mesAtras(ano, mes, k){ let m=mes-k, a=ano; while(m<1){ m+=12; a--; } return [a,m]; }
+// Gastos de um mês agrupados por "categoria + descrição" (maiúsculas/acentos não separam). null = ainda não carregado.
+function itensDoMes(ano, mes){
+  const out=new Map();
+  const add=(cat,desc,valor,iso)=>{
+    const k=chaveTexto(cat)+"|"+chaveTexto(desc);
+    let o=out.get(k); if(!o){ o={cat,desc,valor:0,qtd:0,lan:[]}; out.set(k,o); }
+    o.valor=r2(o.valor+valor); o.qtd++;
+    const d=/^\d{4}-\d{2}-(\d{2})/.exec(iso||""); o.lan.push({dia:d?parseInt(d[1],10):null, valor});
+  };
+  if(ano===ANO){
+    const d=DD["Despesas "+MESES_NOME[mes-1]]; if(!d) return out;
+    Object.entries(d.categorias||{}).forEach(([c,ds])=>Object.entries(ds).forEach(([dn,lans])=>lans.forEach(l=>add(c,dn,Number(l.valor)||0,l.raw&&l.raw.data))));
+    return out;
+  }
+  if(ano===ANO-1 && ANA.ano===ANO && ANA.linhas){
+    ANA.linhas.filter(r=>r.mes===mes).forEach(r=>{
+      const cat=textoOuTraco(GRUPO_POR_CHAVE[chaveTexto(r.categoria)] || canonDe("categoria",r.categoria) || r.categoria);
+      add(cat, textoOuTraco(canonDe("descricao",r.descricao)), Number(r.valor)||0, r.data);
+    });
+    return out;
+  }
+  return null;
+}
+function carregarAnoAnteriorAnalise(){
+  if(ANA.ano===ANO || ANA.carregando) return;
+  const alvo=ANO; ANA.carregando=true;
+  dbGetTudo("saidas?select=mes,data,descricao,categoria,valor&ano=eq."+(ANO-1)+"&excluido_em=is.null&order=mes")
+    .then(l=>{ if(ANO===alvo){ ANA.ano=alvo; ANA.linhas=l; } })
+    .catch(()=>{ if(ANO===alvo){ ANA.ano=alvo; ANA.linhas=[]; } })
+    .then(()=>{ ANA.carregando=false; const b=document.getElementById("analiseDespesas"); if(b && b.isConnected && ANO===alvo && TELA==="ano" && ABA==="saida"){ montarAnaliseDespesas(b); aplicarOcultamento(); } });
+}
+function somaItens(m){ let t=0; m.forEach(o=>{ t+=o.valor; }); return r2(t); }
+function tabelaAnalise(colunas, linhas, id){
+  const c=div("table-card"); if(id) c.id=id;
+  c.innerHTML='<table class="tab-sem-barra"><thead><tr>'+colunas.map((t,i)=>'<th'+(i?' class="td-right"':'')+'>'+escHtml(t)+'</th>').join("")+'</tr></thead><tbody></tbody></table>';
+  const tb=c.querySelector("tbody");
+  linhas.forEach(h=>{ const tr=document.createElement("tr"); tr.innerHTML=h; tb.appendChild(tr); });
+  return c;
+}
+const valorSpan = v => '<span class="cmp-valor">'+fBRL(v)+'</span>';
+function celDif(dif){ const x=r2(dif); return '<td class="td-right '+(x>0?"td-red":(x<0?"td-green":""))+'">'+(x===0?"—":fDif(x))+'</td>'; }
+function celPct(cur, prev){
+  if(r2(prev)===0 && r2(cur)===0) return '<td class="td-right">—</td>';
+  if(r2(prev)===0) return '<td class="td-right"><small class="cmp-var neutro">novo</small></td>';
+  if(r2(cur)===0) return '<td class="td-right"><small class="cmp-var neutro">sem gasto</small></td>';
+  const v=(cur-prev)/prev, bom=v<0;
+  return '<td class="td-right"><small class="cmp-var '+(Math.abs(v)<0.0005?"neutro":(bom?"bom":"ruim"))+'" style="margin:0">'+(Math.abs(v)<0.0005?"= igual":((v>0?"▲ ":"▼ ")+(Math.abs(v)*100).toFixed(1).replace(".",",")+"%"))+'</small></td>';
+}
+function montarAnaliseDespesas(box){
+  const mes=numeroDoMes(MES), nm=getMesNome(), [aA,mA]=mesAtras(ANO,mes,1), nmAnt=MESES_NOME[mA-1], proxNm=MESES_NOME[mes%12];
+  box.innerHTML='<div class="section-hdr"><div><p class="section-title">Despesas: '+escHtml(nm)+' × '+escHtml(nmAnt)+'</p><p class="section-sub">O que mudou em relação ao mês anterior e quais gastos se repetem todo mês</p></div></div>';
+  let falta=false; const cache=new Map();
+  const itens=k=>{ if(!cache.has(k)){ const [a,m]=mesAtras(ANO,mes,k); const r=itensDoMes(a,m); if(r===null) falta=true; cache.set(k,r); } return cache.get(k); };
+  const cur=itens(0)||new Map(), prev=itens(1);
+  if(prev===null){ carregarAnoAnteriorAnalise(); box.appendChild(notaSaldo("Carregando o histórico do ano anterior…")); return; }
+  const totC=somaItens(cur), totP=somaItens(prev);
+  const em=comparativosDoMes(mes).emAndamento;
+
+  // 1) Resumo em números e em frase
+  const dif=r2(totC-totP);
+  const kp=div("kpi-grid fade-in"); kp.style.gridTemplateColumns="repeat(3,minmax(0,1fr))";
+  const kcard=(rot,val,cls,sub)=>{ const c=div("kpi-card "+cls); c.innerHTML='<div class="kpi-header"><div><p class="kpi-label">'+escHtml(rot)+'</p><p class="kpi-value">'+val+'</p></div></div><p class="kpi-footer">'+escHtml(sub)+'</p>'; return c; };
+  kp.appendChild(kcard("Saídas em "+nmAnt, fBRL(totP), "kpi-saida", prev.size+" gasto(s) diferente(s)"));
+  kp.appendChild(kcard("Saídas em "+nm, fBRL(totC), "kpi-saida", cur.size+" gasto(s) diferente(s)"+(em?" · mês em andamento":"")));
+  const pctTot=totP>0?Math.abs(dif/totP*100).toFixed(1).replace(".",",")+"%":"";
+  kp.appendChild(kcard("Diferença", fDif(dif), dif>0?"kpi-saida":"kpi-entrada", dif===0?"igual ao mês anterior":((dif>0?"a mais":"a menos")+(pctTot?" · "+pctTot:""))));
+  box.appendChild(kp);
+
+  if(prev.size===0){ box.appendChild(notaSaldo("Não há despesas lançadas em "+nmAnt+", então não há o que comparar. Os gastos que se repetem aparecem a partir de 2 meses seguidos com lançamento.")); }
+
+  // categorias e gastos: diferença mês a mês
+  const cats=new Map();
+  const somaCat=(m,campo)=>m.forEach(o=>{ const k=chaveTexto(o.cat); let c=cats.get(k); if(!c){ c={cat:o.cat,prev:0,cur:0}; cats.set(k,c); } c[campo]=r2(c[campo]+o.valor); });
+  somaCat(prev,"prev"); somaCat(cur,"cur");
+  const listaCat=[...cats.values()].map(c=>Object.assign(c,{dif:r2(c.cur-c.prev)})).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif)||a.cat.localeCompare(b.cat));
+  const todos=new Map();
+  prev.forEach((o,k)=>todos.set(k,{cat:o.cat,desc:o.desc,prev:o.valor,cur:0}));
+  cur.forEach((o,k)=>{ const t=todos.get(k); if(t) t.cur=o.valor; else todos.set(k,{cat:o.cat,desc:o.desc,prev:0,cur:o.valor}); });
+  const listaGasto=[...todos.values()].map(g=>Object.assign(g,{dif:r2(g.cur-g.prev)})).filter(g=>Math.abs(g.dif)>=0.005).sort((a,b)=>Math.abs(b.dif)-Math.abs(a.dif));
+
+  if(prev.size>0){
+    const sobe=listaGasto.filter(g=>g.dif>0).slice(0,3), desce=listaGasto.filter(g=>g.dif<0).slice(0,3);
+    const nomeG=g=>g.desc==="—"?g.cat:g.desc;
+    let f="As saídas de "+nm+" estão "+(dif===0?"iguais às":fBRL(Math.abs(dif))+(dif>0?" acima":" abaixo")+" das")+" de "+nmAnt+(pctTot&&dif!==0?" ("+pctTot+")":"")+".";
+    if(em) f+=" Como "+nm+" ainda está em andamento, a comparação é com o mês anterior inteiro.";
+    if(sobe.length) f+=" O que mais pesou para cima: "+sobe.map(g=>nomeG(g)+" ("+fDif(g.dif)+")").join(", ")+".";
+    if(desce.length) f+=" O que mais aliviou: "+desce.map(g=>nomeG(g)+" ("+fDif(g.dif)+")").join(", ")+".";
+    const fr=document.createElement("div"); fr.className="rel-banner"; fr.id="analiseFrase"; fr.style.cssText="margin:0 0 14px"; const sp=document.createElement("span"); sp.textContent="💡 "+f; fr.appendChild(sp); box.appendChild(fr);
+    if(em){ const hoje=new Date().getDate(); const ate=r2([...prev.values()].reduce((s,o)=>s+o.lan.filter(l=>l.dia!==null&&l.dia<=hoje).reduce((x,l)=>x+l.valor,0),0));
+      const n=notaSaldo("No mesmo ponto do mês anterior (até o dia "+hoje+"), "+nmAnt+" tinha "+fBRL(ate)+" de saídas; "+nm+" está em "+fBRL(totC)+" ("+fDif(totC-ate)+").");
+      n.id="analisePonto"; box.appendChild(n); }
+
+    const l1=document.createElement("p"); l1.className="rel-section-label"; l1.textContent="Por categoria"; box.appendChild(l1);
+    const t1=tabelaAnalise(["Categoria",nmAnt,nm,"Diferença","Variação"], listaCat.map(c=>'<td><span class="td-bold">'+escHtml(c.cat)+'</span></td><td class="td-right">'+valorSpan(c.prev)+'</td><td class="td-right">'+valorSpan(c.cur)+'</td>'+celDif(c.dif)+celPct(c.cur,c.prev)), "analiseCategorias");
+    t1.classList.add("fade-in"); box.appendChild(t1); rotularTabela(t1.querySelector("table"));
+
+    const l2=document.createElement("p"); l2.className="rel-section-label"; l2.textContent="Maiores mudanças, gasto a gasto"; box.appendChild(l2);
+    if(!listaGasto.length) box.appendChild(notaSaldo("Nenhum gasto mudou de valor entre os dois meses."));
+    else {
+      const t2=tabelaAnalise(["Gasto",nmAnt,nm,"Diferença"], listaGasto.slice(0,10).map(g=>'<td><span class="td-bold">'+escHtml(g.desc)+'</span><div style="font-size:11px;color:var(--muted)">'+escHtml(g.cat)+'</div></td><td class="td-right">'+valorSpan(g.prev)+'</td><td class="td-right">'+valorSpan(g.cur)+'</td>'+celDif(g.dif)), "analiseGastos");
+      t2.classList.add("fade-in"); box.appendChild(t2); rotularTabela(t2.querySelector("table"));
+      box.appendChild(notaSaldo("Mostrando as 10 maiores mudanças"+(listaGasto.length>10?" (de "+listaGasto.length+")":"")+". Gasto que não aparece em um dos meses entra como R$ 0,00."));
+    }
+  }
+
+  // 2) Gastos que se repetem em meses seguidos (recorrentes) e estimativa do próximo mês
+  const l3=document.createElement("p"); l3.className="rel-section-label"; l3.textContent="Gastos que se repetem mês a mês"; box.appendChild(l3);
+  const chaves=new Set(); cur.forEach((o,k)=>chaves.add(k)); prev.forEach((o,k)=>chaves.add(k));
+  const rec=[];
+  chaves.forEach(k=>{
+    const ini=cur.has(k)?0:1; const seq=[];            // seq[0] = mês mais recente da sequência
+    for(let i=ini;i<=11;i++){ const m=itens(i); if(m && m.has(k)) seq.push({i,o:m.get(k)}); else break; }
+    if(seq.length<2) return;
+    const base=(cur.get(k)||prev.get(k));
+    const completos=seq.filter(x=>!(em && x.i===0)).map(x=>x.o.valor).slice(0,3).reverse();   // do mais antigo para o mais novo; mês em andamento não entra na conta
+    const usar=completos.length?completos:[seq[0].o.valor];
+    const media=r2(usar.reduce((s,v)=>s+v,0)/usar.length), mx=Math.max(...usar), mn=Math.min(...usar);
+    const fixo=usar.length>=2 && (mx-mn)<=0.05*media;
+    rec.push({cat:base.cat, desc:base.desc, meses:seq.length, noMes:cur.has(k)?cur.get(k).valor:null, fixo, confirmar:usar.length<2, mn, mx, previsao:fixo?usar[usar.length-1]:media});
+  });
+  rec.sort((a,b)=>b.previsao-a.previsao||a.desc.localeCompare(b.desc));
+  if(falta){ carregarAnoAnteriorAnalise(); }
+  if(!rec.length){ box.appendChild(notaSaldo("Ainda não há gasto que tenha se repetido em 2 meses seguidos até "+nm+". Isso aparece sozinho conforme os meses forem sendo lançados.")); }
+  else {
+    const totPrev=r2(rec.reduce((s,r)=>s+r.previsao,0));
+    const topo=document.createElement("div"); topo.className="rel-banner"; topo.id="analiseRecorrentes"; topo.style.cssText="margin:0 0 14px";
+    const sp2=document.createElement("span"); sp2.textContent="🔁 "+rec.length+" gasto(s) se repetem há 2 meses seguidos ou mais. Se continuarem assim, devem somar cerca de "+fBRL(totPrev)+" em "+proxNm+(totC>0?" ("+Math.round(totPrev/totC*100)+"% das saídas de "+nm+")":"")+". É uma estimativa, não um orçamento.";
+    topo.appendChild(sp2); box.appendChild(topo);
+    const vis=rec.slice(0,15);
+    const t3=tabelaAnalise(["Gasto","Meses seguidos",nm,"Tipo","Previsão de "+proxNm], vis.map(r=>'<td><span class="td-bold">'+escHtml(r.desc)+'</span><div style="font-size:11px;color:var(--muted)">'+escHtml(r.cat)+'</div></td>'
+      +'<td class="td-right">'+r.meses+'</td>'
+      +'<td class="td-right">'+(r.noMes===null?'<small class="cmp-var ruim" style="margin:0">ainda não lançado</small>':valorSpan(r.noMes))+'</td>'
+      +'<td class="td-right">'+(r.confirmar?'<small class="cmp-var neutro" style="margin:0">a confirmar</small>':(r.fixo?'<small class="cmp-var bom" style="margin:0">fixo</small>':'<small class="cmp-var neutro" style="margin:0">varia</small><div style="font-size:11px;color:var(--muted)"><span class="cmp-valor">'+fBRL(r.mn)+'</span> a <span class="cmp-valor">'+fBRL(r.mx)+'</span></div>'))+'</td>'
+      +'<td class="td-right td-red">'+fBRL(r.previsao)+'</td>'), "analiseRecorrentesTab");
+    t3.classList.add("fade-in"); box.appendChild(t3); rotularTabela(t3.querySelector("table"));
+    box.appendChild(notaSaldo("“Fixo” = o valor mudou menos de 5% nos últimos meses; a previsão é o último valor. “Varia” = a previsão é a média dos últimos 3 meses. “A confirmar” = só um mês fechado para basear."+(em?" Os valores parciais de "+nm+" (mês em andamento) não entram nas previsões.":"")+(rec.length>15?" Mostrando os 15 maiores de "+rec.length+".":"")));
+  }
+  if(falta) box.appendChild(notaSaldo("Carregando o histórico do ano anterior para completar as sequências…"));
+}
+function renderAnaliseDespesas(el){
+  const box=div("fade-in"); box.id="analiseDespesas"; el.appendChild(box);
+  montarAnaliseDespesas(box);
+}
+
 function renderSaidas(el){
   DRILL = { level:0, cat:null, desc:null };
   renderSaidasNivel0(el);
@@ -3898,6 +4047,7 @@ function renderSaidasNivel0(el){
     kpis.appendChild(c);
   });
   el.appendChild(kpis);
+  renderAnaliseDespesas(el);
 
   renderCompMeses(el);
 
