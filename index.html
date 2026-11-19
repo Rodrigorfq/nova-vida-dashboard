@@ -585,6 +585,11 @@ body {
 .kpi-badge-blue  { background: var(--accent2);  color: var(--accent); }
 
 /* ─── HERO FINANCEIRO ─── */
+.cmp-card td > .tc-valor, .cmp-card td { vertical-align: top; }
+.cmp-var { display: block; font-size: 11px; font-weight: 700; margin-top: 2px; }
+.cmp-var.bom { color: var(--entrada); } .cmp-var.ruim { color: var(--saida); } .cmp-var.neutro { color: var(--muted); font-weight: 600; }
+.cmp-valor { display: inline-block; }
+.cmp-vazio { color: var(--muted-lt); }
 .nota-saldo { font-size: 12px; color: var(--muted, #64748b); margin: -6px 2px 18px; line-height: 1.5; }
 .hero-finance {
   display: grid;
@@ -1855,7 +1860,7 @@ function pintarLogos(){
 let SESSAO = null;          // { access, refresh, exp, email, inicio }
 let USUARIO = null;         // { email, nome, papel, igreja_id }
 let ANO = null, ANOS = [];
-let RES = [], CONF = [], INICIO_CONTROLE = null;   // saldos mensais e conferência (vêm de views do banco)
+let RES = [], RES_ANT = [], CONF = [], INICIO_CONTROLE = null;   // saldos mensais e conferência (vêm de views do banco)
 let renovando = null;       // promessa compartilhada: evita renovar o token duas vezes ao mesmo tempo
 
 function sessaoLer(){
@@ -2234,11 +2239,13 @@ function montarDF(folha, funcionarios, vales, resumo){
 // Se falharem, o restante do painel continua funcionando.
 async function carregarSaldos(){
   const a = "ano=eq."+ANO;
-  const [res, conf, ig] = await Promise.all([
+  const [res, conf, ig, resAnt] = await Promise.all([
     dbGetTudo("resumo_mensal?select=mes,entradas,saidas,saldo,saldo_acumulado&"+a+"&order=mes").catch(()=>[]),
     dbGetTudo("conferencia_mensal?select=mes,saldo_acumulado,saldo_real,diferenca,variacao_nao_explicada,variacao_no_mes,primeiro_fechamento,observacao&"+a+"&order=mes").catch(()=>[]),
     dbGet("igrejas?select=inicio_controle&limit=1").catch(()=>[]),
+    dbGetTudo("resumo_mensal?select=mes,entradas,saidas,saldo&ano=eq."+(ANO-1)+"&order=mes").catch(()=>[]),   // ano anterior: só para os comparativos
   ]);
+  RES_ANT = resAnt;
   return { res, conf, inicio:(ig[0]&&ig[0].inicio_controle)||null };
 }
 
@@ -3079,6 +3086,65 @@ function avisoDivergencia(tot){
   d.innerHTML='<span>⚠️ <b>Atenção:</b> os lançamentos detalhados deste mês somam '+fBRL(tot.tela.entradas)+' de entradas e '+fBRL(tot.tela.saidas)+' de saídas, mas o total do banco é '+fBRL(tot.entradas)+' e '+fBRL(tot.saidas)+'. Os totais acima são os do banco. Clique em <b>Atualizar</b>; se continuar assim, avise o administrador.</span>';
   return d;
 }
+// ─── COMPARATIVOS: este mês × mês anterior × mesmo mês do ano passado × média dos 3 meses anteriores ───
+// Usa só a view resumo_mensal (RES do ano aberto + RES_ANT do ano anterior). Meses antes do início do controle não existem
+// na view; nesses casos o quadro mostra "—" em vez de inventar um número.
+function resumoDeMes(ano, mes){
+  const lista = ano===ANO ? RES : (ano===ANO-1 ? RES_ANT : []);
+  const r = lista.find(x=>x.mes===mes);
+  return r ? {entradas:r2(Number(r.entradas)), saidas:r2(Number(r.saidas)), saldo:r2(Number(r.entradas)-Number(r.saidas))} : null;
+}
+function comparativosDoMes(mes, atual){
+  const mesAnt = (()=>{ let m=mes-1, a=ANO; if(m<1){ m=12; a--; } return resumoDeMes(a,m); })();
+  const anoAnt = resumoDeMes(ANO-1, mes);
+  const tres=[]; for(let k=1;k<=3;k++){ let m=mes-k, a=ANO; if(m<1){ m+=12; a--; } const r=resumoDeMes(a,m); if(r) tres.push(r); }
+  const media = tres.length>=2 ? {n:tres.length, entradas:r2(tres.reduce((s,x)=>s+x.entradas,0)/tres.length), saidas:r2(tres.reduce((s,x)=>s+x.saidas,0)/tres.length), saldo:r2(tres.reduce((s,x)=>s+x.saldo,0)/tres.length)} : null;
+  const hoje=new Date(), fechado=(CONF.find(c=>c.mes===mes)||{}).saldo_real!=null;
+  const emAndamento = !fechado && hoje.getFullYear()===ANO && hoje.getMonth()+1===mes;
+  return {mesAnt, anoAnt, media, emAndamento};
+}
+// variação em %, em relação à base; sem base (zero ou ausente) não há percentual
+function variacaoPct(atual, base){ return (base===null||base===undefined||!isFinite(base)||Math.abs(base)<0.005) ? null : (atual-base)/Math.abs(base); }
+function celulaComparativo(atual, base, maisEhBom){
+  if(!base) return '<span class="cmp-vazio">—</span>';
+  const v=variacaoPct(atual, base[0]);
+  const valor='<span class="cmp-valor">'+fBRL(base[0])+'</span>';
+  if(v===null) return valor+'<small class="cmp-var neutro">sem base para %</small>';
+  const igual=Math.abs(v)<0.0005, sobe=v>0;
+  const cls=igual?"neutro":((sobe===maisEhBom)?"bom":"ruim");
+  const txt=igual?"= igual":((sobe?"▲ ":"▼ ")+(Math.abs(v)*100).toFixed(1).replace(".",",")+"%");
+  return valor+'<small class="cmp-var '+cls+'">'+txt+'</small>';
+}
+function renderComparativos(el, tot){
+  const mes=numeroDoMes(MES), nm=getMesNome();
+  const c=comparativosDoMes(mes, tot);
+  const sec=div("fade-in"); sec.id="comparativos";
+  sec.innerHTML='<div class="section-hdr"><div><p class="section-title">Como '+escHtml(nm)+' se compara</p><p class="section-sub">Mesmos totais do banco, lado a lado com outros períodos</p></div></div>';
+  if(!c.mesAnt && !c.anoAnt && !c.media){
+    sec.appendChild(notaSaldo("Ainda não há meses anteriores no controle para comparar com "+nm+"."));
+    el.appendChild(sec); return;
+  }
+  const linhas=[["Entradas",tot.entradas,"entradas",true,"td-green"],["Saídas",tot.saidas,"saidas",false,"td-red"],["Saldo do mês",tot.saldo,"saldo",true,tot.saldo>=0?"td-green":"td-red"]];
+  const tbl=div("table-card cmp-card");
+  tbl.innerHTML='<table class="tab-sem-barra"><thead><tr><th></th><th class="td-right">'+escHtml(nm)+'</th><th class="td-right">Mês anterior</th><th class="td-right">'+escHtml(nm)+' de '+(ANO-1)+'</th><th class="td-right">'+(c.media?'Média dos '+c.media.n+' meses anteriores':'Média dos 3 meses anteriores')+'</th></tr></thead><tbody></tbody></table>';
+  const tb=tbl.querySelector("tbody");
+  linhas.forEach(([rot,val,k,bom,cls])=>{
+    const tr=document.createElement("tr");
+    const pega=o=>o?[o[k]]:null;
+    tr.innerHTML='<td><span class="td-bold">'+rot+'</span></td>'
+      +'<td class="td-right '+cls+'">'+fBRL(val)+'</td>'
+      +'<td class="td-right">'+celulaComparativo(val,pega(c.mesAnt),bom)+'</td>'
+      +'<td class="td-right">'+celulaComparativo(val,pega(c.anoAnt),bom)+'</td>'
+      +'<td class="td-right">'+celulaComparativo(val,pega(c.media),bom)+'</td>';
+    tb.appendChild(tr);
+  });
+  sec.appendChild(tbl);
+  let nota="Verde = melhor que o período comparado (mais entradas, menos saídas, saldo maior); vermelho = pior. “—” = esse período não existe no controle (antes de "+(INICIO_CONTROLE?MESES_NOME[parseInt(INICIO_CONTROLE.slice(5,7))-1]+"/"+INICIO_CONTROLE.slice(0,4):"o início do controle")+").";
+  if(c.emAndamento) nota="⚠ "+nm+" ainda está em andamento (sem fechamento): os números do mês estão parciais, então as comparações tendem a parecer piores do que o mês final será. "+nota;
+  const n=notaSaldo(nota); n.id="notaComparativos"; sec.appendChild(n);
+  el.appendChild(sec);
+  rotularTabela(tbl.querySelector("table"));
+}
 function getDados(){
   const desp=DD[MES]||{}; const ek=getEntKey(MES); const ent=ek?DE[ek]:null;
   const tot=totaisDoMes(MES);
@@ -3119,6 +3185,7 @@ function renderGeral(el){
     </div>`;
   el.appendChild(hero);
   el.appendChild(notaSaldo("Saldo do mês = entradas − saídas. Salários e repasse à Catedral já estão nas saídas (lançados pelo comprovante); os valores “devido” e “calculado” abaixo servem só para conferir."));
+  renderComparativos(el, tot);
 
   // KPI cards linha
   const catTots=Object.entries(cat||{}).map(([n,d])=>({n,v:sumCat({x:d})}));
@@ -6420,7 +6487,7 @@ function aplicarOcultamento(){
   const hide=!visivel;
   [".hero-value",".kpi-value",".semana-card-total",".semana-row-val",
    ".legend-val",".td-red",".td-green",".td-blue",".td-gold",
-   ".ccl-val",".comp-bar-val",".hero-sub",".ano-val"].forEach(sel=>{
+   ".ccl-val",".comp-bar-val",".hero-sub",".ano-val",".cmp-valor"].forEach(sel=>{
     document.querySelectorAll(sel).forEach(e=>{
       if(hide) e.classList.add("val-oculto"); else e.classList.remove("val-oculto");
     });
